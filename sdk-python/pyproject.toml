@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nomos-browser"
+version = "0.1.0"
+description = "SDK Python do NOMOS Browser Runtime — API v1, só stdlib"
+readme = { text = "SDK Python do NOMOS Browser Runtime. Fala a API v1 (docs/API.md) sem nenhuma dependência de runtime.", content-type = "text/plain" }
+requires-python = ">=3.11"
+# `license` fica ausente de propósito: o README declara que a licença do projeto
+# ainda não foi definida e isso é decisão do dono. Escrever uma aqui seria o
+# agente decidindo no lugar dele.
+authors = [{ name = "NOMOS" }]
+keywords = ["nomos", "browser", "automation", "agent", "playwright"]
+
+# Vazio de propósito. Este SDK entra em processos de agente que já carregam a
+# própria árvore de dependências; requests/httpx aqui seria uma restrição de
+# versão a mais para brigar com o que já está instalado lá. urllib.request da
+# stdlib cobre o que a API v1 precisa.
+dependencies = []
+
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Intended Audience :: Developers",
+  "Topic :: Software Development :: Libraries",
+]
+
+[tool.setuptools]
+packages = ["nomos_browser"]

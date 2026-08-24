@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "nomos-web-ui",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["packages/ui/serve.ts"],
+      "port": 7788
+    }
+  ]
+}

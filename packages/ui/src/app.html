@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NOMOS Web</title>
+<!--
+  ATENÇÃO: este arquivo NÃO contém token de marca.
+  Nenhuma cor literal, nenhuma família de fonte literal. Tudo entra em tempo de
+  build, lido do brandbook vigente no cofre (packages/ui/build.ts).
+  Isso não é estilo: é a proibição §6.3 do contrato de governança.
+  O teste tests/ui-build.test.ts falha se um hex aparecer aqui.
+-->
+<style>
+  :root {
+/*__NOMOS_CORES__*/
+    --nomos-mono: __NOMOS_FONT_MONO__;
+    --rail: 220px;
+    --linha: color-mix(in srgb, var(--nomos-marca) 18%, transparent);
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--nomos-fundo);
+    color: var(--nomos-texto);
+    font-family: var(--nomos-mono);
+    font-size: 13px;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    overflow: hidden;
+  }
+  button { font: inherit; color: inherit; cursor: pointer; }
+
+  /* ── barra superior ─────────────────────────────────────────────── */
+  header {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 12px; border-bottom: 1px solid var(--linha);
+    background: var(--nomos-caixas);
+  }
+  .nav button {
+    background: transparent; border: 1px solid var(--linha);
+    border-radius: 4px; width: 30px; height: 30px; line-height: 1;
+  }
+  .nav button:hover:not(:disabled) { border-color: var(--nomos-marca); }
+  .nav button:disabled { opacity: .35; cursor: not-allowed; }
+  #url {
+    flex: 1; min-width: 0; height: 30px; padding: 0 10px;
+    background: var(--nomos-fundo); color: var(--nomos-texto);
+    border: 1px solid var(--linha); border-radius: 4px;
+    font-family: inherit; font-size: 12px;
+  }
+  #url:focus { outline: none; border-color: var(--nomos-marca); }
+  .marca { display: flex; align-items: center; gap: 6px; white-space: nowrap; font-weight: 700; letter-spacing: .06em; }
+  .marca .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--nomos-marca); }
+  .marca .dot[data-live="0"] { background: var(--nomos-erro); }
+  .marca .dot[data-live="?"] { background: var(--nomos-aviso); }
+
+  /* ── corpo ──────────────────────────────────────────────────────── */
+  main { display: grid; grid-template-columns: var(--rail) 1fr; min-height: 0; }
+  nav {
+    border-right: 1px solid var(--linha); background: var(--nomos-caixas);
+    display: flex; flex-direction: column; min-height: 0;
+  }
+  .abas { display: flex; flex-wrap: wrap; gap: 2px; padding: 6px; border-bottom: 1px solid var(--linha); }
+  .abas button {
+    flex: 1 1 auto; background: transparent; border: 1px solid transparent;
+    border-radius: 3px; padding: 5px 7px; font-size: 11px; text-align: left;
+  }
+  .abas button[aria-selected="true"] { border-color: var(--nomos-marca); color: var(--nomos-marca); }
+  .painel { flex: 1; overflow-y: auto; padding: 8px; min-height: 0; }
+  .painel[hidden] { display: none; }
+  .item {
+    padding: 6px 8px; border: 1px solid var(--linha); border-radius: 3px;
+    margin-bottom: 5px; font-size: 11px; word-break: break-word;
+  }
+  .item.sel { border-color: var(--nomos-marca); }
+  .item b { color: var(--nomos-marca); font-weight: 600; }
+  .vazio { opacity: .5; font-size: 11px; padding: 8px; }
+  .ev { font-size: 10px; padding: 3px 6px; border-left: 2px solid var(--linha); margin-bottom: 2px; }
+  .ev b { color: var(--nomos-ciano); font-weight: 600; }
+  .ev.erro { border-left-color: var(--nomos-erro); }
+  .ev.erro b { color: var(--nomos-erro); }
+
+  /* ── área WEB ───────────────────────────────────────────────────── */
+  #palco { position: relative; overflow: hidden; background: var(--nomos-fundo); display: grid; place-items: center; }
+  /* `display:block` sozinho vence o atributo `hidden` e a moldura quebrada da
+     imagem aparecia sobre o aviso de "runtime não alcançado". */
+  #tela { max-width: 100%; max-height: 100%; display: block; }
+  #tela[hidden] { display: none; }
+  #semTela { opacity: .45; text-align: center; line-height: 1.9; font-size: 12px; }
+
+  /* Cursor do NOMOS — FASE 31. Precisa ser inconfundível em relação ao cursor
+     humano: forma diferente, cor de marca, rótulo com a ação corrente. */
+  #cursor { position: absolute; left: 0; top: 0; pointer-events: none; transition: transform .12s linear; z-index: 5; }
+  #cursor[hidden] { display: none; }
+  #cursor .anel {
+    width: 16px; height: 16px; border-radius: 50%;
+    border: 2px solid var(--nomos-marca); background: color-mix(in srgb, var(--nomos-marca) 22%, transparent);
+    box-shadow: 0 0 0 1px var(--nomos-fundo);
+  }
+  #cursor.click .anel { animation: pulso .45s ease-out; }
+  @keyframes pulso { from { transform: scale(1); } 50% { transform: scale(1.9); } to { transform: scale(1); } }
+  #cursor .rotulo {
+    position: absolute; left: 20px; top: 0; white-space: nowrap;
+    background: var(--nomos-caixas); border: 1px solid var(--nomos-marca);
+    color: var(--nomos-marca); padding: 2px 6px; border-radius: 3px; font-size: 10px;
+  }
+  #cursor .rotulo span { color: var(--nomos-texto); }
+
+  #humano {
+    position: absolute; inset: 0; z-index: 6; display: none;
+    place-items: center; background: color-mix(in srgb, var(--nomos-fundo) 72%, transparent);
+  }
+  body[data-controle="human"] #humano { display: grid; }
+  #humano div {
+    border: 1px solid var(--nomos-aviso); color: var(--nomos-aviso);
+    background: var(--nomos-caixas); padding: 12px 18px; border-radius: 4px; text-align: center;
+  }
+
+  /* ── rodapé ─────────────────────────────────────────────────────── */
+  footer {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 8px 12px; border-top: 1px solid var(--linha); background: var(--nomos-caixas); font-size: 11px;
+  }
+  footer .status { flex: 1; min-width: 200px; }
+  footer .conf { color: var(--nomos-ciano); }
+  footer button {
+    background: transparent; border: 1px solid var(--linha);
+    border-radius: 3px; padding: 5px 10px; font-size: 11px;
+  }
+  footer button:hover { border-color: var(--nomos-marca); color: var(--nomos-marca); }
+  footer button.perigo:hover { border-color: var(--nomos-erro); color: var(--nomos-erro); }
+  .selo {
+    font-size: 10px; opacity: .65; border: 1px dashed var(--nomos-aviso);
+    color: var(--nomos-aviso); padding: 2px 6px; border-radius: 3px;
+  }
+</style>
+</head>
+<body data-controle="agent">
+
+<header>
+  <div class="nav">
+    <button id="voltar"  title="Voltar"    disabled>&#8592;</button>
+    <button id="avancar" title="Avançar"   disabled>&#8594;</button>
+    <button id="recarregar" title="Recarregar">&#8635;</button>
+  </div>
+  <input id="url" placeholder="https://…  (Enter para navegar)" spellcheck="false" autocomplete="off">
+  <div class="marca" title="__NOMOS_TAGLINE__"><span class="dot" id="vivo" data-live="?"></span> NOMOS</div>
+</header>
+
+<main>
+  <nav>
+    <div class="abas" role="tablist">
+      <button role="tab" data-aba="chat"      aria-selected="true">Chat</button>
+      <button role="tab" data-aba="tasks"     aria-selected="false">Tasks</button>
+      <button role="tab" data-aba="agents"    aria-selected="false">Agents</button>
+      <button role="tab" data-aba="sessions"  aria-selected="false">Sessions</button>
+      <button role="tab" data-aba="skills"    aria-selected="false">Skills</button>
+      <button role="tab" data-aba="downloads" aria-selected="false">Downloads</button>
+      <button role="tab" data-aba="history"   aria-selected="false">History</button>
+    </div>
+    <div class="painel" id="p-chat">
+      <div class="vazio">Atividade do agente em tempo real.</div>
+      <div id="feed"></div>
+    </div>
+    <div class="painel" id="p-tasks" hidden><div class="vazio">Nenhuma task.</div></div>
+    <div class="painel" id="p-agents" hidden><div class="vazio">Nenhum agente conectado.</div></div>
+    <div class="painel" id="p-sessions" hidden><div class="vazio">Nenhuma sessão.</div></div>
+    <div class="painel" id="p-skills" hidden><div class="vazio">Nenhuma skill carregada.</div></div>
+    <div class="painel" id="p-downloads" hidden><div class="vazio">Nenhum download.</div></div>
+    <div class="painel" id="p-history" hidden><div class="vazio">Sem histórico.</div></div>
+  </nav>
+
+  <div id="palco">
+    <div id="semTela">
+      Runtime não alcançado ou nenhuma sessão ativa.<br>
+      <code>nomos-browser</code> em <code>127.0.0.1:7777</code><br>
+      <small>__NOMOS_ASSINATURA__</small>
+    </div>
+    <img id="tela" alt="Página sob controle do NOMOS" hidden>
+    <div id="cursor" hidden>
+      <div class="anel"></div>
+      <div class="rotulo">&#9673; NOMOS <span id="cursorAcao"></span></div>
+    </div>
+    <div id="humano"><div><b>CONTROLE HUMANO</b><br>Ações do agente congeladas.</div></div>
+  </div>
+</main>
+
+<footer>
+  <span class="status" id="status">aguardando runtime…</span>
+  <span class="conf" id="conf"></span>
+  <span class="selo">__NOMOS_SELO__ · __NOMOS_INTEGRIDADE__</span>
+  <button id="btPausar">Pausar</button>
+  <button id="btControle">Assumir controle</button>
+  <button id="btParar" class="perigo">Parar</button>
+</footer>
+
+<script>
+"use strict";
+// A UI é cliente da API v1. Ela não fala com o Chromium — nunca. Toda ação passa
+// pelo runtime, que é quem detém o estado e aplica capability.
+// O runtime é 127.0.0.1:7777. Assumir `location.origin` estava errado: servida
+// pelo servidor de desenvolvimento (7788) a UI apontava para si mesma e
+// reportava "runtime inalcançável" contra a própria porta. Só reusa a origem
+// quando é o próprio daemon que serve a página.
+const RUNTIME_PADRAO = "http://127.0.0.1:7777";
+const BASE = (function () {
+  const q = new URLSearchParams(location.search).get("runtime");
+  if (q !== null && /^https?:\/\//.test(q)) { return q.replace(/\/$/, ""); }
+  return location.port === "7777" ? location.origin : RUNTIME_PADRAO;
+})();
+const $ = (id) => document.getElementById(id);
+
+const S = { sessionId: null, controle: "agent", pausado: false, escala: 1, timerTela: null, ws: null, backoff: 1000 };
+
+// ── abas ──────────────────────────────────────────────────────────────
+for (const b of document.querySelectorAll('[role="tab"]')) {
+  b.addEventListener("click", () => {
+    for (const o of document.querySelectorAll('[role="tab"]')) {
+      const sel = o === b;
+      o.setAttribute("aria-selected", String(sel));
+      $("p-" + o.dataset.aba).hidden = !sel;
+    }
+  });
+}
+
+function status(txt, conf) {
+  $("status").textContent = txt;
+  $("conf").textContent = (conf === undefined || conf === null) ? "" : "confiança " + Math.round(conf * 100) + "%";
+}
+
+function feed(nome, texto, erro) {
+  const d = document.createElement("div");
+  d.className = "ev" + (erro ? " erro" : "");
+  const hora = new Date().toLocaleTimeString("pt-BR", { hour12: false });
+  d.innerHTML = "<b>" + nome + "</b> " + hora;
+  if (texto) { d.appendChild(document.createTextNode(" · " + texto)); }
+  const f = $("feed");
+  f.prepend(d);
+  while (f.childElementCount > 300) { f.lastElementChild.remove(); }
+}
+
+// ── chamadas ao runtime ───────────────────────────────────────────────
+async function acao(tool, corpo) {
+  const r = await fetch(BASE + "/api/v1/" + tool, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(Object.assign({ session_id: S.sessionId }, corpo || {})),
+  });
+  const env = await r.json().catch(() => null);
+  if (env === null) { throw new Error("resposta não-JSON do runtime"); }
+  // Envelope com success=false é falha de negócio: mostrar o código, nunca engolir.
+  if (env.success === false) {
+    const cod = (env.error && env.error.code) || "INTERNAL";
+    feed(cod, (env.error && env.error.message) || tool, true);
+    const e = new Error(cod); e.code = cod; throw e;
+  }
+  return env.result;
+}
+
+async function gestao(rota, metodo, corpo) {
+  const r = await fetch(BASE + rota, {
+    method: metodo || "GET",
+    headers: corpo ? { "content-type": "application/json" } : undefined,
+    body: corpo ? JSON.stringify(corpo) : undefined,
+  });
+  if (!r.ok) { throw new Error(rota + " → HTTP " + r.status); }
+  return r.json();
+}
+
+// ── saúde e sessões ───────────────────────────────────────────────────
+async function saude() {
+  try {
+    const h = await gestao("/health");
+    $("vivo").dataset.live = h.runtime === "ok" ? "1" : "?";
+    status("runtime " + h.runtime + " · browser " + h.browser + " · sessões " + h.sessions.active + "/" + h.sessions.total);
+    return true;
+  } catch {
+    $("vivo").dataset.live = "0";
+    status("runtime inalcançável em " + BASE);
+    return false;
+  }
+}
+
+async function sessoes() {
+  let lista = [];
+  try { lista = await gestao("/api/v1/sessions"); } catch { return; }
+  const p = $("p-sessions");
+  p.innerHTML = "";
+  if (lista.length === 0) { p.innerHTML = '<div class="vazio">Nenhuma sessão.</div>'; pintarAgentes([]); return; }
+  for (const s of lista) {
+    const d = document.createElement("div");
+    d.className = "item" + (s.session_id === S.sessionId ? " sel" : "");
+    d.innerHTML = "<b>" + s.session_id + "</b><br>" + s.status +
+      " · perfil " + s.profile + " · controle " + s.control +
+      "<br>" + (s.attached_client === null ? "sem cliente (viva)" : "cliente " + s.attached_client);
+    d.addEventListener("click", () => { S.sessionId = s.session_id; aplicarControle(s.control); sessoes(); });
+    p.appendChild(d);
+  }
+  if (S.sessionId === null) { S.sessionId = lista[0].session_id; aplicarControle(lista[0].control); }
+  pintarAgentes(lista);
+}
+
+function pintarAgentes(lista) {
+  const p = $("p-agents");
+  const donos = [...new Set(lista.map((s) => s.owner))];
+  p.innerHTML = donos.length === 0
+    ? '<div class="vazio">Nenhum agente conectado.</div>'
+    : donos.map((o) => '<div class="item"><b>' + o + "</b><br>" +
+        lista.filter((s) => s.owner === o).length + " sessão(ões)</div>").join("");
+}
+
+// ── espelho da página ─────────────────────────────────────────────────
+async function espelhar() {
+  if (S.sessionId === null) { return; }
+  // Sob controle humano o runtime congela TODA ação, inclusive observação —
+  // porque é nesse momento que o humano digita senha ou 2FA. Insistir aqui só
+  // produziria uma enxurrada de CONTROL_HELD_BY_HUMAN no feed. O humano está
+  // olhando a janela real do Chromium; o espelho para até ele devolver.
+  if (S.controle === "human") { return; }
+  try {
+    const r = await acao("browser.screenshot", { scope: "viewport" });
+    // `screenshot_ref` é id opaco; só `screenshot_url` aponta para bytes reais.
+    // Sem essa distinção a UI montava src a partir do id e exibia imagem quebrada.
+    if (!r || !r.screenshot_url) {
+      if (r && r.persisted === false) { feed("screenshot.nao_persistido", r.persist_error || "", true); }
+      return;
+    }
+    const img = $("tela");
+    img.src = BASE + r.screenshot_url + "?t=" + Date.now();
+    img.hidden = false;
+    $("semTela").style.display = "none";
+    // A escala converte coordenada da página em pixel exibido. Sem ela o cursor
+    // do NOMOS apareceria no lugar errado assim que a janela mudasse de tamanho.
+    img.onload = () => { S.escala = img.clientWidth / (r.width || img.naturalWidth || 1); };
+  } catch { /* silêncio aqui é intencional: o feed já registrou o erro */ }
+}
+
+// ── cursor do NOMOS (FASE 31) ─────────────────────────────────────────
+function moverCursor(x, y, acaoTxt, clicou) {
+  const c = $("cursor");
+  const img = $("tela");
+  if (img.hidden) { return; }
+  const r = img.getBoundingClientRect();
+  const p = $("palco").getBoundingClientRect();
+  c.hidden = false;
+  c.style.transform = "translate(" + ((r.left - p.left) + x * S.escala - 8) + "px," +
+                                     ((r.top - p.top) + y * S.escala - 8) + "px)";
+  if (acaoTxt !== undefined) { $("cursorAcao").textContent = acaoTxt; }
+  if (clicou) { c.classList.add("click"); setTimeout(() => c.classList.remove("click"), 460); }
+}
+
+// ── eventos ao vivo ───────────────────────────────────────────────────
+function conectarEventos() {
+  let ws;
+  try { ws = new WebSocket(BASE.replace(/^http/, "ws") + "/events"); } catch { return; }
+  S.ws = ws;
+  ws.onopen = () => { S.backoff = 1000; feed("ws.conectado", ""); };
+  ws.onmessage = (m) => {
+    let ev; try { ev = JSON.parse(m.data); } catch { return; }
+    const p = ev.payload || {};
+    switch (ev.event) {
+      case "mouse.moved":   moverCursor(p.x, p.y, p.alvo || "movendo", false); break;
+      case "mouse.clicked": moverCursor(p.x, p.y, "clicando " + (p.alvo || ""), true); espelhar(); break;
+      case "keyboard.typed": $("cursorAcao").textContent = "digitando"; break;
+      case "page.loaded":   $("url").value = p.url || $("url").value; espelhar(); break;
+      case "action.completed": if (p.verification) { status(p.tool || ev.event, p.verification.confidence); } break;
+      case "control.taken":    aplicarControle("human"); break;
+      case "control.returned": aplicarControle("agent"); break;
+      case "session.created":  sessoes(); break;
+      case "session.closed":   if (p.session_id === S.sessionId) { S.sessionId = null; } sessoes(); break;
+    }
+    const falhou = ev.event.endsWith(".failed");
+    feed(ev.event, p.tool || p.url || p.alvo || "", falhou);
+    if (falhou) { status(ev.event + " — ver feed"); }
+  };
+  ws.onclose = () => {
+    feed("ws.desconectado", "", true);
+    // Backoff com TETO. Reconexão sem teto vira laço de negação de serviço local.
+    S.backoff = Math.min(S.backoff * 2, 30000);
+    setTimeout(conectarEventos, S.backoff);
+  };
+  ws.onerror = () => { try { ws.close(); } catch { /* fechado */ } };
+}
+
+// ── controles ─────────────────────────────────────────────────────────
+function aplicarControle(modo) {
+  S.controle = modo;
+  document.body.dataset.controle = modo;
+  $("btControle").textContent = modo === "human" ? "Devolver controle" : "Assumir controle";
+  $("cursor").hidden = modo === "human";
+}
+
+$("btControle").addEventListener("click", async () => {
+  if (S.sessionId === null) { return; }
+  const alvo = S.controle === "human" ? "release" : "takeover";
+  try {
+    await gestao("/api/v1/sessions/" + S.sessionId + "/" + alvo, "POST", {});
+    aplicarControle(alvo === "takeover" ? "human" : "agent");
+    // Ao devolver o controle o runtime reobserva: a página pode ter mudado
+    // durante o takeover e assumir o contrário seria mentira.
+    if (alvo === "release") { await espelhar(); }
+    feed("control." + (alvo === "takeover" ? "taken" : "returned"), "");
+  } catch (e) { feed("controle.falhou", String(e.message), true); }
+});
+
+$("btPausar").addEventListener("click", () => {
+  S.pausado = !S.pausado;
+  $("btPausar").textContent = S.pausado ? "Retomar" : "Pausar";
+  status(S.pausado ? "agente pausado pelo operador" : "retomado");
+  feed(S.pausado ? "task.paused" : "task.progress", "");
+});
+
+$("btParar").addEventListener("click", async () => {
+  if (S.sessionId === null) { return; }
+  try { await acao("browser.task", { goal: "", cancel: true }); feed("task.cancelled", ""); }
+  catch { /* o feed já registrou */ }
+});
+
+$("url").addEventListener("keydown", async (e) => {
+  if (e.key !== "Enter" || S.sessionId === null) { return; }
+  try { await acao("browser.goto", { url: $("url").value }); await espelhar(); }
+  catch { /* o feed já registrou */ }
+});
+for (const [id, tool] of [["voltar", "browser.back"], ["avancar", "browser.forward"], ["recarregar", "browser.reload"]]) {
+  $(id).addEventListener("click", async () => {
+    if (S.sessionId === null) { return; }
+    try { await acao(tool, {}); await espelhar(); } catch { /* o feed já registrou */ }
+  });
+}
+
+// ── arranque ──────────────────────────────────────────────────────────
+(async function iniciar() {
+  const vivo = await saude();
+  if (vivo) { await sessoes(); conectarEventos(); }
+  setInterval(saude, 5000);
+  setInterval(sessoes, 4000);
+  S.timerTela = setInterval(() => { if (!S.pausado) { espelhar(); } }, 1200);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>NOMOS — fixture pointer/keyboard (FASE 10/11)</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 16px/1.4 -apple-system, system-ui, sans-serif; background: #fff; color: #111; }
+  main { padding: 12px; }
+  h1 { font-size: 16px; margin: 0; }
+  #hit { position: absolute; left: 420px; top: 60px; width: 180px; height: 80px;
+         background: rgb(0, 120, 200); color: #fff; border: 0; font-size: 16px; cursor: pointer; }
+  #drag { position: absolute; left: 100px; top: 200px; width: 440px; height: 180px; background: #eef; }
+  #scroller { position: absolute; left: 620px; top: 200px; width: 300px; height: 160px;
+              overflow-y: scroll; border: 1px solid #ccc; }
+  #scroller .tall { height: 3000px; background: linear-gradient(#eee, #999); }
+  #sel { position: absolute; left: 100px; top: 420px; width: 380px; padding: 8px; font-size: 16px; }
+  #form { position: absolute; left: 100px; top: 480px; }
+  #form input { padding: 8px; font-size: 16px; width: 260px; }
+  #typed { position: absolute; left: 100px; top: 540px; width: 380px; padding: 8px; font-size: 16px; }
+  #hover-zone { position: absolute; left: 620px; top: 420px; width: 200px; height: 60px; background: #dfd; }
+</style>
+</head>
+<body>
+<main><h1>fixture pointer/keyboard</h1></main>
+
+<button id="hit" type="button">alvo</button>
+<div id="drag"></div>
+<div id="scroller"><div class="tall"></div></div>
+<input id="sel" type="text" value="NOMOS BROWSER RUNTIME SELECIONA TUDO" autocomplete="off">
+<form id="form"><input id="form-input" type="text" autocomplete="off"><button type="submit">enviar</button></form>
+<input id="typed" type="text" autocomplete="off">
+<div id="hover-zone">hover</div>
+
+<script>
+// Log ordenado de eventos. `isTrusted` é o discriminador herdado do spike da
+// FASE 1: input sintetizado por JS chega false; só o motor de input do Chromium
+// (CDP Input.dispatch* ou page.mouse/page.keyboard) chega true.
+// `seq` existe porque a ORDEM (mousedown → mousemove → mouseup) é o que o teste
+// de drag afirma — e ordem não se prova por presença.
+window.__nomos = [];
+let seq = 0;
+
+function rec(e, extra) {
+  window.__nomos.push(Object.assign({
+    seq: seq++,
+    type: e.type,
+    isTrusted: e.isTrusted,
+    target: (e.target && e.target.id) ? e.target.id : null,
+    x: (typeof e.clientX === 'number') ? e.clientX : null,
+    y: (typeof e.clientY === 'number') ? e.clientY : null,
+    key: (typeof e.key === 'string') ? e.key : null,
+    code: (typeof e.code === 'string') ? e.code : null,
+    meta: !!e.metaKey, ctrl: !!e.ctrlKey, alt: !!e.altKey, shift: !!e.shiftKey,
+    button: (typeof e.button === 'number') ? e.button : null
+  }, extra || {}));
+}
+
+window.__nomosReset = function () { window.__nomos = []; seq = 0; };
+
+// Captura no document: pega tudo na ordem real, sem depender de bubbling.
+for (const t of ['mousedown', 'mouseup', 'click', 'dblclick', 'mousemove', 'mouseover', 'wheel']) {
+  document.addEventListener(t, rec, true);
+}
+document.addEventListener('contextmenu', function (e) {
+  rec(e);
+  e.preventDefault(); // sem isto o Chromium tentaria abrir menu nativo
+}, true);
+
+for (const t of ['keydown', 'keyup', 'keypress', 'input']) {
+  document.addEventListener(t, function (e) {
+    rec(e, { value_length: (e.target && typeof e.target.value === 'string') ? e.target.value.length : null });
+  }, true);
+}
+
+document.getElementById('scroller').addEventListener('scroll', function (e) {
+  window.__nomos.push({ seq: seq++, type: 'scroll', isTrusted: e.isTrusted, target: 'scroller', scrollTop: e.target.scrollTop });
+});
+
+document.getElementById('form').addEventListener('submit', function (e) {
+  e.preventDefault(); // navegar aqui apagaria o log e o teste perderia a evidência
+  rec(e, { submitted: true });
+});
+
+window.__nomosRect = function (sel) {
+  const el = document.querySelector(sel);
+  if (!el) return null;
+  const r = el.getBoundingClientRect();
+  return { x: r.x, y: r.y, width: r.width, height: r.height, cx: r.x + r.width / 2, cy: r.y + r.height / 2 };
+};
+
+window.__nomosSelection = function (sel) {
+  const el = document.querySelector(sel);
+  if (!el) return null;
+  return { start: el.selectionStart, end: el.selectionEnd, length: el.value.length };
+};
+
+window.__nomosValue = function (sel) {
+  const el = document.querySelector(sel);
+  return el ? el.value : null;
+};
+</script>
+</body>
+</html>

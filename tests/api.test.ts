@@ -1,0 +1,854 @@
+/**
+ * FASE 2 / 4 / 5 / 43 / 44 — prova do daemon com Chromium REAL.
+ *
+ * Mesmo critério de honestidade do spike da FASE 1: nada de mock do navegador.
+ * Cada afirmação sobre sessão viva é feita perguntando ao Chromium, não olhando
+ * um campo booleano do nosso próprio registro.
+ *
+ * Onde há risco de asserção vácua, há controle:
+ *   - "a sessão sobreviveu ao detach" só vale porque, DEPOIS do detach, uma ação
+ *     real (`browser.observe`) volta com a URL da fixture — um `status: "IDLE"`
+ *     na listagem provaria apenas que o nosso Map ainda tem a chave;
+ *   - "upload é negado" só vale porque a MESMA sessão executa `browser.observe`
+ *     com sucesso: se tudo estivesse negado, o 403 não diria nada sobre política;
+ *   - "o WebSocket recebe evento" é medido com o socket aberto ANTES da ação,
+ *     porque não há replay de histórico na conexão.
+ */
+import test, { after, before } from "node:test";
+import assert from "node:assert/strict";
+import http from "node:http";
+import os from "node:os";
+import path from "node:path";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { WebSocket } from "ws";
+import { startDaemon, SessionQueue, type DaemonHandle } from "../packages/api/src/daemon.ts";
+import { ApiError } from "../packages/api/src/handlers.ts";
+import { matchRoute, parseEventFilter } from "../packages/api/src/router.ts";
+import { loadConfig, parseConfigText } from "../packages/api/src/config.ts";
+import { DEFAULT_PROFILES_ROOT } from "../packages/core/src/session.ts";
+import { FileVault } from "../packages/core/src/vault.ts";
+import type { ActionResponse, RuntimeEvent, SessionInfo } from "../packages/core/src/contract.ts";
+
+const FIXTURE_HTML = `<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><title>nomos fixture</title>
+<style>#rolagem{height:120px;overflow:auto}#rolagem div{height:600px}</style></head>
+<body>
+  <h1 id="titulo">fixture do daemon</h1>
+  <button id="botao">Entrar</button>
+  <input id="campo" type="text" placeholder="usuario">
+  <input id="arquivo" type="file">
+  <div id="painel" hidden>painel secreto</div>
+  <div id="rolagem"><div>conteudo alto</div></div>
+  <script>
+    document.getElementById("botao").addEventListener("click", function () {
+      this.textContent = "Autenticado";
+      document.getElementById("painel").hidden = false;
+      document.body.dataset.state = "autenticado";
+      location.hash = "#logado";
+    });
+  </script>
+</body></html>`;
+
+interface Fixture {
+  base: string;
+  close: () => Promise<void>;
+}
+
+/** Servidor local: a prova roda offline, sem rede externa. */
+function startFixture(): Promise<Fixture> {
+  const server = http.createServer((_req, res) => {
+    res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+    res.end(FIXTURE_HTML);
+  });
+  return new Promise((resolve) => {
+    server.listen(0, "127.0.0.1", () => {
+      const addr = server.address();
+      if (addr === null || typeof addr === "string") throw new Error("fixture: endereço inválido");
+      resolve({
+        base: `http://127.0.0.1:${addr.port}`,
+        close: () => new Promise<void>((r) => server.close(() => r())),
+      });
+    });
+  });
+}
+
+let fixture: Fixture;
+let daemon: DaemonHandle;
+let sessionsRoot: string;
+
+interface Res<T> {
+  status: number;
+  body: T;
+}
+
+async function call<T>(method: string, route: string, body?: unknown): Promise<Res<T>> {
+  const res = await fetch(`${daemon.url}${route}`, {
+    method,
+    headers: { "content-type": "application/json", "x-nomos-client": "teste-api" },
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+  });
+  const text = await res.text();
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    // Corpo não-JSON é FALHA do daemon (ex.: página de erro do Node). O teste
+    // precisa ver o texto cru para que a mensagem não vire "undefined".
+    throw new Error(`resposta não-JSON em ${method} ${route} (status ${res.status}): ${text.slice(0, 300)}`);
+  }
+  return { status: res.status, body: parsed as T };
+}
+
+function act<T>(tool: string, payload: Record<string, unknown>): Promise<Res<ActionResponse<T>>> {
+  return call<ActionResponse<T>>("POST", `/api/v1/${tool}`, payload);
+}
+
+/** Envelope bem formado, independentemente de sucesso ou erro. */
+function assertEnvelope(env: ActionResponse<unknown>): void {
+  assert.equal(typeof env.action_id, "string");
+  assert.equal(typeof env.success, "boolean");
+  assert.equal(typeof env.state, "string");
+  assert.ok("result" in env && "error" in env, "envelope precisa ter result e error");
+  assert.equal(typeof env.timing.started_at, "string");
+  assert.equal(typeof env.timing.ended_at, "string");
+  assert.equal(typeof env.timing.duration_ms, "number");
+  assert.ok(env.timing.duration_ms >= 0, `duration_ms deve ser >= 0, veio ${env.timing.duration_ms}`);
+}
+
+before(async () => {
+  fixture = await startFixture();
+  sessionsRoot = await mkdtemp(path.join(os.tmpdir(), "nomos-api-audit-"));
+  daemon = await startDaemon({
+    host: "127.0.0.1",
+    port: 0,
+    headless: true,
+    // A fixture vive em 127.0.0.1: navegar para host interno é ato explícito
+    // (anti-SSRF da FASE 40), nunca inferido de a origem ser local.
+    allow_internal_urls: true,
+    sessions_root: sessionsRoot,
+    action_timeout_ms: 60_000,
+    // Ambiente vazio + sem arquivo: a config do operador não pode contaminar a prova.
+    env: {},
+    read_file: false,
+  });
+});
+
+after(async () => {
+  await daemon?.close("teste");
+  await fixture?.close();
+  if (sessionsRoot !== undefined) await rm(sessionsRoot, { recursive: true, force: true });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 1. /health
+// ─────────────────────────────────────────────────────────────────────────────
+
+test("1) GET /health responde 200 com contract=1", async () => {
+  const { status, body } = await call<Record<string, unknown>>("GET", "/health");
+  assert.equal(status, 200);
+  assert.equal(body.contract, "1");
+  assert.equal(body.runtime, "ok");
+  assert.equal(typeof body.version, "string");
+  assert.equal(typeof body.uptime_s, "number");
+  assert.ok((body.uptime_s as number) >= 0);
+  const workers = body.workers as { active: number; max: number };
+  assert.equal(workers.max, daemon.config.max_workers);
+  const s = body.sessions as { total: number; active: number; idle: number; paused: number };
+  for (const k of ["total", "active", "idle", "paused"] as const) assert.equal(typeof s[k], "number");
+  assert.ok(["ok", "starting", "down"].includes(body.browser as string));
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 2. sessões
+// ─────────────────────────────────────────────────────────────────────────────
+
+let sessionId = "";
+
+test("2) POST /api/v1/sessions cria sessão e GET a lista", async () => {
+  const created = await call<SessionInfo>("POST", "/api/v1/sessions", {
+    owner: "teste-api",
+    // sandbox = perfil efêmero: dir temporário apagado no close, nada em profiles/.
+    profile: "sandbox",
+    headless: true,
+    client: "teste-api",
+  });
+  assert.equal(created.status, 201, `criação falhou: ${JSON.stringify(created.body)}`);
+  assert.equal(typeof created.body.session_id, "string");
+  assert.ok(created.body.session_id.startsWith("ses_"));
+  assert.equal(created.body.owner, "teste-api");
+  assert.equal(created.body.profile, "sandbox");
+  assert.equal(created.body.control, "agent");
+  assert.equal(created.body.attached_client, "teste-api");
+  // Política default é RESTRITA: o que muda o mundo lá fora nasce negado.
+  assert.equal(created.body.permissions.upload, false);
+  assert.equal(created.body.permissions.read, true);
+  sessionId = created.body.session_id;
+
+  const listed = await call<SessionInfo[]>("GET", "/api/v1/sessions");
+  assert.equal(listed.status, 200);
+  assert.ok(Array.isArray(listed.body));
+  const found = listed.body.find((s) => s.session_id === sessionId);
+  assert.ok(found !== undefined, "sessão criada tem de aparecer em GET /api/v1/sessions");
+
+  const one = await call<SessionInfo>("GET", `/api/v1/sessions/${sessionId}`);
+  assert.equal(one.status, 200);
+  assert.equal(one.body.session_id, sessionId);
+
+  const health = await call<Record<string, unknown>>("GET", "/health");
+  assert.equal((health.body.sessions as { total: number }).total, 1);
+  assert.equal(health.body.browser, "ok", "com sessão viva o Chromium está aberto");
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 3. goto + observe
+// ─────────────────────────────────────────────────────────────────────────────
+
+test("3) browser.goto na fixture e browser.observe devolvem envelope com sucesso", async () => {
+  const goto = await act<{ url: string; title: string }>("browser.goto", {
+    session_id: sessionId,
+    url: `${fixture.base}/`,
+  });
+  assert.equal(goto.status, 200, `goto falhou: ${JSON.stringify(goto.body.error)}`);
+  assertEnvelope(goto.body);
+  assert.equal(goto.body.success, true);
+  assert.equal(goto.body.error, null);
+  assert.ok(goto.body.result !== null);
+  assert.ok(goto.body.result!.url.startsWith(fixture.base), `URL inesperada: ${goto.body.result!.url}`);
+
+  const obs = await act<{
+    url: string;
+    title: string;
+    elements: { tag: string; text: string | null }[];
+    total_elements: number;
+    truncated: boolean;
+  }>("browser.observe", { session_id: sessionId, limit: 50 });
+  assert.equal(obs.status, 200, `observe falhou: ${JSON.stringify(obs.body.error)}`);
+  assertEnvelope(obs.body);
+  assert.equal(obs.body.success, true);
+  assert.ok(obs.body.timing.duration_ms >= 0);
+  const observation = obs.body.result!;
+  assert.equal(observation.title, "nomos fixture");
+  assert.ok(observation.total_elements > 0, "a fixture tem elementos; total_elements zero seria varredura morta");
+  // Controle: a observação vem do DOM REAL, então o botão da fixture está lá.
+  const botao = observation.elements.find((e) => (e.text ?? "").includes("Entrar"));
+  assert.ok(botao !== undefined, "observe tem de enxergar o botão da fixture");
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 4. capability negada
+// ─────────────────────────────────────────────────────────────────────────────
+
+test("4) browser.upload sob política restricted devolve 403 CAPABILITY_DENIED", async () => {
+  const denied = await act<never>("browser.upload", {
+    session_id: sessionId,
+    target: { selector: "#arquivo" },
+    path: "/etc/passwd",
+  });
+  assert.equal(denied.status, 403);
+  assertEnvelope(denied.body);
+  assert.equal(denied.body.success, false);
+  assert.equal(denied.body.result, null);
+  assert.equal(denied.body.error?.code, "CAPABILITY_DENIED");
+  assert.equal(denied.body.error?.detail?.required, "upload");
+
+  // CONTROLE POSITIVO: a mesma sessão faz uma ação PERMITIDA. Sem isto, o 403
+  // acima poderia ser "tudo está quebrado" em vez de "a política decidiu".
+  const allowed = await act<{ url: string }>("browser.observe", { session_id: sessionId, limit: 5 });
+  assert.equal(allowed.status, 200);
+  assert.equal(allowed.body.success, true);
+
+  // E a negação acontece ANTES do navegador: o caminho nem chega a ser checado.
+  assert.notEqual(denied.body.error?.code, "UPLOAD_DENIED");
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 5. detach não mata a sessão (FASE 3 / 44)
+// ─────────────────────────────────────────────────────────────────────────────
+
+test("5) detach do cliente deixa a sessão viva, órfã e reatável", async () => {
+  const detached = await call<SessionInfo>("POST", `/api/v1/sessions/${sessionId}/detach`, {});
+  assert.equal(detached.status, 200);
+  assert.equal(detached.body.attached_client, null, "detach solta o cliente");
+  assert.equal(detached.body.status, "IDLE");
+
+  const listed = await call<SessionInfo[]>("GET", "/api/v1/sessions");
+  const still = listed.body.find((s) => s.session_id === sessionId);
+  assert.ok(still !== undefined, "sessão órfã continua listada");
+  assert.equal(still.attached_client, null);
+
+  // PROVA DE VIDA: continuar na lista é o nosso Map falando de si. O que prova
+  // que o Chromium respira é uma ação real voltar com a URL da fixture.
+  const obs = await act<{ url: string; title: string }>("browser.observe", { session_id: sessionId, limit: 5 });
+  assert.equal(obs.status, 200, `observe após detach falhou: ${JSON.stringify(obs.body.error)}`);
+  assert.equal(obs.body.success, true);
+  assert.ok(obs.body.result!.url.startsWith(fixture.base), "a página continua onde estava");
+  assert.equal(obs.body.result!.title, "nomos fixture");
+
+  const reattached = await call<SessionInfo>("POST", `/api/v1/sessions/${sessionId}/attach`, { client: "teste-api-2" });
+  assert.equal(reattached.status, 200);
+  assert.equal(reattached.body.attached_client, "teste-api-2");
+  assert.equal(reattached.body.status, "ACTIVE");
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 6. WebSocket /events
+// ─────────────────────────────────────────────────────────────────────────────
+
+test("6) WebSocket /events entrega ao menos um RuntimeEvent após uma ação", async () => {
+  const ws = new WebSocket(`ws://${daemon.host}:${daemon.port}/events?session_id=${sessionId}`);
+  const frames: RuntimeEvent[] = [];
+
+  await new Promise<void>((resolve, reject) => {
+    ws.once("open", () => resolve());
+    ws.once("error", reject);
+  });
+
+  const gotFrame = new Promise<RuntimeEvent>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error("nenhum evento chegou em 20s")), 20_000);
+    ws.on("message", (data: Buffer | string) => {
+      const parsed = JSON.parse(String(data)) as RuntimeEvent;
+      frames.push(parsed);
+      clearTimeout(timer);
+      resolve(parsed);
+    });
+  });
+
+  // Ação só DEPOIS do socket aberto: não há replay de histórico na conexão, e
+  // esperar evento anterior à assinatura seria testar algo que não existe.
+  const obs = await act("browser.observe", { session_id: sessionId, limit: 5 });
+  assert.equal(obs.body.success, true);
+
+  const first = await gotFrame;
+  assert.equal(typeof first.timestamp, "string");
+  assert.equal(first.session_id, sessionId, "filtro ?session_id= tem de valer");
+  assert.equal(typeof first.event, "string");
+  assert.ok("payload" in first);
+
+  ws.close();
+  await new Promise<void>((r) => ws.once("close", () => r()));
+
+  // O socket morreu; a SESSÃO não. É o requisito da FASE 44.
+  const alive = await act<{ url: string }>("browser.observe", { session_id: sessionId, limit: 5 });
+  assert.equal(alive.status, 200);
+  assert.equal(alive.body.success, true);
+  assert.ok(alive.body.result!.url.startsWith(fixture.base));
+});
+
+test("6b) filtro ?events= com nome desconhecido fecha o socket em vez de calar", async () => {
+  const ws = new WebSocket(`ws://${daemon.host}:${daemon.port}/events?events=nao.existe`);
+  const code = await new Promise<number>((resolve, reject) => {
+    ws.once("close", (c: number) => resolve(c));
+    ws.once("error", reject);
+    setTimeout(() => reject(new Error("socket não fechou em 5s")), 5000).unref();
+  });
+  assert.equal(code, 1008, "nome inválido devolve silêncio se não fechar — silêncio é a mentira aqui");
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 7. rota inexistente
+// ─────────────────────────────────────────────────────────────────────────────
+
+test("7) rota inexistente devolve 404 com envelope, não HTML de stack trace", async () => {
+  const res = await fetch(`${daemon.url}/api/v1/rota-que-nao-existe`);
+  assert.equal(res.status, 404);
+  assert.match(res.headers.get("content-type") ?? "", /application\/json/);
+  const text = await res.text();
+  assert.ok(!text.includes("<html"), "resposta não pode ser HTML");
+  assert.ok(!/\bat .*\.ts:\d+/.test(text), "resposta não pode conter stack trace");
+  const env = JSON.parse(text) as ActionResponse<unknown>;
+  assertEnvelope(env);
+  assert.equal(env.success, false);
+  assert.equal(env.result, null);
+  assert.equal(env.error?.code, "INVALID_REQUEST");
+
+  // Método errado em caminho existente é 405 — distinto de "não existe".
+  const wrong = await fetch(`${daemon.url}/health`, { method: "DELETE" });
+  assert.equal(wrong.status, 405);
+  assert.equal(wrong.headers.get("allow"), "GET");
+  const wrongEnv = (await wrong.json()) as ActionResponse<unknown>;
+  assertEnvelope(wrongEnv);
+});
+
+test("7b) sessão inexistente e session_id ausente saem no envelope", async () => {
+  const missing = await act<never>("browser.observe", { session_id: "ses_naoexiste" });
+  assert.equal(missing.status, 404);
+  assert.equal(missing.body.error?.code, "SESSION_NOT_FOUND");
+  assertEnvelope(missing.body);
+
+  const noSession = await act<never>("browser.observe", {});
+  assert.equal(noSession.status, 400);
+  assert.equal(noSession.body.error?.code, "INVALID_REQUEST");
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FASE 43 — fila, concorrência e prazo (unidade pura, sem navegador)
+// ─────────────────────────────────────────────────────────────────────────────
+
+test("FASE 43) SessionQueue respeita concorrência e recusa fila cheia com BACKPRESSURE_REJECTED", async () => {
+  const q = new SessionQueue(2, 3);
+  const releases: (() => void)[] = [];
+  const started: number[] = [];
+  const submit = (id: number): Promise<number> =>
+    q.submit(async () => {
+      started.push(id);
+      await new Promise<void>((r) => releases.push(r));
+      return id;
+    }, 5000);
+
+  // 2 executando + 3 aguardando = teto exato.
+  const jobs = [submit(1), submit(2), submit(3), submit(4), submit(5)];
+  assert.equal(q.running, 2, "só a concorrência configurada roda de fato");
+  assert.equal(q.waiting, 3);
+  assert.deepEqual(started, [1, 2], "os demais não podem ter começado");
+
+  // A sexta estoura: recusa IMEDIATA, não espera silenciosa.
+  await assert.rejects(
+    submit(6),
+    (e: unknown) => e instanceof ApiError && e.code === "BACKPRESSURE_REJECTED",
+    "fila cheia tem de recusar com BACKPRESSURE_REJECTED",
+  );
+
+  for (const r of releases.splice(0)) r();
+  await new Promise<void>((r) => setImmediate(r));
+  for (const r of releases.splice(0)) r();
+  await new Promise<void>((r) => setImmediate(r));
+  for (const r of releases.splice(0)) r();
+  assert.deepEqual(await Promise.all(jobs), [1, 2, 3, 4, 5]);
+});
+
+test("FASE 43) prazo estourado devolve TIMEOUT e admite que a ação segue correndo", async () => {
+  const q = new SessionQueue(1, 4);
+  let liberou = false;
+  const lenta = q.submit(async () => {
+    await new Promise<void>((r) => setTimeout(r, 300));
+    liberou = true;
+    return "tarde demais";
+  }, 40);
+
+  await assert.rejects(lenta, (e: unknown) => {
+    if (!(e instanceof ApiError)) return false;
+    assert.equal(e.code, "TIMEOUT");
+    // Honestidade: o Playwright não oferece cancelamento cooperativo aqui, então
+    // o envelope NÃO pode sugerir que a ação parou.
+    assert.equal(e.detail?.still_running, true);
+    return true;
+  });
+  assert.equal(liberou, false, "no instante do TIMEOUT a ação ainda não tinha terminado");
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Unidades puras: roteador e configuração
+// ─────────────────────────────────────────────────────────────────────────────
+
+test("roteador distingue rota ausente de método errado e conhece as ações do contrato", () => {
+  assert.equal(matchRoute("GET", "/health").kind, "match");
+  assert.equal(matchRoute("POST", "/health").kind, "method_not_allowed");
+  assert.equal(matchRoute("GET", "/nao/existe").kind, "not_found");
+
+  const action = matchRoute("POST", "/api/v1/browser.click");
+  assert.equal(action.kind, "match");
+  if (action.kind === "match") {
+    assert.equal(action.route.name, "action");
+    assert.equal(action.route.tool, "browser.click");
+    assert.equal(action.route.envelope, true);
+  }
+  // Verbo que não está em ACTION_CLASS não vira rota — fail closed no roteador.
+  assert.equal(matchRoute("POST", "/api/v1/browser.formatar_disco").kind, "not_found");
+
+  const withId = matchRoute("POST", "/api/v1/sessions/ses_abc/takeover");
+  assert.equal(withId.kind, "match");
+  if (withId.kind === "match") assert.equal(withId.route.params.id, "ses_abc");
+});
+
+test("parseEventFilter separa evento conhecido de desconhecido", () => {
+  const f = parseEventFilter(new URLSearchParams("session_id=ses_1&events=mouse.clicked,task.progress,inventado"));
+  assert.equal(f.session_id, "ses_1");
+  assert.deepEqual(f.events, ["mouse.clicked", "task.progress"]);
+  assert.deepEqual(f.unknown, ["inventado"]);
+});
+
+test("config: ambiente vence arquivo, override vence ambiente, lixo não é coagido", () => {
+  const cfg = loadConfig({
+    read_file: false,
+    env: { NOMOS_BROWSER_PORT: "9123", NOMOS_BROWSER_HEADLESS: "true" },
+  });
+  assert.equal(cfg.port, 9123);
+  assert.equal(cfg.headless, true);
+  assert.equal(cfg.sources.port, "env:NOMOS_BROWSER_PORT");
+
+  const overridden = loadConfig({ read_file: false, env: { NOMOS_BROWSER_PORT: "9123" }, port: 0 });
+  assert.equal(overridden.port, 0);
+  assert.equal(overridden.sources.port, "override");
+
+  // Coerção silenciosa é o defeito: "abc" NÃO pode virar 7777.
+  assert.throws(() => loadConfig({ read_file: false, env: { NOMOS_BROWSER_PORT: "abc" } }), /inteiro entre/);
+  // "full" não se conquista escrevendo uma string na configuração.
+  assert.throws(() => loadConfig({ read_file: false, env: { NOMOS_BROWSER_POLICY: "full" } }), /desconhecida/);
+
+  const parsed = parseConfigText("# comentário\nhost: 0.0.0.0\nviewport:\n  width: 800\n", "teste");
+  assert.equal(parsed.host, "0.0.0.0");
+  assert.equal(parsed["viewport.width"], "800");
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Cobertura das demais rotas de `docs/API.md`
+//
+// Sessão própria e descartável: um teste que dependesse da ordem em relação aos
+// anteriores mediria a ordem, não a rota.
+// ─────────────────────────────────────────────────────────────────────────────
+
+test("rotas de ação restantes operam contra o Chromium real", async (t) => {
+  const created = await call<SessionInfo>("POST", "/api/v1/sessions", {
+    owner: "teste-rotas",
+    profile: "sandbox",
+    headless: true,
+    client: "teste-rotas",
+  });
+  assert.equal(created.status, 201, JSON.stringify(created.body));
+  const sid = created.body.session_id;
+
+  try {
+    await act("browser.goto", { session_id: sid, url: `${fixture.base}/` });
+
+    await t.test("browser.find resolve o alvo e diz por qual estratégia", async () => {
+      const found = await act<{ strategy: string; box: { width: number }; handle?: unknown }>("browser.find", {
+        session_id: sid,
+        target: { role: "button", text: "Entrar" },
+      });
+      assert.equal(found.status, 200, JSON.stringify(found.body.error));
+      assert.equal(found.body.success, true);
+      assert.ok(found.body.result!.box.width > 0, "caixa de área zero seria alvo não renderizado");
+      // O handle é opaco e NÃO atravessa a fronteira da API (contrato).
+      assert.ok(!("handle" in found.body.result!), "handle não pode vazar no JSON");
+    });
+
+    await t.test("browser.click muda a página de verdade e a verificação confirma", async () => {
+      const clicked = await act<{ verification: { verified: boolean; kind: string; confidence: number } }>(
+        "browser.click",
+        {
+          session_id: sid,
+          target: { selector: "#botao" },
+          verification: { kind: "URL_CHANGED", timeout_ms: 3000 },
+        },
+      );
+      assert.equal(clicked.status, 200, JSON.stringify(clicked.body.error));
+      assert.equal(clicked.body.success, true);
+      assert.equal(clicked.body.result!.verification.kind, "URL_CHANGED");
+      assert.equal(clicked.body.result!.verification.verified, true, "o hash da fixture muda no clique");
+
+      // EVIDÊNCIA INDEPENDENTE da verificação: o DOM mudou. Sem isto, um
+      // verificador complacente faria o teste passar sem clique nenhum.
+      const texto = await act<{ content: string }>("browser.extract", {
+        session_id: sid,
+        target: { selector: "#botao" },
+      });
+      assert.equal(texto.body.result!.content.trim(), "Autenticado");
+    });
+
+    await t.test("browser.wait espera condição verificável, não duração fixa", async () => {
+      const visible = await act<{ waited_ms: number; satisfied: boolean }>("browser.wait", {
+        session_id: sid,
+        condition: "element_visible",
+        value: "#painel",
+        timeout_ms: 3000,
+      });
+      assert.equal(visible.status, 200, JSON.stringify(visible.body.error));
+      assert.equal(visible.body.result!.satisfied, true);
+
+      // Condição que NUNCA acontece tem de estourar como TIMEOUT — se qualquer
+      // espera "desse certo", a rota não estaria verificando nada.
+      const nunca = await act<never>("browser.wait", {
+        session_id: sid,
+        condition: "element_visible",
+        value: "#nao-existe-jamais",
+        timeout_ms: 300,
+      });
+      assert.equal(nunca.status, 504);
+      assert.equal(nunca.body.error?.code, "TIMEOUT");
+    });
+
+    await t.test("browser.type escreve no campo e browser.press dispara tecla", async () => {
+      const typed = await act<{ typed_length: number }>("browser.type", {
+        session_id: sid,
+        target: { selector: "#campo" },
+        text: "nomos-operador",
+      });
+      assert.equal(typed.status, 200, JSON.stringify(typed.body.error));
+      assert.equal(typed.body.result!.typed_length, "nomos-operador".length);
+
+      // Prova de que o texto entrou: lê de volta do DOM.
+      const valor = await act<{ content: string }>("browser.extract", {
+        session_id: sid,
+        target: { selector: "#campo" },
+        format: "value",
+      });
+      assert.equal(valor.body.result!.content, "nomos-operador");
+
+      const pressed = await act<{ pressed: string[] }>("browser.press", { session_id: sid, key: "Backspace" });
+      assert.equal(pressed.status, 200, JSON.stringify(pressed.body.error));
+      const depois = await act<{ content: string }>("browser.extract", {
+        session_id: sid,
+        target: { selector: "#campo" },
+        format: "value",
+      });
+      assert.equal(depois.body.result!.content, "nomos-operado", "Backspace tem de apagar um caractere");
+    });
+
+    await t.test("browser.scroll rola o contêiner alvo", async () => {
+      const scrolled = await act<{ scrolled: { dx: number; dy: number } }>("browser.scroll", {
+        session_id: sid,
+        target: { selector: "#rolagem" },
+        dy: 200,
+      });
+      assert.equal(scrolled.status, 200, JSON.stringify(scrolled.body.error));
+      assert.equal(scrolled.body.result!.scrolled.dy, 200);
+    });
+
+    await t.test("browser.screenshot devolve referência e dimensões lidas do PNG", async () => {
+      const shot = await act<{ screenshot_ref: string; width: number; height: number; bytes: number }>(
+        "browser.screenshot",
+        { session_id: sid, scope: "viewport" },
+      );
+      assert.equal(shot.status, 200, JSON.stringify(shot.body.error));
+      assert.ok(shot.body.result!.width > 0 && shot.body.result!.height > 0);
+      assert.ok(shot.body.result!.bytes > 1000, "PNG de viewport não cabe em 1 kB");
+
+      const elemento = await act<{ width: number; height: number }>("browser.screenshot", {
+        session_id: sid,
+        scope: "element",
+        target: { selector: "#botao" },
+      });
+      assert.equal(elemento.status, 200, JSON.stringify(elemento.body.error));
+      assert.ok(elemento.body.result!.width > 0);
+    });
+
+    await t.test("abas: tabs, new_tab, switch_tab, close_tab", async () => {
+      const antes = await act<{ page_id: string; active: boolean }[]>("browser.tabs", { session_id: sid });
+      assert.equal(antes.status, 200, JSON.stringify(antes.body.error));
+      assert.equal(antes.body.result!.length, 1);
+      const primeira = antes.body.result![0]!.page_id;
+
+      const nova = await act<{ page_id: string }>("browser.new_tab", { session_id: sid, url: `${fixture.base}/dois` });
+      assert.equal(nova.status, 200, JSON.stringify(nova.body.error));
+      const segunda = nova.body.result!.page_id;
+      assert.notEqual(segunda, primeira);
+
+      const duas = await act<{ page_id: string }[]>("browser.tabs", { session_id: sid });
+      assert.equal(duas.body.result!.length, 2);
+
+      const trocou = await act<{ page_id: string; active: boolean }>("browser.switch_tab", {
+        session_id: sid,
+        page_id: primeira,
+      });
+      assert.equal(trocou.status, 200, JSON.stringify(trocou.body.error));
+      assert.equal(trocou.body.result!.active, true);
+
+      const fechou = await act<{ closed: boolean }>("browser.close_tab", { session_id: sid, page_id: segunda });
+      assert.equal(fechou.status, 200, JSON.stringify(fechou.body.error));
+      const final = await act<unknown[]>("browser.tabs", { session_id: sid });
+      assert.equal(final.body.result!.length, 1);
+    });
+
+    await t.test("histórico: back, forward, reload", async () => {
+      await act("browser.goto", { session_id: sid, url: `${fixture.base}/a` });
+      await act("browser.goto", { session_id: sid, url: `${fixture.base}/b` });
+
+      const back = await act<{ url: string }>("browser.back", { session_id: sid });
+      assert.equal(back.status, 200, JSON.stringify(back.body.error));
+      assert.ok(back.body.result!.url.endsWith("/a"), `voltou para ${back.body.result!.url}`);
+
+      const fwd = await act<{ url: string }>("browser.forward", { session_id: sid });
+      assert.equal(fwd.status, 200, JSON.stringify(fwd.body.error));
+      assert.ok(fwd.body.result!.url.endsWith("/b"));
+
+      const reload = await act<{ url: string }>("browser.reload", { session_id: sid });
+      assert.equal(reload.status, 200, JSON.stringify(reload.body.error));
+      assert.ok(reload.body.result!.url.endsWith("/b"));
+    });
+
+    await t.test("browser.network registra tráfego e declara o que descartou", async () => {
+      // A primeira chamada ANEXA o log; só depois dela há o que contar. Afirmar
+      // tráfego antes disso mediria o instante do attach, não a rede.
+      const primeiro = await act<{ requests: unknown[]; attached: boolean }>("browser.network", { session_id: sid });
+      assert.equal(primeiro.status, 200, JSON.stringify(primeiro.body.error));
+      assert.equal(primeiro.body.result!.attached, true);
+
+      await act("browser.reload", { session_id: sid });
+      const depois = await act<{ requests: { url: string; method: string }[]; dropped: number; total: number }>(
+        "browser.network",
+        { session_id: sid, limit: 50 },
+      );
+      assert.ok(depois.body.result!.requests.length > 0, "um reload gera pelo menos um pedido");
+      assert.equal(typeof depois.body.result!.dropped, "number");
+      assert.ok(depois.body.result!.requests.some((r) => r.url.startsWith(fixture.base)));
+    });
+
+    await t.test("browser.download é negado por capability antes de tocar o disco", async () => {
+      const denied = await act<never>("browser.download", { session_id: sid, url: `${fixture.base}/arquivo` });
+      assert.equal(denied.status, 403);
+      assert.equal(denied.body.error?.code, "CAPABILITY_DENIED");
+      assert.equal(denied.body.error?.detail?.required, "download");
+    });
+
+    await t.test("browser.task sem AgentProvider falha explicitamente, não devolve QUEUED decorativo", async () => {
+      const task = await act<never>("browser.task", { session_id: sid, goal: "fazer algo" });
+      assert.equal(task.status, 400);
+      assert.equal(task.body.error?.code, "INVALID_REQUEST");
+      assert.match(task.body.error?.message ?? "", /AgentProvider/);
+      assert.equal(task.body.result, null, "não pode vir uma task fingindo estar enfileirada");
+    });
+
+    await t.test("alvo inexistente e ambíguo saem com o código certo", async () => {
+      const naoExiste = await act<never>("browser.click", {
+        session_id: sid,
+        target: { selector: "#jamais-existiu" },
+      });
+      assert.equal(naoExiste.status, 404);
+      assert.equal(naoExiste.body.error?.code, "TARGET_NOT_FOUND");
+
+      const invalido = await act<never>("browser.click", { session_id: sid, target: { chave_inventada: "x" } });
+      assert.equal(invalido.status, 400);
+      assert.equal(invalido.body.error?.code, "INVALID_REQUEST");
+    });
+
+    await t.test("takeover congela o agente com 409 e release exige reobservação", async () => {
+      const took = await call<SessionInfo>("POST", `/api/v1/sessions/${sid}/takeover`, {});
+      assert.equal(took.status, 200);
+      assert.equal(took.body.control, "human");
+      assert.equal(took.body.status, "PAUSED");
+
+      const blocked = await act<never>("browser.observe", { session_id: sid });
+      assert.equal(blocked.status, 409);
+      assert.equal(blocked.body.error?.code, "CONTROL_HELD_BY_HUMAN");
+
+      const released = await call<SessionInfo>("POST", `/api/v1/sessions/${sid}/release`, {});
+      assert.equal(released.status, 200);
+      assert.equal(released.body.control, "agent");
+      assert.equal(released.body.status, "RECOVERING", "release NÃO presume que a página continua onde estava");
+
+      // Quem reobserva de fato é quem libera ACTIVE.
+      const obs = await act<{ url: string }>("browser.observe", { session_id: sid, limit: 5 });
+      assert.equal(obs.status, 200, JSON.stringify(obs.body.error));
+      const agora = await call<SessionInfo>("GET", `/api/v1/sessions/${sid}`);
+      assert.equal(agora.body.status, "ACTIVE");
+    });
+
+    await t.test("handoff troca o dono preservando URL e abas", async () => {
+      const antes = await call<SessionInfo>("GET", `/api/v1/sessions/${sid}`);
+      const urlAntes = antes.body.pages.find((p) => p.active)?.url;
+      const handed = await call<SessionInfo>("POST", `/api/v1/sessions/${sid}/handoff`, { to_owner: "outro-agente" });
+      assert.equal(handed.status, 200, JSON.stringify(handed.body));
+      assert.equal(handed.body.owner, "outro-agente");
+      assert.equal(handed.body.pages.find((p) => p.active)?.url, urlAntes);
+    });
+
+    await t.test("URL de esquema proibido é bloqueada antes da navegação (anti-SSRF)", async () => {
+      const bloqueada = await act<never>("browser.goto", { session_id: sid, url: "file:///etc/passwd" });
+      assert.equal(bloqueada.status, 403);
+      assert.equal(bloqueada.body.error?.code, "POLICY_BLOCKED");
+    });
+  } finally {
+    await call("DELETE", `/api/v1/sessions/${sid}`, {});
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FASE 18 — segredo injetado por referência não aparece em resposta, evento ou trilha
+// ─────────────────────────────────────────────────────────────────────────────
+
+test("browser.type com credential_ref injeta sem vazar em resposta, evento ou audit", async () => {
+  const SEGREDO = "S3nh4-SUPER-secreta-nomos-9f2a";
+  const perfil = `tst-vault-${Math.random().toString(36).slice(2, 8)}`;
+  const perfilDir = path.join(DEFAULT_PROFILES_ROOT, perfil);
+  await new FileVault(perfil).put("senha_teste", SEGREDO);
+
+  const created = await call<SessionInfo>("POST", "/api/v1/sessions", {
+    owner: "teste-vault",
+    profile: perfil,
+    headless: true,
+    client: "teste-vault",
+  });
+  assert.equal(created.status, 201, JSON.stringify(created.body));
+  const sid = created.body.session_id;
+
+  // Socket aberto ANTES da injeção: evento emitido depois é o que interessa.
+  const ws = new WebSocket(`ws://${daemon.host}:${daemon.port}/events?session_id=${sid}`);
+  const eventos: string[] = [];
+  await new Promise<void>((resolve, reject) => {
+    ws.once("open", () => resolve());
+    ws.once("error", reject);
+  });
+  ws.on("message", (data: Buffer | string) => eventos.push(String(data)));
+
+  try {
+    await act("browser.goto", { session_id: sid, url: `${fixture.base}/` });
+
+    const typed = await act<{ credential_ref: string; injected: boolean; secret_verified: boolean }>("browser.type", {
+      session_id: sid,
+      target: { selector: "#campo" },
+      credential_ref: "senha_teste",
+    });
+    assert.equal(typed.status, 200, JSON.stringify(typed.body.error));
+    assert.equal(typed.body.result!.credential_ref, "senha_teste");
+    assert.equal(typed.body.result!.injected, true);
+
+    // CONTROLE POSITIVO. "não achei o segredo no log" só significa alguma coisa
+    // se o segredo tiver de fato existido: aqui ele é lido de volta do DOM real.
+    const valor = await act<{ content: string }>("browser.extract", {
+      session_id: sid,
+      target: { selector: "#campo" },
+      format: "value",
+    });
+    assert.equal(valor.body.result!.content, SEGREDO, "sem isto, o teste de vazamento seria vácuo");
+
+    // 1. A resposta da injeção não carrega valor, comprimento nem prefixo.
+    assert.ok(!JSON.stringify(typed.body).includes(SEGREDO), "segredo vazou no envelope de browser.type");
+
+    // 2. Nenhum evento do bus carrega o valor.
+    await new Promise<void>((r) => setTimeout(r, 200));
+    const usou = eventos.filter((e) => e.includes('"secret.used"'));
+    assert.ok(usou.length > 0, "a injeção tem de emitir secret.used — auditar o uso é o ponto");
+    for (const frame of eventos) {
+      assert.ok(!frame.includes(SEGREDO), `segredo vazou num RuntimeEvent: ${frame.slice(0, 160)}`);
+    }
+
+    // 3. A trilha JSONL no disco também não.
+    const trilha = path.join(sessionsRoot, sid, "actions.jsonl");
+    const conteudo = await readFile(trilha, "utf8");
+    assert.ok(conteudo.length > 0, "a ação tem de ter deixado trilha");
+    assert.ok(conteudo.includes("browser.type"), "a trilha tem de registrar a ação");
+    assert.ok(!conteudo.includes(SEGREDO), "segredo vazou no audit log");
+
+    // 4. Referência inexistente falha explicitamente, sem cair em digitação vazia.
+    const inexistente = await act<never>("browser.type", {
+      session_id: sid,
+      target: { selector: "#campo" },
+      credential_ref: "nao_existe",
+    });
+    assert.equal(inexistente.body.success, false);
+    assert.equal(inexistente.body.error?.code, "INVALID_REQUEST");
+  } finally {
+    ws.close();
+    await call("DELETE", `/api/v1/sessions/${sid}`, {});
+    await rm(perfilDir, { recursive: true, force: true });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Encerramento: nenhum Chromium fica para trás
+// ─────────────────────────────────────────────────────────────────────────────
+
+test("encerramento fecha a sessão e o pool volta a zero", async () => {
+  const del = await call<{ closed: boolean }>("DELETE", `/api/v1/sessions/${sessionId}`, {});
+  assert.equal(del.status, 200);
+  assert.equal(del.body.closed, true);
+
+  const listed = await call<SessionInfo[]>("GET", "/api/v1/sessions");
+  assert.equal(
+    listed.body.find((s) => s.session_id === sessionId),
+    undefined,
+    "sessão fechada sai da listagem padrão",
+  );
+  const health = await call<Record<string, unknown>>("GET", "/health");
+  assert.equal((health.body.sessions as { total: number }).total, 0);
+});

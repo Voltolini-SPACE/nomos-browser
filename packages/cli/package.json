@@ -1,0 +1,19 @@
+{
+  "name": "@nomos/browser-cli",
+  "version": "0.1.0",
+  "description": "CLI nomos-web — cliente HTTP do NOMOS Browser Runtime (contrato v1)",
+  "type": "module",
+  "private": true,
+  "bin": {
+    "nomos-web": "src/main.ts"
+  },
+  "exports": {
+    ".": "./src/main.ts"
+  },
+  "engines": {
+    "node": ">=22.6.0"
+  },
+  "dependencies": {
+    "ws": "8.21.3"
+  }
+}

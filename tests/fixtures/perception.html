@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <title>NOMOS · fixture de percepção</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font: 14px/1.4 system-ui, sans-serif; background: #ffffff; color: #101418; }
+    header { padding: 8px 16px; }
+    h1 { font-size: 18px; margin: 0; }
+    main { padding: 0 16px; }
+    /* Bloco de cor sólida com geometria INTEIRA: o teste de screenshot compara
+       dimensão do PNG com o retângulo do DOM, então nada de subpixel. */
+    #target-block {
+      position: absolute;
+      left: 40px;
+      top: 240px;
+      width: 200px;
+      height: 120px;
+      background: rgb(200, 30, 90);
+    }
+    .linha { margin: 6px 0; }
+    #oculto { display: none; }
+    .spacer { height: 4px; }
+  </style>
+</head>
+<body>
+  <header id="topo"><h1>Painel de percepção</h1></header>
+  <main>
+    <div class="linha">
+      <button id="login-btn" type="button">Entrar</button>
+      <button id="btn-bloqueado" type="button" disabled>Bloqueado</button>
+      <a id="link-docs" href="#docs">Documentação</a>
+    </div>
+    <div class="linha">
+      <label for="user">Usuário</label>
+      <input id="user" name="user" placeholder="operador">
+      <input id="pwd" name="password" type="password" placeholder="senha">
+    </div>
+    <div class="linha">
+      <select id="perfil">
+        <option value="padrao">Padrão</option>
+        <option value="restrito">Restrito</option>
+      </select>
+      <textarea id="nota" placeholder="observação"></textarea>
+    </div>
+    <div class="linha">
+      <img id="logo" alt="marca NOMOS" width="24" height="24"
+           src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
+      <span id="rotulo" role="status">pronto</span>
+    </div>
+    <h2 id="secao">Seção observável</h2>
+    <p id="par">Texto que existe e é lido.</p>
+
+    <!-- Decorativo: sem texto próprio, sem role, sem foco. Filtrado da lista,
+         porém CONTADO em total_elements. -->
+    <div id="decorativo"><div class="spacer"><span></span></div></div>
+
+    <!-- Invisível: display:none. Mesmo tratamento — some da lista, entra na conta. -->
+    <div id="oculto">Invisível mas contado</div>
+
+    <div id="target-block"></div>
+  </main>
+</body>
+</html>

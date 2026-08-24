@@ -5,3 +5,7 @@ profiles/
 .env
 *.log
 downloads/
+__pycache__/
+*.pyc
+*.bak
+spike/evidence/

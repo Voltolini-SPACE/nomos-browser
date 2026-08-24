@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>NOMOS Browser — fixture FASE 13/14/15</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 24px; font: 16px/1.5 -apple-system, system-ui, sans-serif; color: #111; background: #fff; }
+  h1 { font-size: 18px; margin: 0 0 16px; }
+  button { padding: 10px 18px; font-size: 16px; cursor: pointer; }
+  input { padding: 8px; font-size: 16px; width: 260px; }
+  .hidden { display: none; }
+  p { margin: 12px 0; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Fixture — resolução de alvo e verificação de ação</h1>
+
+  <!-- Alvo canônico da cascata: seletor, texto, role e intenção semântica "login". -->
+  <p><button id="login-btn" type="button">Entrar</button></p>
+
+  <p><label for="user">Usuário</label><br>
+     <input id="user" name="user" type="text" placeholder="seu usuário" autocomplete="off"></p>
+
+  <p><label for="pwd">Senha</label><br>
+     <input id="pwd" name="pwd" type="password" placeholder="sua senha" autocomplete="off"></p>
+
+  <!-- Dois irmãos com texto idêntico: nenhum contém o outro, logo a redução por
+       "innermost" NÃO os elimina. É a ambiguidade legítima que precisa falhar. -->
+  <p>
+    <button class="dup" type="button">Duplicado</button>
+    <button class="dup" type="button">Duplicado</button>
+  </p>
+
+  <!-- Controle negativo do verificador: clicar aqui não muda nada. -->
+  <p><button id="quieto" type="button">Quieto</button></p>
+
+  <p><button id="muda-dom" type="button">Mudar DOM</button></p>
+  <p><button id="some" type="button">Sumir</button></p>
+
+  <p><a href="#ajuda">Ajuda</a></p>
+
+  <div id="efemero">EFEMERO_VISIVEL</div>
+  <div id="painel" class="hidden">PAINEL_ABERTO</div>
+  <div id="status" data-state="inicial">estado: inicial</div>
+
+  <!-- Armadilha: mesmo texto do botão de login, porém invisível. Um resolvedor que
+       não filtra visibilidade acha DOIS candidatos e declara ambiguidade falsa. -->
+  <div id="oculto" class="hidden">Entrar</div>
+</main>
+
+<script>
+document.getElementById('login-btn').addEventListener('click', () => {
+  document.getElementById('painel').classList.remove('hidden');
+  const s = document.getElementById('status');
+  s.textContent = 'estado: autenticado';
+  s.dataset.state = 'autenticado';
+  location.hash = '#logado';
+});
+
+document.getElementById('some').addEventListener('click', () => {
+  document.getElementById('efemero').remove();
+});
+
+document.getElementById('muda-dom').addEventListener('click', () => {
+  const d = document.createElement('div');
+  d.className = 'injetado';
+  d.textContent = 'NOVO_NO';
+  document.body.appendChild(d);
+});
+
+// #quieto não tem listener DE PROPÓSITO.
+</script>
+</body>
+</html>
