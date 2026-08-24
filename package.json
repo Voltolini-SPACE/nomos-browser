@@ -1,0 +1,23 @@
+{
+  "name": "nomos-browser",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22.6.0" },
+  "workspaces": ["packages/*"],
+  "scripts": {
+    "spike": "node spike/fase1_spike.ts",
+    "daemon": "node packages/api/src/daemon.ts",
+    "test": "node --test --experimental-strip-types tests/",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "playwright": "1.62.1",
+    "ws": "8.21.3"
+  },
+  "devDependencies": {
+    "typescript": "7.0.2",
+    "@types/node": "26.0.1",
+    "@types/ws": "8.18.1"
+  }
+}

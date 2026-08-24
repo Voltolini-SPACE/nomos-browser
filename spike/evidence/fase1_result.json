@@ -1,0 +1,299 @@
+{
+  "spike": "FASE_1_CONTROLE_REAL",
+  "chromium": "151.0.7922.34",
+  "executavel": "/Users/AI/Library/Caches/ms-playwright/chromium-1234/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing",
+  "playwright": "1.62.1",
+  "duracao_ms": 687,
+  "DOM_CONTROL_PASS": "YES",
+  "CDP_MOUSE_PASS": "YES",
+  "SCREENSHOT_PASS": "YES",
+  "total": 25,
+  "falhas": 0,
+  "checks": [
+    {
+      "id": "DOM-01",
+      "camada": "DOM",
+      "descricao": "localizar elemento por seletor",
+      "esperado": 1,
+      "observado": 1,
+      "pass": true
+    },
+    {
+      "id": "DOM-02",
+      "camada": "DOM",
+      "descricao": "extrair conteúdo textual",
+      "esperado": "Entrar",
+      "observado": "Entrar",
+      "pass": true
+    },
+    {
+      "id": "DOM-03",
+      "camada": "DOM",
+      "descricao": "localizar por role+nome acessível",
+      "esperado": 1,
+      "observado": 1,
+      "pass": true
+    },
+    {
+      "id": "DOM-04",
+      "camada": "DOM",
+      "descricao": "clique altera o DOM",
+      "esperado": "Autenticado",
+      "observado": "Autenticado",
+      "pass": true
+    },
+    {
+      "id": "DOM-05",
+      "camada": "DOM",
+      "descricao": "efeito colateral observável (data-state)",
+      "esperado": "autenticado",
+      "observado": "autenticado",
+      "pass": true
+    },
+    {
+      "id": "DOM-06",
+      "camada": "DOM",
+      "descricao": "navegação alterou a URL",
+      "esperado": "#logado",
+      "observado": "#logado",
+      "pass": true
+    },
+    {
+      "id": "DOM-07",
+      "camada": "DOM",
+      "descricao": "elemento apareceu após ação",
+      "esperado": true,
+      "observado": true,
+      "pass": true
+    },
+    {
+      "id": "DOM-08",
+      "camada": "DOM",
+      "descricao": "preencher input e ler de volta",
+      "esperado": "nomos-operador",
+      "observado": "nomos-operador",
+      "pass": true
+    },
+    {
+      "id": "DOM-09",
+      "camada": "DOM",
+      "descricao": "clique do Playwright chega como evento REAL (isTrusted)",
+      "esperado": {
+        "isTrusted": true
+      },
+      "observado": {
+        "isTrusted": true
+      },
+      "pass": true
+    },
+    {
+      "id": "CDP-01",
+      "camada": "CDP",
+      "descricao": "Input.dispatchMouseEvent mousePressed gerou mousedown",
+      "esperado": true,
+      "observado": true,
+      "pass": true
+    },
+    {
+      "id": "CDP-02",
+      "camada": "CDP",
+      "descricao": "Input.dispatchMouseEvent mouseReleased gerou mouseup",
+      "esperado": true,
+      "observado": true,
+      "pass": true
+    },
+    {
+      "id": "CDP-03",
+      "camada": "CDP",
+      "descricao": "down+up promovidos a click pelo motor",
+      "esperado": true,
+      "observado": true,
+      "pass": true
+    },
+    {
+      "id": "CDP-04",
+      "camada": "CDP",
+      "descricao": "eventos CDP são isTrusted=true (input real, não sintetizado)",
+      "esperado": {
+        "down": true,
+        "up": true,
+        "click": true
+      },
+      "observado": {
+        "down": true,
+        "up": true,
+        "click": true
+      },
+      "pass": true
+    },
+    {
+      "id": "CDP-05",
+      "camada": "CDP",
+      "descricao": "coordenada entregue ao CDP == coordenada recebida pela página (±1px)",
+      "esperado": {
+        "dx": "<=1",
+        "dy": "<=1"
+      },
+      "observado": {
+        "dx": 0.79,
+        "dy": 0
+      },
+      "pass": true
+    },
+    {
+      "id": "CDP-06",
+      "camada": "CDP",
+      "descricao": "Input.dispatchKeyEvent digitou texto",
+      "esperado": "NB7",
+      "observado": "NB7",
+      "pass": true
+    },
+    {
+      "id": "CDP-07",
+      "camada": "CDP",
+      "descricao": "teclado CDP é isTrusted=true",
+      "esperado": {
+        "isTrusted": true
+      },
+      "observado": {
+        "isTrusted": true
+      },
+      "pass": true
+    },
+    {
+      "id": "CDP-08",
+      "camada": "CDP",
+      "descricao": "tecla nomeada (Backspace) aplicada",
+      "esperado": "NB",
+      "observado": "NB",
+      "pass": true
+    },
+    {
+      "id": "CDP-10",
+      "camada": "CDP",
+      "descricao": "controle do instrumento: clique sintetizado por JS chega isTrusted=false",
+      "esperado": {
+        "isTrusted": false
+      },
+      "observado": {
+        "isTrusted": false
+      },
+      "pass": true
+    },
+    {
+      "id": "CDP-09",
+      "camada": "CDP",
+      "descricao": "mouseWheel rolou o contêiner",
+      "esperado": "> 0",
+      "observado": 240,
+      "pass": true
+    },
+    {
+      "id": "SHOT-01",
+      "camada": "SCREENSHOT",
+      "descricao": "PNG decodificável e não vazio",
+      "esperado": "> 1000 bytes",
+      "observado": 17608,
+      "pass": true
+    },
+    {
+      "id": "SHOT-02",
+      "camada": "SCREENSHOT",
+      "descricao": "dimensões coerentes com o viewport (escala uniforme)",
+      "esperado": {
+        "width": 1280,
+        "height": 800
+      },
+      "observado": {
+        "width": 1280,
+        "height": 800
+      },
+      "pass": true
+    },
+    {
+      "id": "SHOT-03",
+      "camada": "SCREENSHOT",
+      "descricao": "pixel no centro do retângulo DOM == cor do elemento (mapeamento coordenada<->pixel)",
+      "esperado": {
+        "cor": {
+          "r": 200,
+          "g": 30,
+          "b": 90,
+          "a": 255
+        },
+        "tolerancia": 12
+      },
+      "observado": {
+        "cor": {
+          "r": 200,
+          "g": 30,
+          "b": 90,
+          "a": 255
+        },
+        "distancia": 0,
+        "coord": {
+          "x": 480,
+          "y": 170
+        }
+      },
+      "pass": true
+    },
+    {
+      "id": "SHOT-04",
+      "camada": "SCREENSHOT",
+      "descricao": "controle negativo: pixel fora do bloco NÃO é a cor do bloco",
+      "esperado": {
+        "distancia": "> 12"
+      },
+      "observado": {
+        "cor": {
+          "r": 255,
+          "g": 255,
+          "b": 255,
+          "a": 255
+        },
+        "distancia": 284.39
+      },
+      "pass": true
+    },
+    {
+      "id": "SHOT-05",
+      "camada": "SCREENSHOT",
+      "descricao": "captura por região (clip) enquadra o elemento certo",
+      "esperado": {
+        "cor": {
+          "r": 200,
+          "g": 30,
+          "b": 90,
+          "a": 255
+        },
+        "dims": {
+          "width": 160,
+          "height": 100
+        }
+      },
+      "observado": {
+        "cor": {
+          "r": 200,
+          "g": 30,
+          "b": 90,
+          "a": 255
+        },
+        "dims": {
+          "width": 160,
+          "height": 100
+        },
+        "distancia": 0
+      },
+      "pass": true
+    },
+    {
+      "id": "SHOT-06",
+      "camada": "SCREENSHOT",
+      "descricao": "captura de página inteira produz PNG válido",
+      "esperado": "> 0",
+      "observado": 800,
+      "pass": true
+    }
+  ]
+}

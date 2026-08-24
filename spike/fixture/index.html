@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>NOMOS Browser — Fixture FASE 1</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 16px/1.4 -apple-system, system-ui, sans-serif; background: #ffffff; color: #111; }
+  main { padding: 24px; }
+  h1 { font-size: 20px; margin: 0 0 16px; }
+  /* Bloco de cor sólida em posição conhecida: alvo da validação coordenada<->pixel.
+     Sem borda, sem sombra, sem gradiente — antialiasing aqui viraria falso negativo. */
+  #target-block {
+    position: absolute; left: 400px; top: 120px;
+    width: 160px; height: 100px;
+    background: rgb(200, 30, 90);
+  }
+  #login-btn { padding: 12px 24px; font-size: 16px; cursor: pointer; }
+  #user { padding: 8px; font-size: 16px; width: 260px; }
+  #scroller { margin-top: 24px; width: 320px; height: 140px; overflow-y: scroll; border: 1px solid #ccc; }
+  #scroller .tall { height: 2000px; background: linear-gradient(#eee, #999); }
+  #result { margin-top: 16px; font-family: ui-monospace, monospace; }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<main>
+  <h1>NOMOS Browser Runtime — fixture de controle real</h1>
+
+  <p><button id="login-btn" type="button">Entrar</button></p>
+  <p><label for="user">Usuário</label><br><input id="user" type="text" autocomplete="off"></p>
+
+  <div id="scroller"><div class="tall"></div></div>
+
+  <div id="result" data-state="inicial">estado: inicial</div>
+  <div id="painel-secreto" class="hidden">PAINEL_ABERTO</div>
+</main>
+
+<div id="target-block"></div>
+
+<script>
+// Registrador de eventos. `isTrusted` é o ponto central desta fixture:
+// um evento sintetizado por JS traz isTrusted=false; um evento entregue pelo
+// motor de input do Chromium (CDP Input.dispatchMouseEvent) traz isTrusted=true.
+// Sem essa distinção não dá para diferenciar controle real de simulação.
+window.__nomosEvents = [];
+function rec(e, extra) {
+  window.__nomosEvents.push(Object.assign({
+    type: e.type,
+    isTrusted: e.isTrusted,
+    target: e.target && e.target.id ? e.target.id : null,
+    x: e.clientX ?? null,
+    y: e.clientY ?? null,
+    key: e.key ?? null,
+    t: performance.now()
+  }, extra || {}));
+}
+
+const btn = document.getElementById('login-btn');
+const result = document.getElementById('result');
+const painel = document.getElementById('painel-secreto');
+const user = document.getElementById('user');
+const scroller = document.getElementById('scroller');
+
+for (const t of ['mousedown', 'mouseup', 'click', 'dblclick', 'contextmenu']) {
+  btn.addEventListener(t, (e) => rec(e));
+}
+btn.addEventListener('click', () => {
+  btn.textContent = 'Autenticado';
+  result.textContent = 'estado: autenticado';
+  result.dataset.state = 'autenticado';
+  painel.classList.remove('hidden');
+  location.hash = '#logado';
+});
+
+for (const t of ['keydown', 'keyup', 'input']) {
+  user.addEventListener(t, (e) => rec(e, { value: user.value }));
+}
+
+scroller.addEventListener('scroll', () => {
+  window.__nomosEvents.push({ type: 'scroll', isTrusted: true, target: 'scroller', scrollTop: scroller.scrollTop, t: performance.now() });
+});
+
+window.__nomosRect = (sel) => {
+  const el = document.querySelector(sel);
+  if (!el) return null;
+  const r = el.getBoundingClientRect();
+  return { x: r.x, y: r.y, width: r.width, height: r.height, cx: r.x + r.width / 2, cy: r.y + r.height / 2 };
+};
+</script>
+</body>
+</html>

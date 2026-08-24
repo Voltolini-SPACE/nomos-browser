@@ -1,0 +1,25 @@
+{
+  "checkpoint": "pre-nomos-browser-product-01",
+  "captured_at_utc": "2026-08-24T13:01:43Z",
+  "host": {
+    "os": "ProductName:\t\tmacOS ProductVersion:\t\t26.3.1 ProductVersionExtra:\t(a) BuildVersion:\t\t25D771280a",
+    "arch": "arm64",
+    "disk_avail": "72Gi"
+  },
+  "runtimes": {
+    "node": "v26.0.0",
+    "npm": "11.12.1",
+    "python": "Python 3.14.7",
+    "chrome": "Google Chrome 151.0.7922.173",
+    "playwright_browsers": "chromium-1234,chromium_headless_shell-1234,ffmpeg-1011,"
+  },
+  "repo": {
+    "path": "/Users/AI/Projects/nomos-browser",
+    "branch": "fatal: ambiguous argument 'HEAD': unknown revision or path not in the working tree.\nUse '--' to separate paths from revisions, like this:\n'git <command> [<revision>...] -- [<file>...]'\nHEAD",
+    "head": "fatal: ambiguous argument 'HEAD': unknown revision or path not in the working tree.\nUse '--' to separate paths from revisions, like this:\n'git <command> [<revision>...] -- [<file>...]'\nHEAD",
+    "dirty_files": "4"
+  },
+  "ports_listen": "*:3283,*:36229,*:43618,*:443,*:49164,*:5000,*:51869,*:51870,*:53,*:7000,*:8321,127.0.0.1:11434,127.0.0.1:20128,127.0.0.1:20131,127.0.0.1:20132,127.0.0.1:2785,127.0.0.1:4321,127.0.0.1:4322,127.0.0.1:53849,127.0.0.1:5432,127.0.0.1:56915,127.0.0.1:59013,127.0.0.1:6379,127.0.0.1:8137,127.0.0.1:8150,127.0.0.1:8322,127.0.0.1:8787,127.0.0.1:8791,127.0.0.1:8794,127.0.0.1:8795,127.0.0.1:8798,127.0.0.1:8808,127.0.0.1:8912,127.0.0.1:8931,127.0.0.1:8975,127.0.0.1:8984,127.0.0.1:9337,[::1]:24642,[::1]:5432,[::1]:6379,",
+  "port_7777_free": true,
+  "nomos_services": "br.com.se7enpay.nomos.servico(70094),ai.sovereign.omniroute(12728),com.nomos.panel(70495),"
+}
