@@ -436,9 +436,15 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
       case "sessions.delete": {
         const id = params.id!;
         await sessions.closeSession(id, typeof body.reason === "string" ? body.reason : "requested");
-        // Sessão fechada de propósito não é órfã: deixar o snapshot faria o
-        // próximo arranque tentar recuperar algo que o dono já encerrou.
-        await recovery.remove(id).catch(() => undefined);
+        // Sessão fechada de propósito não é órfã. Marcar CLOSED faz o próximo
+        // `scan()` decidir `terminate` — o comportamento que o RecoveryManager
+        // já implementa. (Eu havia inventado um `recovery.remove()` que não
+        // existe; a chamada a `undefined` transformava todo DELETE em 500.)
+        try {
+          await recovery.patch(id, { status: "CLOSED" });
+        } catch {
+          // Snapshot ausente é normal: nem toda sessão chegou a ser gravada.
+        }
         services.forget(id);
         queues.delete(id);
         return { closed: true, session_id: id };

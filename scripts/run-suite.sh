@@ -49,6 +49,18 @@ for f in "$RAIZ"/tests/*.test.ts; do
     continue
   fi
 
+  # Testes que carregam LLM competem por memória. Devolver o que ficou residente
+  # antes de cada um evita que o vizinho anterior estoure o timeout deste — o
+  # gate de visão falhava por 121s de carregamento, não por erro de código.
+  case "$nome" in
+    vision|aiprovider|product02-gate)
+      for m in qwen3.5:4b-q8_0 qwen2.5-coder:7b qwen2.5vl:3b moondream:1.8b; do
+        curl -s --max-time 20 -X POST http://127.0.0.1:11434/api/generate \
+          -d "{\"model\":\"$m\",\"keep_alive\":0}" -o /dev/null 2>/dev/null || true
+      done
+      ;;
+  esac
+
   log="$OUT/$nome.log"
   inicio=$(date +%s)
   # `timeout` do coreutils pode não existir no macOS; usa-se um watchdog simples.

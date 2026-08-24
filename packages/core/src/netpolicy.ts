@@ -432,8 +432,25 @@ export class NetworkPolicy {
       if (base.code === "INVALID_REQUEST") {
         return this.#deny("URL_INVALIDA", base.reason, { hop, scheme: base.scheme, host: base.host }, "INVALID_REQUEST");
       }
-      const rule: NetworkRule = /userinfo/i.test(base.reason) ? "USERINFO_NEGADO" : "ESQUEMA_NEGADO";
-      return this.#deny(rule, base.reason, { hop, scheme: base.scheme, host: base.host, url: base.url });
+      // Distinguir "userinfo" de "esquema" olhando a URL, e NÃO casando a prosa
+      // de policy.ts: aquela mensagem não é minha e pode ser reescrita a qualquer
+      // momento sem que este módulo fique sabendo.
+      let temUserinfo = false;
+      try {
+        const parsed = new URL(text);
+        temUserinfo = parsed.username !== "" || parsed.password !== "";
+      } catch {
+        temUserinfo = false;
+      }
+      if (temUserinfo) {
+        // A credencial NÃO é ecoada no motivo nem em `url` — o motivo vai para log.
+        return this.#deny("USERINFO_NEGADO", "url com credencial embutida (userinfo) é bloqueada", {
+          hop,
+          scheme: base.scheme,
+          host: base.host,
+        });
+      }
+      return this.#deny("ESQUEMA_NEGADO", base.reason, { hop, scheme: base.scheme, host: base.host, url: base.url });
     }
 
     if (base.scheme === "about:") {

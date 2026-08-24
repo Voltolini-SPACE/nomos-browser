@@ -105,6 +105,15 @@ before(async () => {
   if (a === null || typeof a === "string") throw new Error("fixture sem porta");
   FIXTURE_URL = `http://127.0.0.1:${a.port}/`;
   ollamaVivo = await ollamaTem(MODELO_VISAO);
+
+  // Devolve a memória antes de começar.
+  //
+  // Rodando este arquivo ISOLADO, o modelo de visão responde em ~1 s. Rodando na
+  // suíte inteira, `vision.test.ts` e `aiprovider.test.ts` deixam modelos de 5 e
+  // 7 GB residentes, e neste M2 de 16 GB com swap no teto o carregamento estoura
+  // o timeout de 120 s — o provider devolve null e o gate falha por RECURSO, não
+  // por correção. Foi exatamente o que aconteceu na primeira execução completa.
+  for (const m of [MODELO_A, MODELO_B, "moondream:1.8b"]) await descarregar(m);
 });
 
 after(async () => {

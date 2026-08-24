@@ -294,10 +294,17 @@ describe("FASE 29 — NetworkPolicy: formas ofuscadas", () => {
     assert.ok((grande.url ?? "").length < 60, `url da decisão longa demais: ${grande.url}`);
 
     // Credencial embutida vaza em log e Referer.
-    const cred = strict.check("http://usuario:senha@exemplo.com/");
+    const cred = strict.check("http://usuario:s3nh4-secreta@exemplo.com/");
     assert.equal(cred.allowed, false);
     assert.equal(cred.rule, "USERINFO_NEGADO");
-    assert.equal(cred.reason.includes("senha"), false, "a senha vazou no motivo da decisão");
+    // A decisão INTEIRA vai para audit/log: a credencial não pode estar em campo
+    // nenhum, não só fora do `reason`.
+    assert.equal(
+      JSON.stringify(cred).includes("s3nh4-secreta"),
+      false,
+      `credencial vazou na decisão: ${JSON.stringify(cred)}`,
+    );
+    assert.equal(JSON.stringify(networkActionError(cred)).includes("s3nh4-secreta"), false, "credencial vazou no ActionError");
 
     assert.equal(strict.check("naoeurl").rule, "URL_INVALIDA");
     assert.equal(strict.check("naoeurl").code, "INVALID_REQUEST");
