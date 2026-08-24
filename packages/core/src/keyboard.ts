@@ -571,7 +571,10 @@ export class KeyboardEngine {
     const isShortcut = (mask & shortcutMask) !== 0;
     const text = phase === "down" && !isShortcut ? d.text : null;
 
-    const params: Record<string, unknown> = {
+    // Tipar como `Record<string, unknown>` puro apagava o literal de `type`, que o
+    // CDP exige estaticamente. A interseção preserva o campo obrigatório e continua
+    // aceitando os opcionais adicionados abaixo.
+    const params: { type: "keyUp" | "keyDown" | "rawKeyDown" } & Record<string, unknown> = {
       // rawKeyDown para tecla sem texto: evita keypress espúrio que "keyDown"
       // geraria para teclas de controle.
       type: phase === "up" ? "keyUp" : text !== null ? "keyDown" : "rawKeyDown",

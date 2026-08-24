@@ -3,13 +3,18 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=22.6.0" },
-  "workspaces": ["packages/*"],
+  "engines": {
+    "node": ">=22.6.0"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "spike": "node spike/fase1_spike.ts",
     "daemon": "node packages/api/src/daemon.ts",
     "test": "node --test --experimental-strip-types tests/",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "typecheck:strict": "tsc --noEmit -p tsconfig.strict.json"
   },
   "dependencies": {
     "playwright": "1.62.1",

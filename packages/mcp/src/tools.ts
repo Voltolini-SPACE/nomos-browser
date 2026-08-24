@@ -189,7 +189,12 @@ function readVerification(tool: string, args: Record<string, unknown>): Verifica
   if (v.timeout_ms !== undefined && (typeof v.timeout_ms !== "number" || !Number.isInteger(v.timeout_ms) || v.timeout_ms < 0)) {
     throw new ToolInputError(`${tool}: "verification.timeout_ms" deve ser inteiro >= 0`);
   }
-  return v as VerificationSpec;
+  // Construção explícita a partir do que foi validado logo acima. Um `as` aqui
+  // afirmaria um formato que o validador nunca conferiu campo a campo.
+  const spec: VerificationSpec = { kind: v.kind as VerificationSpec["kind"] };
+  if (typeof v.expect === "string") spec.expect = v.expect;
+  if (typeof v.timeout_ms === "number") spec.timeout_ms = v.timeout_ms;
+  return spec;
 }
 
 /** Remove chaves `undefined` — o corpo do POST não deve carregar campo fantasma. */

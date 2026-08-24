@@ -5,6 +5,9 @@
   //
   // Este arquivo existe para fechar esse buraco. `noEmit` porque o produto roda
   // do fonte; o compilador é usado como verificador, nunca como gerador.
+  // Config ASPIRACIONAL, opt-in: `npx tsc --noEmit -p tsconfig.strict.json`.
+  // NÃO é gate. Acusa 95 pontos hoje; existe para que a dívida fique medida em
+  // vez de invisível. Fechar essa lista é trabalho futuro declarado.
   "compilerOptions": {
     "target": "es2023",
     "module": "nodenext",
@@ -17,14 +20,8 @@
     "lib": ["es2023", "dom"],
 
     "strict": true,
-    // As duas flags abaixo estão DESLIGADAS aqui de propósito e LIGADAS em
-    // tsconfig.strict.json. Ligadas, acusam 95 pontos em 23 arquivos — quase
-    // todos acesso indexado sem verificação e opcional-vs-undefined. É dívida
-    // real, mas não é o mesmo risco dos erros que este gate barra. Misturar as
-    // duas coisas num gate só produziria um gate permanentemente vermelho, que
-    // ninguém olha.
-    "noUncheckedIndexedAccess": false,
-    "exactOptionalPropertyTypes": false,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
     "noImplicitOverride": true,
     "noFallthroughCasesInSwitch": true,
     "forceConsistentCasingInFileNames": true,

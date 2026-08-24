@@ -50,7 +50,7 @@ export interface NomosBrowserErrorInit {
  * referência. Não ecoar o pedido é o que impede que isso vaze num stack trace.
  */
 export class NomosBrowserError extends Error {
-  readonly name = "NomosBrowserError";
+  override readonly name = "NomosBrowserError";
   readonly code: ActionErrorCode;
   readonly actionId: string | null;
   readonly timing: ActionTiming | null;

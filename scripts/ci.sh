@@ -48,6 +48,11 @@ if [ "$ESTAGIO" = "fast" ] || [ "$ESTAGIO" = "all" ]; then
     [ -f "tests/$t.test.ts" ] && checar "test:$t" testes "tests/$t.test.ts"
   done
   checar "python:sdk" bash -c "cd '$RAIZ/sdk-python' && python3 -m unittest discover -s tests"
+
+  # Node v26 só faz type-stripping: sem este passo, nada aqui é verificado por um
+  # typechecker. Foi assim que um `--token` silenciosamente ignorado sobreviveu a
+  # 551 testes verdes.
+  checar "typecheck" npx tsc --noEmit -p tsconfig.json
 fi
 
 if [ "$ESTAGIO" = "guards" ] || [ "$ESTAGIO" = "all" ]; then
