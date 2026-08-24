@@ -915,6 +915,14 @@ const handleDownload: ActionHandler = async (svc, req) => {
   }
 
   const waiter: Promise<Download> = page.waitForEvent("download", { timeout: num(req.body, "timeout_ms", 30_000)! });
+  // O waiter nasce ANTES do urlGuard, porque o evento pode chegar durante a
+  // navegação. Se o guarda recusar a URL (ou qualquer passo abaixo lançar),
+  // ninguém mais espera por ele — e o `page.waitForEvent` rejeita sozinho quando
+  // a página/contexto fecha. Sem este handler, essa rejeição é `unhandled` e
+  // DERRUBA O PROCESSO do daemon inteiro, levando junto todas as outras sessões.
+  // Anexar o handler aqui não consome a rejeição do `await waiter` abaixo:
+  // aquele caminho continua caindo no try/catch que devolve TIMEOUT.
+  waiter.catch(() => undefined);
   svc.emit("download.started", req.session_id, req.action_id, { via: url !== null ? "url" : "target" }, "agent");
 
   if (url !== null) {
