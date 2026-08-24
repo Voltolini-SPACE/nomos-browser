@@ -178,8 +178,20 @@ export function build(): { saida: string; resolucao: BrandResolution; selo: stri
     .replaceAll("__NOMOS_ASSINATURA__", tokens.assinatura)
     .replaceAll("__NOMOS_INTEGRIDADE__", integridade.verificado ? `sha256 verificado ${integridade.sha256.slice(0, 12)}` : "sha256 NÃO verificado");
 
-  if (html.includes("__NOMOS_") || html.includes("/*__NOMOS_CORES__*/")) {
-    throw new Error("build: sobrou placeholder não substituído no HTML gerado");
+  // Guarda específico, não genérico. O `__NOMOS_` cru também casava com
+  // `window.__NOMOS_TOKEN`, que o daemon injeta em tempo de execução e é
+  // legítimo — o guarda passou a acusar o próprio produto.
+  const PLACEHOLDERS = [
+    "/*__NOMOS_CORES__*/",
+    "__NOMOS_FONT_MONO__",
+    "__NOMOS_SELO__",
+    "__NOMOS_TAGLINE__",
+    "__NOMOS_ASSINATURA__",
+    "__NOMOS_INTEGRIDADE__",
+  ];
+  const sobraram = PLACEHOLDERS.filter((ph) => html.includes(ph));
+  if (sobraram.length > 0) {
+    throw new Error(`build: placeholder não substituído: ${sobraram.join(", ")}`);
   }
 
   const dist = path.join(HERE, "dist");

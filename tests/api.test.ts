@@ -73,6 +73,7 @@ function startFixture(): Promise<Fixture> {
 }
 
 let fixture: Fixture;
+let TOKEN: string | null = null;
 let daemon: DaemonHandle;
 let sessionsRoot: string;
 
@@ -84,7 +85,14 @@ interface Res<T> {
 async function call<T>(method: string, route: string, body?: unknown): Promise<Res<T>> {
   const res = await fetch(`${daemon.url}${route}`, {
     method,
-    headers: { "content-type": "application/json", "x-nomos-client": "teste-api" },
+    headers: {
+      "content-type": "application/json",
+      "x-nomos-client": "teste-api",
+      // FASE 15: o control plane passou a exigir credencial. O token de arranque
+      // vem do próprio handle — nunca de arquivo, para o teste não depender do
+      // ambiente do operador.
+      ...(TOKEN !== null ? { authorization: `Bearer ${TOKEN}` } : {}),
+    },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
   const text = await res.text();
@@ -131,6 +139,7 @@ before(async () => {
     env: {},
     read_file: false,
   });
+  TOKEN = (daemon as unknown as { token: string | null }).token;
 });
 
 after(async () => {
@@ -295,7 +304,7 @@ test("5) detach do cliente deixa a sessão viva, órfã e reatável", async () =
 // ─────────────────────────────────────────────────────────────────────────────
 
 test("6) WebSocket /events entrega ao menos um RuntimeEvent após uma ação", async () => {
-  const ws = new WebSocket(`ws://${daemon.host}:${daemon.port}/events?session_id=${sessionId}`);
+  const ws = new WebSocket(`ws://${daemon.host}:${daemon.port}/events?session_id=${sessionId}${TOKEN !== null ? `&token=${encodeURIComponent(TOKEN)}` : ""}`);
   const frames: RuntimeEvent[] = [];
 
   await new Promise<void>((resolve, reject) => {
@@ -335,7 +344,7 @@ test("6) WebSocket /events entrega ao menos um RuntimeEvent após uma ação", a
 });
 
 test("6b) filtro ?events= com nome desconhecido fecha o socket em vez de calar", async () => {
-  const ws = new WebSocket(`ws://${daemon.host}:${daemon.port}/events?events=nao.existe`);
+  const ws = new WebSocket(`ws://${daemon.host}:${daemon.port}/events?events=nao.existe${TOKEN !== null ? `&token=${encodeURIComponent(TOKEN)}` : ""}`);
   const code = await new Promise<number>((resolve, reject) => {
     ws.once("close", (c: number) => resolve(c));
     ws.once("error", reject);
@@ -772,7 +781,7 @@ test("browser.type com credential_ref injeta sem vazar em resposta, evento ou au
   const sid = created.body.session_id;
 
   // Socket aberto ANTES da injeção: evento emitido depois é o que interessa.
-  const ws = new WebSocket(`ws://${daemon.host}:${daemon.port}/events?session_id=${sid}`);
+  const ws = new WebSocket(`ws://${daemon.host}:${daemon.port}/events?session_id=${sid}${TOKEN !== null ? `&token=${encodeURIComponent(TOKEN)}` : ""}`);
   const eventos: string[] = [];
   await new Promise<void>((resolve, reject) => {
     ws.once("open", () => resolve());

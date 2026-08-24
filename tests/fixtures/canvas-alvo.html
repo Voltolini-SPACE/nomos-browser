@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>NOMOS Browser — fixture FASE 2/3/4 (alvo só-pixel)</title>
+<style>
+  * { box-sizing: border-box; }
+  /* Sem animação, sem transição, sem fonte web: o screenshot precisa ser
+     byte-estável entre duas capturas, senão o teste de frescor mediria ruído
+     do renderizador em vez de mudança da página. */
+  body { margin: 0; padding: 0; font: 16px/1.5 -apple-system, system-ui, sans-serif; color: #111; background: #fff; }
+  #palco { position: relative; width: 640px; height: 240px; }
+  #tela { display: block; border: 0; }
+  #cobertura { position: absolute; background: #ff00d0; }
+  .oculta { display: none; }
+  button { padding: 10px 18px; font-size: 16px; cursor: pointer; }
+  p { margin: 12px 0 12px 12px; }
+</style>
+</head>
+<body>
+
+<div id="palco">
+  <!--
+    ALVO SÓ-PIXEL. O retângulo é desenhado DENTRO do canvas: não vira nó do DOM,
+    não tem role, não tem texto, não tem label, não tem tabindex e não está na
+    lista de elementos interativos do TargetResolver. Logo:
+      - selector  não alcança (não há elemento para o retângulo)
+      - role_text não alcança (canvas não tem nome acessível)
+      - accessibility não alcança (sem label/placeholder/title/alt)
+      - semantic  não alcança (canvas fora do universo de candidatos)
+    Só sobra o 4º degrau. É esse o ponto da fixture.
+  -->
+  <canvas id="tela" width="640" height="240"></canvas>
+
+  <!-- Overlay do canvas: escondido por padrão, posicionado sobre o retângulo. -->
+  <div id="cobertura" class="oculta"></div>
+</div>
+
+<!-- Alvo com identidade DOM legítima ao lado: prova que a política prefere DOM
+     quando DOM existe, e que a visão nem chega a ser consultada. -->
+<p><button id="btn-real" type="button">Confirmar</button></p>
+
+<!-- Dois irmãos idênticos: ambiguidade legítima que tem de PARAR a cascata no
+     1º degrau, sem descer para a visão. -->
+<p>
+  <button class="gemea" type="button">Gemeo</button>
+  <button class="gemea" type="button">Gemeo</button>
+</p>
+
+<!-- Overlay do botão: fixed, fora do botão, sem pointer-events:none. -->
+<div id="cobre-botao" class="oculta"></div>
+
+<script>
+// Coordenadas do alvo DENTRO do canvas. A fixture é a única fonte de verdade
+// sobre onde desenhou — o teste pergunta, não adivinha.
+var ALVO = { x: 60, y: 60, w: 160, h: 80 };
+var COR_INICIAL = '#0057ff';
+var COR_ALTERADA = '#ff3300';
+
+function desenha(cor) {
+  var c = document.getElementById('tela');
+  var g = c.getContext('2d');
+  g.fillStyle = '#f2f2f2';
+  g.fillRect(0, 0, c.width, c.height);
+  g.fillStyle = cor;
+  g.fillRect(ALVO.x, ALVO.y, ALVO.w, ALVO.h);
+}
+
+desenha(COR_INICIAL);
+
+// Caixa do alvo em coordenadas de página (px CSS) — o mesmo espaço em que o
+// PerceptionEngine e o Pointer Engine trabalham.
+window.__alvoBox = function () {
+  var r = document.getElementById('tela').getBoundingClientRect();
+  return { x: r.x + ALVO.x, y: r.y + ALVO.y, width: ALVO.w, height: ALVO.h };
+};
+
+window.__corAlvo = function () { return COR_INICIAL; };
+window.__corAlterada = function () { return COR_ALTERADA; };
+
+// Muda os PIXELS do alvo sem mexer no DOM: é exatamente o caso que só um hash
+// de imagem detecta (nenhuma mutação de DOM acontece aqui).
+window.__mudaPixels = function () { desenha(COR_ALTERADA); return true; };
+
+window.__cobreCanvas = function () {
+  var d = document.getElementById('cobertura');
+  d.style.left = ALVO.x + 'px';
+  d.style.top = ALVO.y + 'px';
+  d.style.width = ALVO.w + 'px';
+  d.style.height = ALVO.h + 'px';
+  d.classList.remove('oculta');
+  return true;
+};
+
+window.__cobreBotao = function () {
+  var r = document.getElementById('btn-real').getBoundingClientRect();
+  var d = document.getElementById('cobre-botao');
+  d.style.position = 'fixed';
+  d.style.left = r.x + 'px';
+  d.style.top = r.y + 'px';
+  d.style.width = r.width + 'px';
+  d.style.height = r.height + 'px';
+  d.style.background = '#ff00d0';
+  d.style.zIndex = '9999';
+  d.classList.remove('oculta');
+  return true;
+};
+</script>
+</body>
+</html>

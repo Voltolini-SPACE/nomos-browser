@@ -212,6 +212,12 @@ const BASE = (function () {
 })();
 const $ = (id) => document.getElementById(id);
 
+// O daemon injeta o token na página servida a quem já o apresentou. Fica em
+// memória, não em localStorage: um token de arranque não deve sobreviver ao
+// fechamento da aba, e localStorage seria legível por qualquer script da origem.
+const TOKEN = (typeof window.__NOMOS_TOKEN === "string" && window.__NOMOS_TOKEN !== "") ? window.__NOMOS_TOKEN : null;
+function comAuth(h) { const o = Object.assign({}, h || {}); if (TOKEN !== null) { o["authorization"] = "Bearer " + TOKEN; } return o; }
+
 const S = { sessionId: null, controle: "agent", pausado: false, escala: 1, timerTela: null, ws: null, backoff: 1000 };
 
 // ── abas ──────────────────────────────────────────────────────────────
@@ -245,7 +251,7 @@ function feed(nome, texto, erro) {
 async function acao(tool, corpo) {
   const r = await fetch(BASE + "/api/v1/" + tool, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: comAuth({ "content-type": "application/json" }),
     body: JSON.stringify(Object.assign({ session_id: S.sessionId }, corpo || {})),
   });
   const env = await r.json().catch(() => null);
@@ -262,7 +268,7 @@ async function acao(tool, corpo) {
 async function gestao(rota, metodo, corpo) {
   const r = await fetch(BASE + rota, {
     method: metodo || "GET",
-    headers: corpo ? { "content-type": "application/json" } : undefined,
+    headers: comAuth(corpo ? { "content-type": "application/json" } : {}),
     body: corpo ? JSON.stringify(corpo) : undefined,
   });
   if (!r.ok) { throw new Error(rota + " → HTTP " + r.status); }
@@ -328,7 +334,7 @@ async function espelhar() {
       return;
     }
     const img = $("tela");
-    img.src = BASE + r.screenshot_url + "?t=" + Date.now();
+    img.src = BASE + r.screenshot_url + "?t=" + Date.now() + (TOKEN !== null ? "&token=" + encodeURIComponent(TOKEN) : "");
     img.hidden = false;
     $("semTela").style.display = "none";
     // A escala converte coordenada da página em pixel exibido. Sem ela o cursor
@@ -354,7 +360,11 @@ function moverCursor(x, y, acaoTxt, clicou) {
 // ── eventos ao vivo ───────────────────────────────────────────────────
 function conectarEventos() {
   let ws;
-  try { ws = new WebSocket(BASE.replace(/^http/, "ws") + "/events"); } catch { return; }
+  // O navegador não deixa mandar header no handshake de WebSocket; por isso o
+  // token vai na query, que é o único canal disponível. Aceitável porque a
+  // origem é loopback e o token é efêmero — mas está declarado no SECURITY.md.
+  const qsTok = TOKEN !== null ? "?token=" + encodeURIComponent(TOKEN) : "";
+  try { ws = new WebSocket(BASE.replace(/^http/, "ws") + "/events" + qsTok); } catch { return; }
   S.ws = ws;
   ws.onopen = () => { S.backoff = 1000; feed("ws.conectado", ""); };
   ws.onmessage = (m) => {

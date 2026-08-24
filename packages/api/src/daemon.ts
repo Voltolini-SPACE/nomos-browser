@@ -53,6 +53,7 @@ import { EventBus } from "../../observability/src/eventbus.ts";
 import { AuditLog } from "../../observability/src/audit.ts";
 import { loadConfig, type DaemonConfig, type LoadConfigOptions } from "./config.ts";
 import { EVENTS_PATH, httpStatusFor, matchRoute, parseEventFilter } from "./router.ts";
+import { AuthManager, scopeForRoute, scopeForTool, type IssuedToken } from "./auth.ts";
 
 /** Raiz do pacote de UI, resolvida a partir deste arquivo (não do cwd do processo). */
 const UI_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../ui");
@@ -177,6 +178,9 @@ export interface DaemonHandle {
   readonly bus: EventBus;
   readonly services: RuntimeServices;
   readonly startedAt: number;
+  /** Segredo do token raiz. Devolvido UMA vez; nunca vai para log. */
+  readonly token: string | null;
+  readonly tokenPath: string | null;
   health(): HealthResponse;
   close(reason?: string): Promise<void>;
 }
@@ -189,6 +193,14 @@ export interface StartDaemonOptions extends LoadConfigOptions {
    * teste que sequestrasse os sinais do processo seria efeito colateral escondido.
    */
   install_signal_handlers?: boolean;
+  /**
+   * Desliga a exigencia de credencial. Existe para migracao e para testes que
+   * ainda nao carregam token; NUNCA deve ser usado em operacao real. O daemon
+   * avisa em stderr quando arranca assim.
+   */
+  auth_disabled?: boolean;
+  /** Diretorio onde o token efemero do daemon e gravado (0600). */
+  runtime_dir?: string;
 }
 
 const MAX_URL_LENGTH = 8192;
@@ -265,9 +277,18 @@ function capabilitiesFromBody(body: Body): Partial<Capabilities> | undefined {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function startDaemon(opts: StartDaemonOptions = {}): Promise<DaemonHandle> {
-  const { agent = null, install_signal_handlers = false, ...configOpts } = opts;
+  const { agent = null, install_signal_handlers = false, auth_disabled = false, runtime_dir, ...configOpts } = opts;
   const config = loadConfig(configOpts);
   const startedAt = Date.now();
+
+  const auth = new AuthManager({
+    disabled: auth_disabled,
+    ...(runtime_dir !== undefined ? { runtime_dir } : {}),
+  });
+  // Token de arranque: efemero, gravado 0600, nunca impresso. O segredo so
+  // aparece no retorno de startDaemon() e no arquivo — nao em log, nem em
+  // evento, nem em audit.
+  const rootToken: IssuedToken | null = auth_disabled ? null : auth.bootstrap();
 
   const bus = new EventBus({
     bufferSize: config.event_buffer,
@@ -514,7 +535,7 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
    * governança inacessível). Um runtime que morre porque a marca não resolveu
    * seria acoplamento errado — o runtime é independente da marca.
    */
-  function serveUi(res: http.ServerResponse): void {
+  function serveUi(res: http.ServerResponse, token: string | null): void {
     const dist = path.join(UI_DIR, "dist", "index.html");
     if (!existsSync(dist)) {
       res.writeHead(503, { "content-type": "text/plain; charset=utf-8" });
@@ -528,7 +549,14 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
       "content-security-policy": "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; connect-src 'self'",
       "x-content-type-options": "nosniff",
     });
-    res.end(readFileSync(dist));
+    // O token entra na página servida a quem JÁ o apresentou. Não é vazamento:
+    // é a mesma credencial voltando para a mesma origem, para que os fetch()
+    // seguintes não precisem repeti-la na URL (onde ficaria no histórico).
+    const html = readFileSync(dist, "utf8").replace(
+      "</head>",
+      `<script>window.__NOMOS_TOKEN=${JSON.stringify(token ?? "")};</script></head>`,
+    );
+    res.end(html);
   }
 
   /**
@@ -581,8 +609,20 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
         // permissivo, qualquer página aberta no navegador do dono passaria a
         // conseguir dirigir o runtime. Servir a UI daqui remove a necessidade de
         // CORS em vez de contorná-la.
+        // A credencial é extraída ANTES de qualquer rota, inclusive a da UI e a
+        // dos screenshots. Deixá-las fora do gate — como estavam — significaria
+        // que qualquer processo local lê a página e as imagens da sessão sem se
+        // identificar, e a UI ainda entregaria o token embutido de brinde.
+        const cred = AuthManager.extract(req.headers as Record<string, string | undefined>, url);
+        const autenticado = auth.authenticate(cred);
+
         if ((req.method ?? "GET") === "GET" && (url.pathname === "/" || url.pathname === "/ui")) {
-          serveUi(res);
+          if (!autenticado.ok) {
+            res.writeHead(401, { "content-type": "text/plain; charset=utf-8" });
+            res.end(`NOMOS Web exige credencial.\nAbra: ${url.origin}/?token=<token>\nToken em: ${auth.tokenPath ?? "(auth desligada)"}\n`);
+            return;
+          }
+          serveUi(res, cred);
           return;
         }
 
@@ -590,6 +630,17 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
         // opaco: sem esta rota a NOMOS Web não teria como exibir a página
         // espelhada, e o `nomos-web replay` não teria imagem nenhuma.
         if ((req.method ?? "GET") === "GET" && url.pathname.startsWith("/screenshots/")) {
+          if (!autenticado.ok) {
+            res.writeHead(401, { "content-type": "text/plain; charset=utf-8" });
+            res.end("credencial ausente ou inválida\n");
+            return;
+          }
+          const escopoShot = auth.authorize(autenticado.token, "OBSERVE");
+          if (!escopoShot.ok) {
+            res.writeHead(403, { "content-type": "text/plain; charset=utf-8" });
+            res.end("escopo OBSERVE não concedido\n");
+            return;
+          }
           serveScreenshot(res, url.pathname);
           return;
         }
@@ -624,6 +675,37 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
         }
 
         const route = lookup.route;
+
+        // ── FASE 15/16/17 — control plane autenticado e autorizado ──────────
+        //
+        // O gate vem ANTES de ler o corpo e antes de qualquer efeito. Autenticar
+        // depois de já ter agido não é autenticação, é registro.
+        //
+        // A ordem também importa entre as duas camadas: primeiro "quem é você"
+        // (401), depois "o que você pode" (403). Responder 403 a quem não se
+        // identificou revelaria que a rota existe e que a credencial ausente
+        // seria aceita para alguma outra coisa.
+        if (!autenticado.ok) {
+          res.setHeader("www-authenticate", 'Bearer realm="nomos-browser"');
+          envelopeError(res, action_id, "FAILED", "CAPABILITY_DENIED", autenticado.reason, { auth: autenticado.failure }, 401);
+          return;
+        }
+        const escopo = route.name === "action" ? scopeForTool(route.tool!) : scopeForRoute(route.name);
+        const sessaoAlvo = route.params?.id ?? (url.searchParams.get("session_id") ?? null);
+        const autorizado = auth.authorize(autenticado.token, escopo, sessaoAlvo);
+        if (!autorizado.ok) {
+          envelopeError(
+            res,
+            action_id,
+            "FAILED",
+            "CAPABILITY_DENIED",
+            autorizado.reason,
+            { auth: autorizado.failure, required_scope: escopo, subject: autenticado.token.subject },
+            403,
+          );
+          return;
+        }
+
         if (route.name === "events") {
           envelopeError(res, action_id, "FAILED", "INVALID_REQUEST", "/events exige upgrade para WebSocket", {
             hint: `ws://${config.host}:${boundPort}${EVENTS_PATH}`,
@@ -669,7 +751,24 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
       socket.destroy();
       return;
     }
+    // O WebSocket era o furo mais silencioso: um socket sem credencial recebia o
+    // fluxo de eventos da sessão — URLs visitadas, alvos clicados, tudo. Recusar
+    // no upgrade, antes de qualquer frame, é o único ponto em que dá para negar
+    // sem já ter vazado o primeiro evento.
+    const credWs = AuthManager.extract(req.headers as Record<string, string | undefined>, url);
+    const authWs = auth.authenticate(credWs);
+    if (!authWs.ok) {
+      socket.write("HTTP/1.1 401 Unauthorized\r\nwww-authenticate: Bearer realm=\"nomos-browser\"\r\nconnection: close\r\n\r\n");
+      socket.destroy();
+      return;
+    }
     const filter = parseEventFilter(url.searchParams);
+    const escopoWs = auth.authorize(authWs.token, "OBSERVE", filter.session_id);
+    if (!escopoWs.ok) {
+      socket.write("HTTP/1.1 403 Forbidden\r\nconnection: close\r\n\r\n");
+      socket.destroy();
+      return;
+    }
     wss.handleUpgrade(req, socket, head, (ws) => {
       if (filter.unknown.length > 0) {
         // Filtro com nome inválido entregaria SILÊNCIO ao cliente, que leria como
@@ -758,6 +857,8 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
     bus,
     services,
     startedAt,
+    token: rootToken?.secret ?? null,
+    tokenPath: auth.tokenPath,
     health,
     close,
   };

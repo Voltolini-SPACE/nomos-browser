@@ -22,6 +22,7 @@ const FIXTURE = readFileSync(path.join(RAIZ, "spike/fixture/index.html"));
 let daemon: { port: number; close: () => Promise<void> };
 let fixtureServer: http.Server;
 let BASE = "";
+let TOKEN: string | null = null;
 let FIXTURE_URL = "";
 
 /** Flags do gate. Só viram YES por asserção executada. */
@@ -56,6 +57,7 @@ before(async () => {
     sessions_root: path.join(RAIZ, "sessions"),
   } as never);
   BASE = `http://127.0.0.1:${daemon.port}`;
+  TOKEN = (daemon as unknown as { token: string | null }).token;
 });
 
 after(async () => {
@@ -72,7 +74,10 @@ after(async () => {
 async function gestao(rota: string, metodo = "GET", corpo?: unknown): Promise<{ status: number; body: any }> {
   const r = await fetch(BASE + rota, {
     method: metodo,
-    headers: corpo === undefined ? undefined : { "content-type": "application/json" },
+    headers: {
+      ...(corpo === undefined ? {} : { "content-type": "application/json" }),
+      ...(TOKEN !== null ? { authorization: `Bearer ${TOKEN}` } : {}),
+    },
     body: corpo === undefined ? undefined : JSON.stringify(corpo),
   });
   return { status: r.status, body: await r.json().catch(() => null) };
@@ -81,7 +86,10 @@ async function gestao(rota: string, metodo = "GET", corpo?: unknown): Promise<{ 
 async function acao(tool: string, corpo: Record<string, unknown>): Promise<{ status: number; env: any }> {
   const r = await fetch(`${BASE}/api/v1/${tool}`, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: {
+      "content-type": "application/json",
+      ...(TOKEN !== null ? { authorization: `Bearer ${TOKEN}` } : {}),
+    },
     body: JSON.stringify(corpo),
   });
   return { status: r.status, env: await r.json() };
@@ -184,7 +192,7 @@ test("8-9. opera por coordenada + mouse, com cursor observável no event bus", a
   // Coordenada pura é o último degrau da cascata — o mesmo caminho que a visão
   // usaria depois de devolver uma caixa.
   const ev: any[] = [];
-  const ws = new WebSocket(`${BASE.replace("http", "ws")}/events?session_id=${sessionId}`);
+  const ws = new WebSocket(`${BASE.replace("http", "ws")}/events?session_id=${sessionId}${TOKEN !== null ? `&token=${encodeURIComponent(TOKEN)}` : ""}`);
   await new Promise<void>((r, j) => { ws.once("open", () => r()); ws.once("error", j); });
   ws.on("message", (m) => { try { ev.push(JSON.parse(String(m))); } catch { /* frame inválido */ } });
 

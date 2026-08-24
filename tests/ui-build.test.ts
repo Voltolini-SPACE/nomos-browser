@@ -58,8 +58,19 @@ test("build injeta os tokens, marca PROPOSTA e não deixa placeholder", () => {
   const r = build();
   const html = readFileSync(r.saida, "utf8");
 
-  assert.ok(!html.includes("__NOMOS_"), "sobrou placeholder no HTML gerado");
-  assert.ok(!html.includes("/*__NOMOS_CORES__*/"), "bloco de cores não substituído");
+  // Guarda específico: o `__NOMOS_` cru também casa com `window.__NOMOS_TOKEN`,
+  // que o daemon injeta em tempo de execução e é legítimo. O guarda genérico
+  // passou a acusar o próprio produto.
+  for (const ph of [
+    "/*__NOMOS_CORES__*/",
+    "__NOMOS_FONT_MONO__",
+    "__NOMOS_SELO__",
+    "__NOMOS_TAGLINE__",
+    "__NOMOS_ASSINATURA__",
+    "__NOMOS_INTEGRIDADE__",
+  ]) {
+    assert.ok(!html.includes(ph), `sobrou placeholder no HTML gerado: ${ph}`);
+  }
   assert.match(html, /--nomos-marca:\s*#[0-9A-F]{6}/, "variável de cor da marca ausente no build");
   assert.match(html, /--nomos-mono:[^;]+mono/i, "família mono ausente no build");
 

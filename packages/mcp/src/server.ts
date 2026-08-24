@@ -104,6 +104,20 @@ export class RuntimeClient {
     this.#fetch = opts.fetchImpl ?? (globalThis.fetch as unknown as FetchLike);
   }
 
+  /**
+   * Credencial do control plane (FASE 15/17).
+   *
+   * O servidor MCP não guarda token próprio: ele repassa o do ambiente. Quem
+   * decide o que esse token pode fazer é o runtime, pelos escopos — é ali que a
+   * autorização pertence, não numa casca de tradução de protocolo.
+   */
+  #authHeaders(): Record<string, string> {
+    const h: Record<string, string> = { "content-type": "application/json", accept: "application/json" };
+    const t = process.env.NOMOS_BROWSER_TOKEN;
+    if (t !== undefined && t.trim() !== "") h["authorization"] = `Bearer ${t.trim()}`;
+    return h;
+  }
+
   /** POST JSON. Devolve status + corpo já parseado; não interpreta o envelope. */
   async post(path: string, body: unknown): Promise<{ status: number; json: unknown }> {
     const url = `${this.baseUrl}${path}`;
@@ -112,7 +126,7 @@ export class RuntimeClient {
     try {
       const res = await this.#fetch(url, {
         method: "POST",
-        headers: { "content-type": "application/json", accept: "application/json" },
+        headers: this.#authHeaders(),
         body: JSON.stringify(body),
         signal: AbortSignal.timeout(this.timeoutMs),
       });

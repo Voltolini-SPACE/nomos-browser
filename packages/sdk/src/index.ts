@@ -102,7 +102,10 @@ class HttpTransport implements Transport {
   #base: string;
   #timeout: number;
 
-  constructor(base: string, timeout_ms: number) {
+  readonly token: string | null;
+
+  constructor(base: string, timeout_ms: number, token: string | null = null) {
+    this.token = token;
     this.#base = base;
     this.#timeout = timeout_ms;
   }
@@ -120,6 +123,9 @@ class HttpTransport implements Transport {
     const timeout_ms = opts?.timeout_ms ?? this.#timeout;
     const headers: Record<string, string> = { accept: "application/json" };
     if (body !== undefined) headers["content-type"] = "application/json";
+    // Credencial do control plane (FASE 15). Ausência não é erro aqui: o 401
+    // vem do runtime, que é quem tem autoridade para negar.
+    if (this.token !== null) headers["authorization"] = `Bearer ${this.token}`;
 
     let status: number;
     let text: string;

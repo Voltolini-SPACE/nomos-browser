@@ -40,6 +40,7 @@ import {
   type ReplayOptions,
   type TimelineItem,
 } from "../../observability/src/replay.ts";
+import { readControlToken } from "../../api/src/auth.ts";
 
 export const CLI_NAME = "nomos-web";
 export const CLI_VERSION = "0.1.0";
@@ -404,6 +405,8 @@ export class RuntimeClient {
   async send(method: string, pathname: string, body?: unknown): Promise<HttpResult> {
     const headers: Record<string, string> = { accept: "application/json" };
     if (body !== undefined) headers["content-type"] = "application/json";
+    const tok = resolveToken(this.token);
+    if (tok !== null) headers["authorization"] = `Bearer ${tok}`;
 
     let response: Response;
     try {
@@ -508,6 +511,30 @@ function envelopeError(envelope: ActionResponse): Outcome["error"] {
 
 function pad(text: string, width: number): string {
   return text.length >= width ? text : text + " ".repeat(width - text.length);
+}
+
+
+/**
+ * Credencial do control plane (FASE 15).
+ *
+ * Ordem: opção explícita → NOMOS_BROWSER_TOKEN → arquivo do daemon (0600).
+ * Ausência NÃO é erro aqui: quem responde 401 é o runtime, e a decisão pertence
+ * a ele. Um cliente que se recusasse a arrancar sem token quebraria o modo de
+ * migração `auth_disabled`.
+ *
+ * Um arquivo de token com permissão larga faz `readControlToken` lançar; aqui
+ * isso vira "sem token" em vez de crash — o 401 subsequente é mensagem melhor
+ * para o operador do que um stack trace.
+ */
+export function resolveToken(explicito?: string | null): string | null {
+  if (explicito !== undefined && explicito !== null && explicito !== "") return explicito;
+  const env = process.env.NOMOS_BROWSER_TOKEN;
+  if (env !== undefined && env.trim() !== "") return env.trim();
+  try {
+    return readControlToken(process.env.NOMOS_RUNTIME_DIR);
+  } catch {
+    return null;
+  }
 }
 
 export function table(headers: readonly string[], rows: readonly (readonly string[])[]): string[] {
