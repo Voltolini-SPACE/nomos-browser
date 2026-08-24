@@ -3,7 +3,7 @@
   "chromium": "151.0.7922.34",
   "executavel": "/Users/AI/Library/Caches/ms-playwright/chromium-1234/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing",
   "playwright": "1.62.1",
-  "duracao_ms": 429,
+  "duracao_ms": 792,
   "DOM_CONTROL_PASS": "YES",
   "CDP_MOUSE_PASS": "YES",
   "SCREENSHOT_PASS": "YES",
