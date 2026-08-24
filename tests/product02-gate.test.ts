@@ -254,13 +254,13 @@ test("FASE 10 — dois providers REAIS, ownership arbitrado, handoff e auditoria
     // ── Dois providers REAIS, em série (memória) ────────────────────────────
     const pergunta = "Responda apenas com o número: quanto é 2+2?";
 
-    const A = new OllamaProvider({ endpoint: OLLAMA, model: MODELO_A, timeout_ms: 300_000 });
+    const A = new OllamaProvider({ base_url: OLLAMA, model: MODELO_A, timeout_ms: 300_000 });
     const rA = await A.request({ prompt: pergunta });
     assert.equal(rA.provider_id, `ollama:${MODELO_A}`);
     assert.ok(rA.text.length > 0, "provider A não respondeu");
     await descarregar(MODELO_A);
 
-    const B = new OllamaProvider({ endpoint: OLLAMA, model: MODELO_B, timeout_ms: 300_000 });
+    const B = new OllamaProvider({ base_url: OLLAMA, model: MODELO_B, timeout_ms: 300_000 });
     const rB = await B.request({ prompt: pergunta });
     assert.equal(rB.provider_id, `ollama:${MODELO_B}`);
     assert.ok(rB.text.length > 0, "provider B não respondeu");

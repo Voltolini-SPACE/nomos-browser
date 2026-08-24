@@ -395,10 +395,14 @@ export interface HttpResult {
 export class RuntimeClient {
   readonly baseUrl: string;
   readonly timeoutMs: number;
+  /** Credencial explícita. Sem este campo, `resolveToken(this.token)` lia `undefined`
+   *  e um `--token` do operador era descartado sem aviso. */
+  readonly token: string | null;
 
-  constructor(baseUrl: string, timeoutMs: number = DEFAULT_TIMEOUT_MS) {
+  constructor(baseUrl: string, timeoutMs: number = DEFAULT_TIMEOUT_MS, token: string | null = null) {
     this.baseUrl = baseUrl;
     this.timeoutMs = timeoutMs;
+    this.token = token;
   }
 
   /** Falha de transporte vira UnreachableError (exit 3); resposta HTTP nunca vira. */
