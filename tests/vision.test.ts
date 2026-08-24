@@ -346,10 +346,9 @@ test("A17. nenhum caminho de parsing escreve em stdout/stderr", () => {
   const capturado: string[] = [];
   const outW = process.stdout.write.bind(process.stdout);
   const errW = process.stderr.write.bind(process.stderr);
-  // @ts-expect-error patch temporário para provar silêncio
-  process.stdout.write = (c: unknown) => (capturado.push(String(c)), true);
-  // @ts-expect-error patch temporário para provar silêncio
-  process.stderr.write = (c: unknown) => (capturado.push(String(c)), true);
+  // Patch temporário só para provar o silêncio; restaurado no finally.
+  process.stdout.write = ((c: unknown) => (capturado.push(String(c)), true)) as typeof process.stdout.write;
+  process.stderr.write = ((c: unknown) => (capturado.push(String(c)), true)) as typeof process.stderr.write;
   try {
     parseVisionResponse({ response: "" }, PARSE_CTX);
     parseVisionResponse({ response: "lixo total sem json" }, PARSE_CTX);
@@ -840,6 +839,37 @@ test("C16. oclusão indeterminável NÃO é liberada (fail closed)", async () =>
   const g = await pol.guard(page, semEvidencia);
   assert.equal(g.ok, false, "sem handle e sem âncora, o guard liberou o clique");
   assert.equal(g.outcome, "HUMAN_REQUIRED");
+});
+
+test("C17. LIMITE DECLARADO: a política valida a caixa MECANICAMENTE, não semanticamente", async () => {
+  await fresh();
+  const alvo = await alvoBox();
+
+  // Caixa deslocada de propósito: dentro da viewport, sobre o mesmo <canvas>,
+  // tamanho plausível, confiança alta — e completamente FORA do retângulo azul.
+  // É a forma exata do erro real: qwen2.5vl:3b devolveu, com confiança 0.99,
+  // {109,113,280,227} para um alvo em {60,60,160,80}.
+  const errada: BoundingBox = { x: 320, y: 150, width: 160, height: 80 };
+  assert.ok(errada.x > alvo.x + alvo.width, "a caixa de teste precisa estar fora do alvo");
+
+  const pol = new VisionFallbackPolicy({ vision: scriptedFor(errada, { confidence: 0.99 }) });
+  const r = await pol.resolve(page, CANVAS_TARGET);
+
+  // A política ACEITA — e é honesto que aceite: para um alvo só-pixel não existe
+  // fonte independente contra a qual conferir. Este teste existe para que a
+  // limitação seja EXECUTÁVEL, e não uma frase esquecida num documento.
+  assert.equal(r.outcome, "RESOLVED");
+  assert.deepEqual(r.target?.box, errada);
+  assert.match(String(r.target?.description), /região apontada por/);
+  assert.doesNotMatch(String(r.target?.description), /alvo confirmado|verificado/);
+
+  // O que se PODE provar: a caixa aceita não contém o alvo. Prova por pixel.
+  const recorte = decodePng(await page.screenshot({ type: "png", scale: "css", clip: errada }));
+  const px = pixelAt(recorte, Math.floor(recorte.width / 2), Math.floor(recorte.height / 2));
+  assert.ok(
+    colorDistance(px, { r: 0x00, g: 0x57, b: 0xff, a: 255 }) > 50,
+    `a caixa "errada" caiu sobre o alvo azul (${JSON.stringify(px)}) — o teste perdeu o sentido`,
+  );
 });
 
 // ═════════════════════════════════════════════════════════════════════════════

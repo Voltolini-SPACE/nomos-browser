@@ -54,6 +54,8 @@ import { AuditLog } from "../../observability/src/audit.ts";
 import { loadConfig, type DaemonConfig, type LoadConfigOptions } from "./config.ts";
 import { EVENTS_PATH, httpStatusFor, matchRoute, parseEventFilter } from "./router.ts";
 import { AuthManager, scopeForRoute, scopeForTool, type IssuedToken } from "./auth.ts";
+import { LeaseManager, CONTROL_NOT_OWNED, CONTROL_NOT_OWNED_CODE } from "../../core/src/lease.ts";
+import { RecoveryManager } from "../../core/src/recovery.ts";
 
 /** Raiz do pacote de UI, resolvida a partir deste arquivo (não do cwd do processo). */
 const UI_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../ui");
@@ -178,6 +180,8 @@ export interface DaemonHandle {
   readonly bus: EventBus;
   readonly services: RuntimeServices;
   readonly startedAt: number;
+  /** Arbitragem de controle entre agentes (FASE 9). */
+  readonly leases: LeaseManager;
   /** Segredo do token raiz. Devolvido UMA vez; nunca vai para log. */
   readonly token: string | null;
   readonly tokenPath: string | null;
@@ -290,6 +294,49 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
   // evento, nem em audit.
   const rootToken: IssuedToken | null = auth_disabled ? null : auth.bootstrap();
 
+  // FASE 9/10 — arbitragem de controle.
+  //
+  // `handoff` trocava o dono, mas nada impedia o agente B de mandar um clique
+  // enquanto A ainda operava: dois donos lógicos disputando o mesmo Chromium.
+  // `allow_unleased` fica LIGADO para não quebrar o cliente de agente único que
+  // nunca pediu lease — mas assim que alguém adquire, os demais são barrados.
+  const leases = new LeaseManager({ allow_unleased: true });
+
+  // FASE 11-14 — snapshot de sessão em disco.
+  //
+  // Sem isto o `RecoveryManager` existe mas nunca tem o que recuperar: depois de
+  // um SIGKILL o `scan()` devolve lista VAZIA, e um teste que percorre essa lista
+  // passa por vacuidade. Foi exatamente o que aconteceu na primeira execução
+  // deste gate — o flag ficou verde sem que nada tivesse sido recuperado.
+  const recovery = new RecoveryManager(
+    config.sessions_root !== null ? { root: config.sessions_root } : {},
+  );
+
+  /** Grava o estado da sessão. Falha aqui NÃO derruba a ação — só perde o recovery. */
+  async function snapshot(session_id: string): Promise<void> {
+    try {
+      const info = await sessions.observe(session_id);
+      const ctx = sessions.contextInfo(session_id);
+      const ativa = info.pages.find((p) => p.active) ?? info.pages[0];
+      await recovery.save({
+        session_id,
+        owner: info.owner,
+        profile: info.profile,
+        url: ativa?.url ?? null,
+        page_ids: info.pages.map((p) => p.page_id),
+        context_id: info.context_id,
+        capabilities: info.permissions,
+        cdp_endpoint: null,
+        browser_pid: process.pid,
+        browser_id: ctx.context_id,
+        status: info.status,
+        ephemeral: ctx.ephemeral,
+      });
+    } catch (e) {
+      console.error("[daemon] snapshot falhou:", (e as Error).message);
+    }
+  }
+
   const bus = new EventBus({
     bufferSize: config.event_buffer,
     onHandlerError: (error, event, subscriberId) => {
@@ -381,6 +428,7 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
           ...(typeof body.task === "string" ? { task: body.task } : {}),
           client: typeof body.client === "string" ? body.client : client,
         });
+        await snapshot(info.session_id);
         return info;
       }
       case "sessions.get":
@@ -388,6 +436,9 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
       case "sessions.delete": {
         const id = params.id!;
         await sessions.closeSession(id, typeof body.reason === "string" ? body.reason : "requested");
+        // Sessão fechada de propósito não é órfã: deixar o snapshot faria o
+        // próximo arranque tentar recuperar algo que o dono já encerrou.
+        await recovery.remove(id).catch(() => undefined);
         services.forget(id);
         queues.delete(id);
         return { closed: true, session_id: id };
@@ -719,6 +770,27 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
           : {};
 
         if (route.name === "action") {
+          // Lease (FASE 9/10): depois de autenticar, autorizar E ler o corpo —
+          // o `session_id` chega no corpo, não na query. Checar antes seria
+          // pular a arbitragem em praticamente toda chamada real.
+          const ator = client ?? autenticado.token.subject;
+          const alvoSessao =
+            typeof (body as Record<string, unknown>).session_id === "string"
+              ? ((body as Record<string, unknown>).session_id as string)
+              : url.searchParams.get("session_id");
+          if (alvoSessao !== null && alvoSessao !== "") {
+            const d = leases.check(alvoSessao, ator, { tool: route.tool! });
+            if (!d.allowed) {
+              envelopeError(res, action_id, "FAILED", CONTROL_NOT_OWNED_CODE, d.message, {
+                lease: CONTROL_NOT_OWNED,
+                reason: d.reason,
+                current_holder: d.current_holder ?? null,
+                tool: route.tool,
+                actor: ator,
+              }, 409);
+              return;
+            }
+          }
           await handleAction(route.tool!, body, url.searchParams, client, res);
           return;
         }
@@ -857,6 +929,7 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
     bus,
     services,
     startedAt,
+    leases,
     token: rootToken?.secret ?? null,
     tokenPath: auth.tokenPath,
     health,
@@ -884,12 +957,29 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
 
 /** Entrada de processo: `node packages/api/src/daemon.ts`. */
 export async function main(): Promise<void> {
-  const handle = await startDaemon({ install_signal_handlers: true });
+  // `runtime_dir` e `auth_disabled` precisam de caminho por ambiente: sem isso o
+  // daemon rodando como PROCESSO só sabe gravar o token no diretório padrão do
+  // usuário, e não há como isolá-lo em teste de crash — que é justamente o
+  // cenário em que se precisa de um diretório descartável.
+  const runtimeDir = process.env.NOMOS_RUNTIME_DIR;
+  const authOff = process.env.NOMOS_BROWSER_AUTH === "off";
+  const handle = await startDaemon({
+    install_signal_handlers: true,
+    ...(runtimeDir !== undefined && runtimeDir !== "" ? { runtime_dir: runtimeDir } : {}),
+    ...(authOff ? { auth_disabled: true } : {}),
+  });
   console.error(
     `nomos-browser em ${handle.url} — contrato v${CONTRACT_VERSION}, versão ${handle.config.version}, ` +
       `headless=${String(handle.config.headless)}, política=${handle.config.default_policy}`,
   );
   console.error(`eventos: ws://${handle.host}:${handle.port}${EVENTS_PATH}`);
+  // O caminho, nunca o segredo. Quem tem permissão de ler o arquivo já tem o
+  // token; imprimi-lo o colocaria em log, histórico de terminal e captura de tela.
+  if (authOff) {
+    console.error("[daemon] AVISO: autenticação DESLIGADA (NOMOS_BROWSER_AUTH=off) — não use assim em operação");
+  } else {
+    console.error(`credencial: ${handle.tokenPath ?? "(não gravada)"}`);
+  }
 }
 
 if ((import.meta as { main?: boolean }).main === true) {

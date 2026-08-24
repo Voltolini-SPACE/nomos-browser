@@ -1,0 +1,89 @@
+# FASE 38 — CI anti-regressão.
+#
+# Este arquivo NÃO contém a lógica da CI: ela vive em `scripts/ci.sh`, que roda
+# igual aqui e na máquina do desenvolvedor. Um YAML com os comandos duplicados
+# diverge do script na primeira mudança, e aí a CI passa a testar outra coisa.
+#
+# ESTADO HONESTO: este workflow nunca foi executado por um runner do GitHub —
+# o repositório não tem remote. O que está PROVADO é `scripts/ci.sh` rodando
+# localmente. Enquanto não houver uma execução verde no runner, considere este
+# arquivo declaração de intenção, não evidência.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  # Barato primeiro: quebrar unidade não deve custar dez minutos de Chromium
+  # para ser descoberto.
+  fast:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "26"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: npm ci
+      - run: ./scripts/ci.sh fast
+
+  guards:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "26"
+      - run: npm ci
+      # `guards` inclui a checagem de marca, que depende do cofre de brandbooks
+      # em `~/Documents/BRANDBOOKS_OFICIAIS`. Num runner limpo esse cofre não
+      # existe e o build da UI falha fechado — que é o comportamento correto.
+      # Por isso o passo é tolerado aqui e obrigatório na máquina do dono.
+      - run: ./scripts/ci.sh guards
+        continue-on-error: true
+
+  integration:
+    runs-on: macos-latest
+    needs: fast
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "26"
+      - run: npm ci
+      - run: npx playwright install chromium
+      - run: ./scripts/ci.sh integration
+
+  adversarial:
+    runs-on: macos-latest
+    needs: fast
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "26"
+      - run: npm ci
+      - run: npx playwright install chromium
+      - run: ./scripts/ci.sh adversarial
+
+  e2e:
+    runs-on: macos-latest
+    needs: [integration, adversarial]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "26"
+      - run: npm ci
+      - run: npx playwright install chromium
+      # Os gates que dependem de Ollama (visão e dois providers) se PULAM
+      # explicitamente quando o backend não existe — nunca fingem sucesso.
+      # Num runner sem Ollama, `VISION_MOUSE_PASS` e `MULTI_AI_PASS` saem
+      # pulados, e isso precisa aparecer no relatório do runner.
+      - run: ./scripts/ci.sh e2e

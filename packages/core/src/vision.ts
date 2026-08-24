@@ -1211,6 +1211,26 @@ export interface RungAttempt {
   duration_ms: number;
 }
 
+/**
+ * LIMITE DECLARADO — o que `RESOLVED` no 4º degrau significa e o que NÃO significa.
+ *
+ * SIGNIFICA: a caixa passou por verificação MECÂNICA — veio do screenshot atual
+ * (`image_hash`), é única, tem confiança acima do limiar, cabe na viewport, tem
+ * tamanho clicável, e o centro dela não está coberto por outro elemento.
+ *
+ * NÃO SIGNIFICA que a caixa é o alvo que o chamador pediu. Para um alvo
+ * só-pixel não existe, por definição, nenhuma fonte independente contra a qual
+ * conferir — é justamente por não haver identidade no DOM que se chegou à
+ * visão. MEDIDO nesta máquina: `qwen2.5vl:3b`, com confiança 0.99, devolveu
+ * `{109,113,280,227}` para um retângulo realmente desenhado em
+ * `{60,60,160,80}` (viewport 640x400) — estruturalmente sã, semanticamente
+ * errada, e o clique cairia fora. Na mesma página em 1280x800 o mesmo modelo
+ * devolveu `{63,65,195,115}`, cujo centro cai DENTRO do alvo.
+ *
+ * Conclusão operacional: acima do 4º degrau a verificação é da AÇÃO (FASE 14,
+ * `verifier.ts`), não do alvo. Quem clica por visão precisa exigir
+ * `VerificationSpec` — o degrau 5 (humano) existe para quando nem isso serve.
+ */
 export interface PolicyResolution {
   outcome: VisionOutcome;
   /** Degrau que PRODUZIU a caixa; "human" quando nenhum produziu. */

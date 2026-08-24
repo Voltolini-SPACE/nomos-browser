@@ -97,3 +97,19 @@ permanece `—`, nunca "implementado".
 |---|---|---|---|---|
 | 0 | Revalidação do estado de entrada | `checkpoints/entry-product-02.json` | `tests/e2e-gate.test.ts` | REPRODUZIDO |
 | 1 | Rastreabilidade | `docs/RASTREABILIDADE.md` | `tests/traceability.test.ts` | REPRODUZIDO |
+| 2–5 | VisionProvider + cascata + provas negativas | `packages/core/src/vision.ts` | `tests/vision.test.ts`, `tests/product02-gate.test.ts` | REPRODUZIDO |
+| 6–7 | AIProvider + dois providers locais reais | `packages/core/src/aiprovider.ts` | `tests/aiprovider.test.ts` | MEDIDO |
+| 8–10 | Handoff, ownership e auditoria por agente | `packages/core/src/lease.ts` | `tests/lease.test.ts`, `tests/product02-gate.test.ts` | REPRODUZIDO |
+| 11–14 | Crash do processo, snapshot e recovery | `packages/core/src/recovery.ts` | `tests/recovery-watchdog.test.ts`, `tests/product02-gate.test.ts` | REPRODUZIDO |
+| 15–17 | Auth do control plane e autorização MCP | `packages/api/src/auth.ts` | `tests/auth.test.ts` | REPRODUZIDO |
+| 19 | Endurecimento de replay | `packages/observability/src/replay-verify.ts` | `tests/replay-hardening.test.ts` | REPRODUZIDO |
+| 20 | Watchdog | `packages/observability/src/watchdog.ts` | `tests/recovery-watchdog.test.ts` | REPRODUZIDO |
+| 23 | Decisão sobre driver nativo | `docs/DECISAO-DRIVER-NATIVO.md` | — | OBSERVADO |
+| 27–28 | Política de download e upload | `packages/core/src/filepolicy.ts` | `tests/security-files-secrets.test.ts` | REPRODUZIDO |
+| 29 | Política de rede do navegador | `packages/core/src/netpolicy.ts` | `tests/security-net-injection.test.ts` | REPRODUZIDO |
+| 30 | Injeção via página | `packages/core/src/sanitize.ts` | `tests/security-net-injection.test.ts` | REPRODUZIDO |
+| 31 | Não-exfiltração de segredo | `packages/core/src/vault.ts` | `tests/security-files-secrets.test.ts` | REPRODUZIDO |
+| 32–33 | Arnês de benchmark | `packages/observability/src/bench.ts` | `tests/bench.test.ts` | MEDIDO |
+| 37 | Marca NOMOS | `docs/BRAND.md` | `tests/ui-build.test.ts` | REPRODUZIDO |
+| 38 | CI anti-regressão | `scripts/ci.sh` | `scripts/ci.sh` | OBSERVADO |
+| 41–42 | Vazamento e não-interferência | `checkpoints/capture.sh` | — | OBSERVADO |
