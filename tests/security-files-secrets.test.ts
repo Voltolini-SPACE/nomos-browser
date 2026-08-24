@@ -42,6 +42,7 @@ import { FileVault, SecretLeakError, makeScrubber, type SecretScrubber } from ".
 import { ACTIONS_FILE, AuditLog } from "../packages/observability/src/audit.ts";
 import { EVENTS_FILE, SessionRecorder, loadReplay } from "../packages/observability/src/replay.ts";
 import type { Observation } from "../packages/core/src/contract.ts";
+import { makeAuditEntry } from "../packages/core/src/contract.ts";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Raízes temporárias — nada toca `profiles/` nem `sessions/` do repositório
@@ -601,7 +602,7 @@ describe("FASE 31 — canário no cookie, no header e no vault não vaza", () =>
     // ── Grava as quatro superfícies de disco ──────────────────────────────
     const rec = new SessionRecorder(SID, { root: SESSIONS_ROOT });
     await rec.init();
-    await rec.recordAction({
+    await rec.recordAction(makeAuditEntry({
       timestamp: new Date().toISOString(),
       session: SID,
       actor: "agente-de-teste",
@@ -613,7 +614,7 @@ describe("FASE 31 — canário no cookie, no header e no vault não vaza", () =>
       // `credential_ref` é a REFERÊNCIA (tem de sobreviver); `authorization`
       // carrega o valor e tem de ser destruído pela redação.
       detail: { credential_ref: REF1, authorization: `Bearer ${CANARY}`, session_token: CANARY2 },
-    });
+    }));
     const dl = new DownloadPolicy({ root: DOWNLOAD_ROOT }).check({
       suggested_filename: "extrato\u202Efdp.exe",
       session_id: SID,

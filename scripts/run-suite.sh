@@ -64,14 +64,32 @@ for f in "$RAIZ"/tests/*.test.ts; do
   log="$OUT/$nome.log"
   inicio=$(date +%s)
   # `timeout` do coreutils pode não existir no macOS; usa-se um watchdog simples.
+  #
+  # O teste roda em GRUPO DE PROCESSOS PRÓPRIO (`set -m` + subshell), e o vigia
+  # mata o GRUPO (`kill -TERM -$pid`), não só o pai. A versão anterior matava
+  # apenas o pai com `kill -9`: os filhos (`tests/fixtures/watchdog-child.ts`,
+  # daemons, Chromium) eram reparentados para o init e sobreviviam. A validação
+  # final encontrou 19 desses órfãos, o mais velho com 6 h de vida — todos
+  # nascidos de arquivos classificados MORTO por timeout.
+  #
+  # TERM primeiro para dar chance de teardown; KILL depois, para quem ignorou.
+  set -m
   ( cd "$RAIZ" && node --test "tests/$nome.test.ts" >"$log" 2>&1 ) &
   pid=$!
-  ( sleep "$TIMEOUT_S"; kill -9 "$pid" 2>/dev/null ) &
+  set +m
+  (
+    sleep "$TIMEOUT_S"
+    kill -TERM -"$pid" 2>/dev/null || kill -TERM "$pid" 2>/dev/null
+    sleep 3
+    kill -KILL -"$pid" 2>/dev/null || kill -KILL "$pid" 2>/dev/null
+  ) &
   vigia=$!
   wait "$pid" 2>/dev/null
   rc=$?
   kill "$vigia" 2>/dev/null
   wait "$vigia" 2>/dev/null
+  # Rede de segurança: sobrou algo do grupo depois do wait? Some com o grupo.
+  kill -KILL -"$pid" 2>/dev/null || true
   fim=$(date +%s)
   seg=$((fim - inicio))
 

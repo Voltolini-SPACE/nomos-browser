@@ -20,6 +20,8 @@ import type {
   CredentialRef,
   DownloadRecord,
   Observation,
+  ObservationEnvelope,
+  Provenance,
   PageInfo,
   ResolvedTarget,
   SessionInfo,
@@ -278,16 +280,21 @@ export class Session {
 
   // ── percepção ──────────────────────────────────────────────────────────────
 
-  observe(opts: ObserveOptions = {}): Promise<Observation> {
-    return this.#act<Observation>("browser.observe", pruned({ ...opts }));
+  /**
+   * O retorno traz `provenance` além da observação. O tipo diz isso na cara
+   * porque conteúdo de página é UNTRUSTED por construção: um SDK que devolvesse
+   * `Observation` pura convidaria o chamador a esquecer o selo.
+   */
+  observe(opts: ObserveOptions = {}): Promise<ObservationEnvelope> {
+    return this.#act<ObservationEnvelope>("browser.observe", pruned({ ...opts }));
   }
 
   find(target: TargetDescriptor): Promise<ResolvedTarget> {
     return this.#act<ResolvedTarget>("browser.find", { target });
   }
 
-  extract(opts: ExtractOptions = {}): Promise<{ content: unknown }> {
-    return this.#act<{ content: unknown }>("browser.extract", pruned({ ...opts }));
+  extract(opts: ExtractOptions = {}): Promise<{ content: unknown; provenance: Provenance }> {
+    return this.#act<{ content: unknown; provenance: Provenance }>("browser.extract", pruned({ ...opts }));
   }
 
   screenshot(opts: ScreenshotOptions = {}): Promise<ScreenshotResult> {

@@ -37,6 +37,7 @@ import {
   newId,
   nowIso,
   type ActionErrorCode,
+  makeAuditEntry,
   type AuditEntry,
   type DownloadRecord,
   type UploadRecord,
@@ -591,11 +592,15 @@ export function toDownloadRecord(d: DownloadDecision, status: DownloadRecord["st
 
 /** `AuditEntry` do contrato. Download bloqueado também vira linha — nunca some. */
 export function downloadAuditEntry(d: DownloadDecision, action_id: string | null = null): AuditEntry {
-  return {
+  return makeAuditEntry({
     timestamp: d.decided_at,
+    event: d.allowed ? "action" : "policy",
     session: d.session_id,
     actor: "runtime",
     action: "browser.download",
+    capability: "download",
+    policy_decision: d.allowed ? "allow" : "deny",
+    policy_reason: d.allowed ? null : `DOWNLOAD_DENIED: ${d.reason}`,
     target: d.source,
     result: d.allowed ? "ok" : "denied",
     verified: false,
@@ -615,7 +620,7 @@ export function downloadAuditEntry(d: DownloadDecision, action_id: string | null
       destination: d.resolved_path,
       reason: d.reason,
     },
-  };
+  });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -875,11 +880,15 @@ export function toUploadRecord(d: UploadDecision, req: UploadRequest = {}): Uplo
 
 /** `AuditEntry` do contrato. Upload negado também vira linha. */
 export function uploadAuditEntry(d: UploadDecision, action_id: string | null = null): AuditEntry {
-  return {
+  return makeAuditEntry({
     timestamp: d.decided_at,
+    event: d.allowed ? "action" : "policy",
     session: d.session_id,
     actor: "runtime",
     action: "browser.upload",
+    capability: "upload",
+    policy_decision: d.allowed ? "allow" : "deny",
+    policy_reason: d.allowed ? null : `UPLOAD_DENIED: ${d.reason}`,
     target: d.destination_site,
     result: d.allowed ? "ok" : "denied",
     verified: false,
@@ -894,5 +903,5 @@ export function uploadAuditEntry(d: UploadDecision, action_id: string | null = n
       size: d.size,
       reason: d.reason,
     },
-  };
+  });
 }

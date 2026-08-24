@@ -81,6 +81,15 @@ export type ActionErrorCode =
   | "CAPABILITY_DENIED"
   | "TARGET_NOT_FOUND"
   | "TARGET_AMBIGUOUS"
+  // FASE 4 — o alvo existe mas não pode receber o gesto: fora do viewport
+  // mesmo depois de rolar, área zero, invisível, coberto, ou removido do DOM.
+  // Existe para separar "não achei" de "achei e não dá para agir", que antes
+  // caíam os dois em silêncio com `success:true`.
+  | "TARGET_NOT_ACTIONABLE"
+  // FASE 4 — o gesto foi despachado e NENHUM evento chegou ao alvo. É o código
+  // que impede o sucesso falso: sem ele, "cliquei" e "o elemento foi clicado"
+  // eram a mesma afirmação.
+  | "CLICK_NOT_DELIVERED"
   | "VERIFICATION_FAILED"
   | "NAVIGATION_FAILED"
   | "TIMEOUT"
@@ -229,6 +238,97 @@ export interface VisionProvider {
     goal: string;
     viewport: { width: number; height: number };
   }): Promise<{ box: BoundingBox; confidence: number } | null>;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Procedência de conteúdo web (ligação da defesa anti-injeção)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * O vocabulário de suspeita mora AQUI e não em `sanitize.ts` por causa da
+ * direção da dependência: `sanitize.ts` já importa deste arquivo. Descrever
+ * `Provenance.findings` importando de volta fecharia um ciclo. Além disso este
+ * tipo atravessa a fronteira da API — vai no corpo da resposta de
+ * `browser.observe`/`browser.extract` —, e tudo que atravessa a fronteira é
+ * contrato por definição.
+ */
+export type SuspeitaCategoria =
+  | "instrucao"
+  | "impersonacao"
+  | "exfiltracao"
+  | "execucao"
+  | "oculto"
+  | "delimitador";
+
+export type SuspeitaSeveridade = "alta" | "media" | "baixa";
+
+export interface Suspeita {
+  /** `S1`, `S2`… — o mesmo id aparece como marcador dentro de `sanitized_content`. */
+  id: string;
+  /** Identificador estável do padrão que disparou. */
+  padrao: string;
+  categoria: SuspeitaCategoria;
+  severidade: SuspeitaSeveridade;
+  /** Onde foi encontrado, em linguagem de auditor. */
+  onde: string;
+  /** `ref` do elemento (`e12`), ou `null` quando não veio de um elemento. */
+  ref: string | null;
+  /** Excerto LITERAL da página, com contexto. Nunca reescrito. */
+  trecho: string;
+  motivo: string;
+}
+
+export type TrustLevel = "TRUSTED" | "UNTRUSTED";
+export type ContentSource = "WEB" | "RUNTIME";
+
+/**
+ * Selo de procedência que acompanha TODO conteúdo lido de página.
+ *
+ * A razão de existir é que o runtime não controla o modelo: não há como impedir
+ * que ele leia um parágrafo persuasivo. O que o runtime controla é o *envelope*
+ * da entrega. Sem este selo, texto de página e texto de runtime chegam ao agente
+ * indistinguíveis — e indistinguível é exatamente a condição que a injeção de
+ * prompt explora.
+ *
+ * `raw_content_available === false` nunca significa "o conteúdo sumiu": o texto
+ * literal continua em `findings[].trecho` e dentro de `sanitized_content`. Apagar
+ * sem rastro esconderia o ataque de quem audita, que é justamente quem precisa
+ * vê-lo.
+ */
+export interface Provenance {
+  /** "WEB" para tudo que veio da página. */
+  source: ContentSource;
+  /** Conteúdo de página é sempre UNTRUSTED — não existe página confiável. */
+  trust: TrustLevel;
+  injection_detected: boolean;
+  /** MAIOR severidade encontrada; `null` quando não houve nenhuma suspeita. */
+  severity: SuspeitaSeveridade | null;
+  /** Lista completa, com o trecho literal. */
+  findings: Suspeita[];
+  /** Texto delimitado por nonce, pronto para entrega ao modelo. */
+  sanitized_content: string;
+  nonce: string;
+  /** Conforme a política `raw_web_content`. */
+  raw_content_available: boolean;
+  /** Por que o cru foi retido, quando foi. `null` quando não houve retenção. */
+  raw_withheld_reason: string | null;
+  /** Quantos campos textuais foram inspecionados — controle de teste vácuo. */
+  fields_inspected: number;
+  origin: string | null;
+}
+
+/** Resultado de `browser.observe`: a observação MAIS o selo de procedência. */
+export interface ObservationEnvelope extends Observation {
+  provenance: Provenance;
+}
+
+/** Resultado de `browser.extract`. `content` permanece — quem já consome não quebra. */
+export interface ExtractResult {
+  content: unknown;
+  scope: "document" | "element";
+  format: string;
+  target?: Omit<ResolvedTarget, "handle">;
+  provenance: Provenance;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -459,17 +559,116 @@ export interface UploadRecord {
 // Auditoria (FASE 24)
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Classe do fato registrado. Não é decoração: é o que permite separar "o agente
+ * clicou" de "a política recusou" de "o humano tomou o volante" sem precisar
+ * adivinhar pelo nome da ação.
+ */
+export type AuditEvent = "action" | "policy" | "control" | "recovery" | "task" | "provider";
+
+export type PolicyDecisionLabel = "allow" | "deny" | "not_applicable";
+
+export interface AuditErrorRef {
+  code: string;
+  message: string;
+}
+
+/**
+ * FASE 3 (auditoria forense) — a linha de `sessions/<id>/actions.jsonl`.
+ *
+ * TODA chave é obrigatória. `null` é uma resposta ("não se aplica"); chave
+ * AUSENTE é uma pergunta sem resposta, e foi exatamente o que impediu a trilha
+ * antiga de reconstruir quem agiu, em que aba, sob que decisão de política.
+ * `makeAuditEntry` existe para que nenhum produtor consiga esquecer um campo —
+ * e para que `undefined` (que `JSON.stringify` APAGA) nunca chegue ao disco.
+ */
 export interface AuditEntry {
   timestamp: string;
+  event: AuditEvent;
   session: string | null;
+  /** BrowserContext da sessão — estável na sessão, distinto entre sessões. */
+  browser: string | null;
+  /** page_id da aba em que o fato ocorreu. */
+  page: string | null;
+  /** task_id a que o fato pertence. */
+  task: string | null;
+  /** Dono corrente da sessão no instante do fato. */
+  owner: string | null;
+  /** Quem pediu. NUNCA "unknown" quando a sessão tem dono. */
   actor: string;
+  /** provider_id do AIProvider/VisionProvider envolvido. */
+  provider: string | null;
   action: string;
+  /** Capability exigida pela ação (de REQUIRED_CAPABILITY). */
+  capability: string | null;
+  policy_decision: PolicyDecisionLabel;
+  /** Código + texto curto quando `deny`. */
+  policy_reason: string | null;
   target: string | null;
   result: "ok" | "error" | "denied";
-  verified: boolean;
-  action_id: string | null;
+  verified: boolean | null;
+  error: AuditErrorRef | null;
   /** Nunca contém valor de segredo — apenas a referência usada. */
-  detail?: Record<string, unknown>;
+  detail: Record<string, unknown>;
+  action_id: string | null;
+}
+
+/** Contrato de forma: o gate de auditoria confere chave a chave contra esta lista. */
+export const AUDIT_FIELDS: readonly (keyof AuditEntry)[] = Object.freeze([
+  "timestamp",
+  "event",
+  "session",
+  "browser",
+  "page",
+  "task",
+  "owner",
+  "actor",
+  "provider",
+  "action",
+  "capability",
+  "policy_decision",
+  "policy_reason",
+  "target",
+  "result",
+  "verified",
+  "error",
+  "detail",
+  "action_id",
+] as const);
+
+/**
+ * Única fábrica de `AuditEntry`. Preenche todo campo ausente com `null` (ou o
+ * default do campo) e IGNORA `undefined` vindo do chamador: escrever
+ * `{ page: undefined }` produziria uma linha sem a chave `page`, porque
+ * `JSON.stringify` elimina `undefined` — o buraco silencioso que esta função
+ * existe para fechar.
+ */
+export function makeAuditEntry(over: Partial<AuditEntry> = {}): AuditEntry {
+  const base: AuditEntry = {
+    timestamp: nowIso(),
+    event: "action",
+    session: null,
+    browser: null,
+    page: null,
+    task: null,
+    owner: null,
+    actor: "runtime",
+    provider: null,
+    action: "unknown",
+    capability: null,
+    policy_decision: "not_applicable",
+    policy_reason: null,
+    target: null,
+    result: "ok",
+    verified: null,
+    error: null,
+    detail: {},
+    action_id: null,
+  };
+  for (const [k, v] of Object.entries(over)) {
+    if (v !== undefined) (base as unknown as Record<string, unknown>)[k] = v;
+  }
+  return base;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

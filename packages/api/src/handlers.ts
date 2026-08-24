@@ -23,6 +23,8 @@
 import path from "node:path";
 import type { Download, ElementHandle, Locator, Page } from "playwright";
 import {
+  REQUIRED_CAPABILITY,
+  makeAuditEntry,
   newActionId,
   newId,
   nowIso,
@@ -30,15 +32,22 @@ import {
   type ActionErrorCode,
   type AgentProvider,
   type AuditEntry,
+  type AuditEvent,
+  type AxNode,
   type BrowserTask,
   type DownloadRecord,
   type EventName,
+  type ExtractResult,
   type Observation,
+  type ObservationEnvelope,
   type PageInfo,
   type Plan,
   type PlanStep,
+  type Provenance,
   type ResolvedTarget,
   type RuntimeEvent,
+  type Suspeita,
+  type SuspeitaSeveridade,
   type TargetDescriptor,
   type UploadRecord,
   type VerificationResult,
@@ -54,13 +63,24 @@ import {
   type ScreenshotScope,
 } from "../../core/src/perception.ts";
 import { isTargetResolutionError, resolveDetailed } from "../../core/src/target.ts";
+import {
+  armarSondaDeEntrega,
+  entregaComprovada,
+  estabilizarCaixa,
+  garantirAcionavel,
+  type AcionabilidadeConfig,
+  type Acionavel,
+  type AlvoAcionavel,
+  type LeituraDeEntrega,
+} from "../../core/src/actionable.ts";
 import { capture as captureSnapshot, verify as verifyAction } from "../../core/src/verifier.ts";
 import { CapabilityEngine, PolicyError, checkPath, checkUrl } from "../../core/src/policy.ts";
+import { sanitizeObservation, sanitizeText, type ObservacaoSanitizada } from "../../core/src/sanitize.ts";
 import { FileVault, VaultError } from "../../core/src/vault.ts";
 import { AuditLog } from "../../observability/src/audit.ts";
 import { SessionRecorder } from "../../observability/src/replay.ts";
 import { EventBus } from "../../observability/src/eventbus.ts";
-import type { DaemonConfig } from "./config.ts";
+import type { DaemonConfig, RawWebContentPolicy } from "./config.ts";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Erro da camada de API
@@ -233,10 +253,83 @@ export function publicTarget(t: ResolvedTarget): Omit<ResolvedTarget, "handle"> 
   return rest;
 }
 
-function centerOf(t: ResolvedTarget): Point {
-  // Alvo por coordenada vem com caixa de área zero: o centro é a própria coordenada.
-  return { x: t.box.x + t.box.width / 2, y: t.box.y + t.box.height / 2 };
+// ─────────────────────────────────────────────────────────────────────────────
+// FASE 4 — acionabilidade
+//
+// `centerOf` sozinho foi o defeito: ele devolve o centro da caixa RESOLVIDA, que
+// pode estar fora do viewport ou já ter se movido, e o Pointer Engine despachava
+// para lá sem perguntar nada. Todo gesto que precisa de um ponto passa agora por
+// `acionavel()` — que rola, espera assentar, remede e RECUSA quando não dá.
+// ─────────────────────────────────────────────────────────────────────────────
+
+function cfgAcionabilidade(svc: RuntimeServices, rolar = true): AcionabilidadeConfig {
+  return {
+    scroll_into_view: rolar && svc.config.scroll_into_view,
+    stability_samples: svc.config.stability_samples,
+    stability_interval_ms: svc.config.stability_interval_ms,
+  };
 }
+
+function alvoDe(t: ResolvedTarget): AlvoAcionavel {
+  return { loc: t.handle as Locator | undefined, box: t.box, descricao: t.description };
+}
+
+/**
+ * Etapas 2–5 da semântica da FASE 4. Lança `TARGET_NOT_ACTIONABLE`.
+ *
+ * Também SOBRESCREVE `resolved.box` com a caixa assentada: o `target` que sai na
+ * resposta tem de dizer onde o alvo estava no instante do gesto, não onde estava
+ * antes de a página terminar de rolar. Devolver a caixa velha seria devolver a
+ * mesma mentira, só que num campo diferente.
+ */
+async function acionavel(
+  svc: RuntimeServices,
+  page: Page,
+  resolved: ResolvedTarget,
+  pointer: PointerEngine,
+  rolar = true,
+): Promise<Acionavel> {
+  const r = await garantirAcionavel(page, alvoDe(resolved), pointer, cfgAcionabilidade(svc, rolar));
+  if (r.detalhe.box_depois !== null) resolved.box = r.detalhe.box_depois;
+  return r;
+}
+
+/** Entrega comprovada? `null` quando a checagem está desligada por configuração. */
+function entregueAoAlvo(checou: boolean, leitura: LeituraDeEntrega): boolean | null {
+  if (!checou) return null;
+  // Regra única, definida em `actionable.ts`: listener, navegação ou aba nova
+  // provam entrega; `entrega_errada` (o evento foi para outro elemento) e
+  // `sem_prova` reprovam. Duplicar a regra aqui deixaria click e type divergirem.
+  return entregaComprovada(leitura);
+}
+
+function detalheDeEntrega(checou: boolean, leitura: LeituraDeEntrega): Record<string, unknown> {
+  return {
+    delivery_checked: checou,
+    delivery_verified: entregueAoAlvo(checou, leitura),
+    delivery_evidence: checou ? leitura.evidencia : null,
+    elemento_que_recebeu: leitura.registro?.elemento ?? null,
+    evento_entregue: leitura.registro?.tipo ?? null,
+    is_trusted: leitura.registro?.isTrusted ?? null,
+    // FASE 4b: a navegação é prova, então ela tem de ser AUDITÁVEL. Sem estes
+    // campos, "por que este clique passou?" viraria confiança no rótulo.
+    url_antes: checou ? leitura.url_antes : null,
+    url_depois: checou ? leitura.url_depois : null,
+    navegou: checou ? leitura.navegou : null,
+    nova_aba: checou ? leitura.nova_aba : null,
+    contexto_destruido: checou ? leitura.contexto_destruido : null,
+  };
+}
+
+const SEM_ENTREGA: LeituraDeEntrega = {
+  registro: null,
+  evidencia: "desligado",
+  url_antes: "",
+  url_depois: "",
+  navegou: false,
+  nova_aba: false,
+  contexto_destruido: false,
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Serviços compartilhados pelos handlers
@@ -274,6 +367,10 @@ export class RuntimeServices {
   readonly #vaults = new Map<string, FileVault>();
   readonly #tasks = new Map<string, BrowserTask>();
   readonly #recorders = new Map<string, SessionRecorder>();
+  /** task_id raiz por sessão — ver `rootTaskFor`. */
+  readonly #rootTasks = new Map<string, string>();
+  /** Identidade de navegador POR SESSÃO — ver `browserFor`. */
+  readonly #browsers = new Map<string, string>();
 
   constructor(opts: RuntimeServicesOptions) {
     this.config = opts.config;
@@ -374,6 +471,74 @@ export class RuntimeServices {
     }
   }
 
+  /**
+   * Task RAIZ da sessão (FASE 3 forense).
+   *
+   * Toda ação pertence a alguma task: quando o cliente não abriu uma
+   * explicitamente com `browser.task`, ela pertence à task da própria sessão.
+   * Sem isso `task` seria `null` em 100% das linhas de uso normal e a pergunta
+   * "que trabalho essa ação servia?" não teria resposta na trilha.
+   */
+  rootTaskFor(session_id: string): string {
+    const found = this.#rootTasks.get(session_id);
+    if (found !== undefined) return found;
+    const made = newId("tsk");
+    this.#rootTasks.set(session_id, made);
+    return made;
+  }
+
+  /**
+   * Identidade do navegador DESTA sessão.
+   *
+   * O `context_id` do `SessionManager` identifica o BrowserContext do POOL, e o
+   * pool reaproveita o mesmo contexto entre sessões do mesmo perfil. Usá-lo aqui
+   * faria duas sessões distintas aparecerem na trilha como o mesmo navegador —
+   * apagando exatamente a fronteira que a auditoria existe para desenhar. Por
+   * isso a sessão ganha a SUA identidade, e o contexto do pool fica registrado
+   * uma vez, em `detail.pool_context` da linha `session.created`.
+   */
+  browserFor(session_id: string): string {
+    const found = this.#browsers.get(session_id);
+    if (found !== undefined) return found;
+    const made = newId("bctx");
+    this.#browsers.set(session_id, made);
+    return made;
+  }
+
+  /** Contexto forense da sessão: dono, navegador, aba ativa e task raiz. */
+  auditContext(session_id: string): {
+    owner: string | null;
+    browser: string;
+    page: string | null;
+    task: string;
+  } {
+    const task = this.rootTaskFor(session_id);
+    // Memoizados: continuam respondendo depois de a sessão fechar, que é
+    // justamente quando a última linha da trilha é escrita.
+    const browser = this.browserFor(session_id);
+    try {
+      const info = this.sessions.get(session_id);
+      const ativa = info.pages.find((p) => p.active) ?? info.pages[0] ?? null;
+      return { owner: info.owner, browser, page: ativa?.page_id ?? null, task };
+    } catch {
+      // Sessão já fechada ou inexistente: o resto da linha continua valendo.
+      return { owner: null, browser, page: null, task };
+    }
+  }
+
+  /**
+   * Escreve uma linha de trilha para um fato que NÃO é uma ação de navegador
+   * (política, controle, recuperação, task, provider). Completa o contexto da
+   * sessão sozinha; `undefined` do chamador nunca apaga o que ela descobriu.
+   */
+  async note(entry: Partial<AuditEntry> & { session: string; action: string }): Promise<void> {
+    const merged: Record<string, unknown> = { ...this.auditContext(entry.session) };
+    for (const [k, v] of Object.entries(entry)) {
+      if (v !== undefined) merged[k] = v;
+    }
+    await this.record(makeAuditEntry(merged as Partial<AuditEntry>));
+  }
+
   /** Solta engines e log de rede de uma sessão encerrada. */
   forget(session_id: string): void {
     const e = this.#engines.get(session_id);
@@ -385,6 +550,7 @@ export class RuntimeServices {
       }
       this.#engines.delete(session_id);
     }
+    this.#rootTasks.delete(session_id);
   }
 
   disposeAll(): void {
@@ -402,13 +568,37 @@ export interface ActionRequest {
   body: Body;
   /** Identidade de quem chamou (header `x-nomos-client`). */
   client: string | null;
+  /**
+   * Sujeito do token que autenticou o pedido. Junto com `client` e `owner` é o
+   * que faz `actor` deixar de ser "unknown": a trilha antiga só olhava o header
+   * `x-nomos-client`, que praticamente nenhum cliente envia.
+   */
+  subject?: string | null;
+  /** Dono da sessão no instante do pedido — preenchido pelo daemon. */
+  owner?: string | null;
+  /** BrowserContext da sessão (`context_id`) — preenchido pelo daemon. */
+  browser?: string | null;
+  /** Task a que esta ação pertence — preenchida pelo daemon. */
+  task?: string | null;
+  /** Provider de IA envolvido, quando houver. */
+  provider?: string | null;
+  /**
+   * page_id da aba REALMENTE usada. Escrito por `pageOf()`, que é o único funil
+   * por onde um handler obtém uma `Page`. Sem isto o audit teria de adivinhar a
+   * aba ativa no momento da GRAVAÇÃO, que não é a mesma coisa que a aba em que
+   * a ação ocorreu.
+   */
+  page_id?: string | null;
 }
 
 export type ActionHandler = (svc: RuntimeServices, req: ActionRequest) => Promise<unknown>;
 
 function pageOf(svc: RuntimeServices, req: ActionRequest): Page {
   const page_id = str(req.body, "page_id");
-  return svc.sessions.getPage(req.session_id, page_id ?? undefined);
+  const page = svc.sessions.getPage(req.session_id, page_id ?? undefined);
+  // Registra a aba EFETIVA na requisição: é o que o audit grava em `page`.
+  req.page_id = svc.sessions.pageIdOf(page) ?? page_id;
+  return page;
 }
 
 function urlGuard(svc: RuntimeServices, url: string): string {
@@ -419,7 +609,13 @@ function urlGuard(svc: RuntimeServices, url: string): string {
   return d.url ?? url;
 }
 
-async function resolveOn(svc: RuntimeServices, page: Page, descriptor: TargetDescriptor, timeout_ms: number | null): Promise<ResolvedTarget> {
+async function resolveOn(
+  svc: RuntimeServices,
+  req: ActionRequest,
+  page: Page,
+  descriptor: TargetDescriptor,
+  timeout_ms: number | null,
+): Promise<ResolvedTarget> {
   const res = await resolveDetailed(page, descriptor, {
     timeout_ms: timeout_ms ?? 0,
     max_candidates: 60,
@@ -429,6 +625,25 @@ async function resolveOn(svc: RuntimeServices, page: Page, descriptor: TargetDes
       strategy: res.target.strategy,
       attempted: res.target.attempted,
       description: res.target.description,
+    });
+    // Um alvo CURADO é literalmente uma nova tentativa: a primeira estratégia
+    // não achou nada e outra achou. É o único ponto de retentativa real do
+    // runtime, e é aqui que `task.retry` nasce em vez de ser decorativo.
+    await svc.note({
+      session: req.session_id,
+      event: "task",
+      action: "task.retry",
+      actor: actorOf(req),
+      page: req.page_id ?? null,
+      action_id: req.action_id,
+      result: "ok",
+      verified: true,
+      detail: {
+        tool: req.tool,
+        strategy: res.target.strategy,
+        attempted: res.target.attempted,
+        healed: true,
+      },
     });
   }
   return res.target;
@@ -522,6 +737,243 @@ function historyHandler(kind: "back" | "forward" | "reload"): ActionHandler {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Procedência — a ponte entre o sanitizador e o caminho de execução
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// O sanitizador existia desde a FASE 29 e era chamado APENAS pelo seu próprio
+// teste. Defesa que não está no caminho da requisição não é defesa: é uma
+// biblioteca com cobertura. Este bloco é a ligação — todo conteúdo que sai de
+// `browser.observe` e `browser.extract` passa por aqui antes de virar resposta.
+
+const ORDEM_SEVERIDADE: Readonly<Record<SuspeitaSeveridade, number>> = Object.freeze({
+  baixa: 0,
+  media: 1,
+  alta: 2,
+});
+
+function maiorSeveridade(suspeitas: readonly Suspeita[]): SuspeitaSeveridade | null {
+  let maior: SuspeitaSeveridade | null = null;
+  for (const s of suspeitas) {
+    if (maior === null || ORDEM_SEVERIDADE[s.severidade] > ORDEM_SEVERIDADE[maior]) maior = s.severidade;
+  }
+  return maior;
+}
+
+const MOTIVO_DETECCAO =
+  "injecao de severidade alta detectada; politica raw_web_content=withhold_on_detection";
+const MOTIVO_NEVER = "politica raw_web_content=never: texto cru de pagina nunca e entregue";
+const RETIDO_POR_POLITICA = "[!-:politica:never] conteudo retido — ver provenance.sanitized_content";
+
+/**
+ * Substituto do texto cru. Carrega o id da suspeita porque o auditor precisa
+ * saber QUAL marca do bloco sanitizado corresponde a este campo — sem o id, ler
+ * "conteudo retido" num campo e procurar o original entre 40 suspeitas é
+ * trabalho manual que ninguém faz.
+ */
+function marcaDeRetencao(suspeitas: readonly Suspeita[]): string {
+  const marcas = suspeitas.map((s) => `[!${s.id}:${s.categoria}:${s.severidade}]`).join("");
+  return `${marcas} conteudo retido — ver provenance.sanitized_content`;
+}
+
+function provenanceDe(
+  san: ObservacaoSanitizada,
+  raw_content_available: boolean,
+  raw_withheld_reason: string | null,
+): Provenance {
+  return {
+    source: "WEB",
+    // Não existe página confiável. O selo é constante de propósito: um campo que
+    // às vezes diz TRUSTED convidaria o consumidor a ramificar por ele.
+    trust: "UNTRUSTED",
+    injection_detected: san.suspeitas.length > 0,
+    severity: maiorSeveridade(san.suspeitas),
+    findings: san.suspeitas,
+    sanitized_content: san.texto_seguro,
+    nonce: san.nonce,
+    raw_content_available,
+    raw_withheld_reason,
+    fields_inspected: san.campos_inspecionados,
+    origin: san.origem,
+  };
+}
+
+// Endereçamento de campo. `Suspeita.onde` é a única coordenada que o sanitizador
+// devolve, então ela é o endereço — estes padrões espelham exatamente o que
+// `camposDaObservacao`/`camposDaArvoreAx` escrevem lá.
+const ONDE_TITULO = "título da página";
+const RE_ONDE_ELEMENTO = /^elemento (\S+) \(texto\)$/;
+const RE_ONDE_ATRIBUTO = /^atributo (\S+) de (\S+)$/;
+const RE_ONDE_AX = /^acessibilidade (ax(?:\.\d+)*) \((nome|valor|descricao)\)$/;
+
+function noAxPorCaminho(raiz: AxNode | null, caminho: string): AxNode | null {
+  if (raiz === null) return null;
+  const partes = caminho.split(".");
+  if (partes[0] !== "ax") return null;
+  let no: AxNode = raiz;
+  for (const p of partes.slice(1)) {
+    const i = Number(p);
+    const filhos = no.children ?? [];
+    if (!Number.isInteger(i) || i < 0 || i >= filhos.length) return null;
+    no = filhos[i]!;
+  }
+  return no;
+}
+
+/** Reescreve UM campo cru. Devolve se achou o campo — endereço órfão não é silencioso. */
+function redigirCampo(obs: Observation, onde: string, substituto: string): boolean {
+  if (onde === ONDE_TITULO) {
+    obs.title = substituto;
+    return true;
+  }
+  const elTexto = RE_ONDE_ELEMENTO.exec(onde);
+  if (elTexto !== null) {
+    const el = (obs.elements ?? []).find((e) => e.ref === elTexto[1]);
+    if (el === undefined) return false;
+    el.text = substituto;
+    return true;
+  }
+  const attr = RE_ONDE_ATRIBUTO.exec(onde);
+  if (attr !== null) {
+    const el = (obs.elements ?? []).find((e) => e.ref === attr[2]);
+    if (el === undefined || el.attributes === undefined || !Object.hasOwn(el.attributes, attr[1]!)) return false;
+    el.attributes[attr[1]!] = substituto;
+    return true;
+  }
+  const ax = RE_ONDE_AX.exec(onde);
+  if (ax !== null) {
+    const no = noAxPorCaminho(obs.accessibility ?? null, ax[1]!);
+    if (no === null) return false;
+    if (ax[2] === "nome") no.name = substituto;
+    else if (ax[2] === "valor") no.value = substituto;
+    else no.description = substituto;
+    return true;
+  }
+  return false;
+}
+
+/** Modo `never`: nenhum texto de página sai cru, tenha suspeita ou não. */
+function redigirTudo(obs: Observation, substituto: string): void {
+  if (typeof obs.title === "string" && obs.title.trim() !== "") obs.title = substituto;
+  for (const el of obs.elements ?? []) {
+    if (typeof el.text === "string" && el.text.trim() !== "") el.text = substituto;
+    const attrs = el.attributes ?? {};
+    for (const [nome, valor] of Object.entries(attrs)) {
+      if (typeof valor === "string" && valor.trim() !== "") attrs[nome] = substituto;
+    }
+  }
+  const visita = (no: AxNode): void => {
+    if (typeof no.name === "string" && no.name.trim() !== "") no.name = substituto;
+    if (typeof no.value === "string" && no.value.trim() !== "") no.value = substituto;
+    if (typeof no.description === "string" && no.description.trim() !== "") no.description = substituto;
+    for (const f of no.children ?? []) visita(f);
+  };
+  if (obs.accessibility !== null && obs.accessibility !== undefined) visita(obs.accessibility);
+}
+
+/**
+ * Sela uma `Observation`. Muta `obs` quando há retenção — `obs` acabou de nascer
+ * do PerceptionEngine e não é compartilhada com ninguém.
+ *
+ * Severidade média/baixa NUNCA retém. É o controle de falso positivo: um artigo
+ * que *explica* injeção de prompt tem de continuar legível, senão a defesa passa
+ * a cegar o agente em conteúdo legítimo e o dono a desliga.
+ */
+export function selarObservacao(politica: RawWebContentPolicy, obs: Observation): ObservationEnvelope {
+  const san = sanitizeObservation(obs);
+
+  if (politica === "never") {
+    redigirTudo(obs, RETIDO_POR_POLITICA);
+    return { ...obs, provenance: provenanceDe(san, false, MOTIVO_NEVER) };
+  }
+
+  const altas = san.suspeitas.filter((s) => s.severidade === "alta");
+  if (politica === "always" || altas.length === 0) {
+    return { ...obs, provenance: provenanceDe(san, true, null) };
+  }
+
+  // Agrupa por campo (ref + onde, conforme a regra) para que um campo com três
+  // suspeitas altas leve as três marcas, e não três substituições sobrepostas.
+  const porCampo = new Map<string, { onde: string; suspeitas: Suspeita[] }>();
+  for (const s of altas) {
+    const chave = `${s.ref ?? "-"}|${s.onde}`;
+    const atual = porCampo.get(chave);
+    if (atual === undefined) porCampo.set(chave, { onde: s.onde, suspeitas: [s] });
+    else atual.suspeitas.push(s);
+  }
+  for (const { onde, suspeitas } of porCampo.values()) redigirCampo(obs, onde, marcaDeRetencao(suspeitas));
+
+  return { ...obs, provenance: provenanceDe(san, false, MOTIVO_DETECCAO) };
+}
+
+/** Sela texto cru (`browser.extract`). Mesma regra de retenção da observação. */
+export function selarTexto(
+  politica: RawWebContentPolicy,
+  conteudo: string,
+  origem: string | null,
+): { content: string; provenance: Provenance } {
+  const san = sanitizeText(conteudo, origem !== null ? { origem } : {});
+
+  if (politica === "never") {
+    return { content: RETIDO_POR_POLITICA, provenance: provenanceDe(san, false, MOTIVO_NEVER) };
+  }
+  const altas = san.suspeitas.filter((s) => s.severidade === "alta");
+  if (politica === "always" || altas.length === 0) {
+    return { content: conteudo, provenance: provenanceDe(san, true, null) };
+  }
+  return { content: marcaDeRetencao(altas), provenance: provenanceDe(san, false, MOTIVO_DETECCAO) };
+}
+
+/**
+ * Detalhe de auditoria derivado da procedência.
+ *
+ * NUNCA o `trecho`: ele é texto literal da página e pode carregar segredo que o
+ * dono nunca autorizou a persistir. O audit log fica com contagem e categoria —
+ * o suficiente para responder "quantos ataques esta sessão viu, de que tipo".
+ */
+export function auditProvenanceDetail(result: unknown): Record<string, unknown> | undefined {
+  if (result === null || typeof result !== "object") return undefined;
+  const prov = (result as { provenance?: unknown }).provenance;
+  if (prov === null || typeof prov !== "object") return undefined;
+  const p = prov as Provenance;
+  return {
+    injection_detected: p.injection_detected,
+    severity: p.severity,
+    findings: p.findings.length,
+    trust: p.trust,
+    raw_withheld: !p.raw_content_available,
+    categorias: [...new Set(p.findings.map((f) => f.categoria))],
+  };
+}
+
+/**
+ * Chaves de acionabilidade que a trilha carrega. SOMAM ao `detail` da linha de
+ * ação — não viram chave de topo, porque o schema de audit da FASE 3 é fechado e
+ * "quanto rolou" é detalhe da ação, não uma nova dimensão forense.
+ *
+ * Aceita tanto o `result` de um handler (que traz `detail`) quanto o
+ * `error.detail` de uma recusa — as duas metades da mesma pergunta: "essa ação
+ * conseguiu mirar, e o gesto chegou?".
+ */
+export function auditAcionabilidadeDetail(fonte: unknown): Record<string, unknown> | undefined {
+  if (fonte === null || typeof fonte !== "object") return undefined;
+  const interno = (fonte as { detail?: unknown }).detail;
+  const src = (interno !== null && typeof interno === "object" ? interno : fonte) as Record<string, unknown>;
+  const out: Record<string, unknown> = {};
+  for (const k of ["scrolled", "stabilized_after", "delivery_verified", "actionable"]) {
+    if (Object.hasOwn(src, k)) out[k] = src[k];
+  }
+  return Object.keys(out).length === 0 ? undefined : out;
+}
+
+/** Detalhe da linha de ação: procedência (FASE 2) + acionabilidade (FASE 4). */
+export function auditActionDetail(result: unknown): Record<string, unknown> | undefined {
+  const prov = auditProvenanceDetail(result);
+  const acion = auditAcionabilidadeDetail(result);
+  if (prov === undefined && acion === undefined) return undefined;
+  return { ...(prov ?? {}), ...(acion ?? {}) };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Percepção
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -537,21 +989,55 @@ const handleObserve: ActionHandler = async (svc, req) => {
     ...(svc.sessions.pageIdOf(page) !== null ? { page_id: svc.sessions.pageIdOf(page)! } : {}),
   });
   // FASE 32: quem reobservou de fato é quem pode liberar RECOVERING → ACTIVE.
-  if (svc.sessions.needsReobservation(req.session_id)) svc.sessions.markObserved(req.session_id);
-  return observation;
+  // FASE 3 (forense): essa transição É a conclusão de uma recuperação, e agora
+  // deixa linha — antes o ciclo takeover→release→reobservação sumia da trilha.
+  if (svc.sessions.needsReobservation(req.session_id)) {
+    svc.sessions.markObserved(req.session_id);
+    await svc.note({
+      session: req.session_id,
+      event: "recovery",
+      action: "recovery.complete",
+      actor: actorOf(req),
+      page: req.page_id ?? null,
+      action_id: req.action_id,
+      result: "ok",
+      verified: true,
+      detail: { via: "browser.observe", state: "ACTIVE", recovered: true },
+    });
+  }
+  // Nada observado sai daqui sem selo de procedência. É este ponto — e não o
+  // teste do sanitizador — que faz a defesa existir em produção.
+  return selarObservacao(svc.config.raw_web_content, observation);
 };
 
 const handleFind: ActionHandler = async (svc, req) => {
   const page = pageOf(svc, req);
   const target = readTarget(req.body.target);
-  const resolved = await resolveOn(svc, page, target, num(req.body, "timeout_ms"));
+  const resolved = await resolveOn(svc, req, page, target, num(req.body, "timeout_ms"));
+
+  // A caixa também ASSENTA aqui, e não só no caminho do clique.
+  //
+  // O scroll do Chromium é animado: `browser.find` logo depois de um
+  // `browser.scroll` lia a caixa no meio da animação e devolvia uma coordenada
+  // que já não seria a do alvo um quadro depois. Quem consumisse isso — um
+  // agente, um script de medição — receberia um número exato e errado. `find`
+  // NÃO rola (observar não é agir); só espera parar de se mexer.
+  const est = await estabilizarCaixa(alvoDe(resolved), cfgAcionabilidade(svc, false));
+  if (est.removido || est.box === null) {
+    throw new ApiError("TARGET_NOT_FOUND", `alvo desapareceu do DOM durante a estabilização (${resolved.description})`, {
+      strategy: resolved.strategy,
+      amostras_ate_estabilizar: est.amostras,
+    });
+  }
+  resolved.box = est.box;
+
   svc.emit("element.found", req.session_id, req.action_id, {
     strategy: resolved.strategy,
     attempted: resolved.attempted,
     healed: resolved.healed,
     box: resolved.box,
   }, "agent");
-  return publicTarget(resolved);
+  return { ...publicTarget(resolved), stabilized_after: est.amostras, stabilized: est.estabilizou };
 };
 
 const EXTRACT_FORMATS = ["text", "html", "value"] as const;
@@ -572,10 +1058,17 @@ const handleExtract: ActionHandler = async (svc, req) => {
     if (format === "value") {
       throw new ApiError("INVALID_REQUEST", 'format "value" exige um target (é o valor de um campo)');
     }
-    return { content, scope: "document", format };
+    const selado = selarTexto(svc.config.raw_web_content, content, page.url());
+    const out: ExtractResult = {
+      content: selado.content,
+      scope: "document",
+      format,
+      provenance: selado.provenance,
+    };
+    return out;
   }
 
-  const resolved = await resolveOn(svc, page, readTarget(req.body.target), num(req.body, "timeout_ms"));
+  const resolved = await resolveOn(svc, req, page, readTarget(req.body.target), num(req.body, "timeout_ms"));
   const loc = resolved.handle as Locator | undefined;
   if (loc === undefined) {
     throw new ApiError("TARGET_NOT_FOUND", "alvo resolvido por coordenada não tem conteúdo extraível", {
@@ -584,7 +1077,15 @@ const handleExtract: ActionHandler = async (svc, req) => {
   }
   const content =
     format === "html" ? await loc.innerHTML() : format === "value" ? await loc.inputValue() : ((await loc.textContent()) ?? "");
-  return { content, scope: "element", format, target: publicTarget(resolved) };
+  const selado = selarTexto(svc.config.raw_web_content, content, page.url());
+  const out: ExtractResult = {
+    content: selado.content,
+    scope: "element",
+    format,
+    target: publicTarget(resolved),
+    provenance: selado.provenance,
+  };
+  return out;
 };
 
 const SCREENSHOT_SCOPES = ["viewport", "full", "element", "region"] as const;
@@ -603,7 +1104,7 @@ const handleScreenshot: ActionHandler = async (svc, req) => {
     if (req.body.target === undefined) {
       throw new ApiError("INVALID_REQUEST", "scope=element exige target");
     }
-    const resolved = await resolveOn(svc, page, readTarget(req.body.target), num(req.body, "timeout_ms"));
+    const resolved = await resolveOn(svc, req, page, readTarget(req.body.target), num(req.body, "timeout_ms"));
     const loc = resolved.handle as Locator | undefined;
     if (loc === undefined) throw new ApiError("TARGET_NOT_FOUND", "alvo sem elemento para capturar");
     const handle = await loc.elementHandle();
@@ -715,25 +1216,63 @@ const handleClick: ActionHandler = async (svc, req) => {
   const page = pageOf(svc, req);
   const target = readTarget(req.body.target);
   const spec = readVerification(req.body.verification);
-  const resolved = await resolveOn(svc, page, target, num(req.body, "timeout_ms"));
+  // (1) resolver — cascata inalterada.
+  const resolved = await resolveOn(svc, req, page, target, num(req.body, "timeout_ms"));
   const { pointer } = svc.enginesFor(req.session_id, page);
   const button = req.body.button;
   if (button !== undefined && button !== "left" && button !== "right" && button !== "middle") {
     throw new ApiError("INVALID_REQUEST", `button inválido: ${String(button)}`);
   }
 
-  const { value, verification } = await withVerification(page, spec, () =>
-    pointer.click(centerOf(resolved), {
-      action_id: req.action_id,
-      ...(button !== undefined ? { button: button as "left" | "right" | "middle" } : {}),
-      ...(bool(req.body, "humanize", false) ? { humanize: true } : {}),
-    }),
-  );
+  // (2)–(5) rolar, assentar, remedir, conferir acionabilidade. Recusa aqui é
+  // TARGET_NOT_ACTIONABLE e nunca chega a despachar gesto nenhum.
+  const acao = await acionavel(svc, page, resolved, pointer);
+  const checar = svc.config.click_delivery_check;
+  let leitura: LeituraDeEntrega = SEM_ENTREGA;
 
+  const { value, verification } = await withVerification(page, spec, async () => {
+    // (7-a) a sonda é armada o MAIS TARDE possível: armada antes da resolução,
+    // ela poderia capturar um clique alheio e creditá-lo a esta ação. Os sinais
+    // de navegação/aba nova nascem aqui pelo mesmo motivo — armados depois do
+    // clique, não distinguiriam causa de coincidência.
+    const sonda = checar ? await armarSondaDeEntrega(page, alvoDe(resolved)) : null;
+    try {
+      // (6) clicar — no ponto REMEDIDO, não no centro da caixa da resolução.
+      const r = await pointer.click(acao.ponto, {
+        action_id: req.action_id,
+        ...(button !== undefined ? { button: button as "left" | "right" | "middle" } : {}),
+        ...(bool(req.body, "humanize", false) ? { humanize: true } : {}),
+      });
+      // (7-b) ler a prova antes de a verificação de efeito começar a esperar.
+      if (sonda !== null) leitura = await sonda.ler();
+      return r;
+    } finally {
+      sonda?.desarmar();
+    }
+  });
+
+  const detail: Record<string, unknown> = {
+    ...acao.detalhe,
+    ponto_do_clique: acao.ponto,
+    ...detalheDeEntrega(checar, leitura),
+  };
+
+  if (checar && detail.delivery_verified !== true) {
+    // Despachou e não chegou. É o caso que devolvia `success:true` sem que o
+    // elemento recebesse nada — o motivo de esta fase existir.
+    throw new ApiError(
+      "CLICK_NOT_DELIVERED",
+      `clique despachado em (${acao.ponto.x}, ${acao.ponto.y}) não chegou ao alvo (${resolved.description})`,
+      detail,
+    );
+  }
+
+  // (8) só agora.
   return {
     target: publicTarget(resolved),
     verification,
     pointer: { backend: value.backend, fallback_used: value.fallback_used, fallback_reason: value.fallback_reason },
+    detail,
   };
 };
 
@@ -747,11 +1286,25 @@ const handleType: ActionHandler = async (svc, req) => {
     throw new ApiError("INVALID_REQUEST", "informe exatamente um entre `text` e `credential_ref`");
   }
 
-  const resolved = await resolveOn(svc, page, target, num(req.body, "timeout_ms"));
+  const resolved = await resolveOn(svc, req, page, target, num(req.body, "timeout_ms"));
   const { pointer, keyboard } = svc.enginesFor(req.session_id, page);
   const info = svc.sessions.get(req.session_id);
 
+  // Digitar exige FOCO, e foco aqui nasce de um clique real. Um campo fora do
+  // viewport recebia o clique numa coordenada morta e o texto ia para o vazio —
+  // mesma família de sucesso falso do `browser.click`. Por isso o campo passa
+  // pelo mesmo funil de acionabilidade, inclusive no caminho do segredo (onde o
+  // `fill` do vault também erraria o alvo se ele estivesse coberto).
+  const checar = svc.config.click_delivery_check;
+  let leitura: LeituraDeEntrega = SEM_ENTREGA;
+  // Caixa mutável em vez de `let`: o TypeScript estreita uma variável atribuída
+  // só dentro de closure para `never` no ponto de leitura, e trocar o tipo por
+  // `any` para calar isso apagaria a checagem que interessa.
+  const capturado: { acao: Acionavel | null } = { acao: null };
+
   const run = async (): Promise<Record<string, unknown>> => {
+    const acao = await acionavel(svc, page, resolved, pointer);
+    capturado.acao = acao;
     if (credential_ref !== null) {
       const vault = svc.vaultFor(info.profile);
       const loc = resolved.handle as Locator | undefined;
@@ -768,7 +1321,22 @@ const handleType: ActionHandler = async (svc, req) => {
       // O recibo NÃO carrega valor, comprimento nem prefixo — é o contrato do vault.
       return { credential_ref: receipt.ref, injected: receipt.injected, secret_verified: receipt.verified };
     }
-    await pointer.click(centerOf(resolved), { action_id: req.action_id });
+    const sonda = checar ? await armarSondaDeEntrega(page, alvoDe(resolved)) : null;
+    try {
+      await pointer.click(acao.ponto, { action_id: req.action_id });
+      if (sonda !== null) leitura = await sonda.ler();
+    } finally {
+      sonda?.desarmar();
+    }
+    if (checar) {
+      if (entregueAoAlvo(checar, leitura) !== true) {
+        throw new ApiError(
+          "CLICK_NOT_DELIVERED",
+          `clique de foco não chegou ao campo (${resolved.description}) — o texto iria para o vazio`,
+          { ...acao.detalhe, ponto_do_clique: acao.ponto, ...detalheDeEntrega(checar, leitura) },
+        );
+      }
+    }
     if (bool(req.body, "clear", false)) {
       const loc = resolved.handle as Locator | undefined;
       if (loc !== undefined) await loc.fill("");
@@ -778,7 +1346,15 @@ const handleType: ActionHandler = async (svc, req) => {
   };
 
   const { value, verification } = await withVerification(page, spec, run);
-  return { target: publicTarget(resolved), verification, ...value };
+  return {
+    target: publicTarget(resolved),
+    verification,
+    ...value,
+    detail: {
+      ...(capturado.acao === null ? {} : capturado.acao.detalhe),
+      ...detalheDeEntrega(checar && credential_ref === null, leitura),
+    },
+  };
 };
 
 const handlePress: ActionHandler = async (svc, req) => {
@@ -812,28 +1388,60 @@ const handleScroll: ActionHandler = async (svc, req) => {
   if (dx === 0 && dy === 0) throw new ApiError("INVALID_REQUEST", "scroll exige dx ou dy diferente de zero");
 
   let at: Point | undefined;
+  let detalhe: Record<string, unknown> = {};
   if (req.body.target !== undefined && req.body.target !== null) {
-    const resolved = await resolveOn(svc, page, readTarget(req.body.target), num(req.body, "timeout_ms"));
-    at = centerOf(resolved);
+    const resolved = await resolveOn(svc, req, page, readTarget(req.body.target), num(req.body, "timeout_ms"));
+    // A roda age SOB O CURSOR. Um `at` fora do viewport não rola contêiner
+    // nenhum — o evento é descartado e a resposta dizia `success:true` mesmo
+    // assim. Mesmo funil de acionabilidade do clique.
+    const acao = await acionavel(svc, page, resolved, pointer);
+    at = acao.ponto;
+    detalhe = { ...acao.detalhe, ponto_do_clique: acao.ponto };
   }
   const r = await pointer.scroll({ dx, dy }, { action_id: req.action_id, ...(at !== undefined ? { at } : {}) });
-  return { scrolled: r.delta, at: r.to, backend: r.backend };
+  return { scrolled: r.delta, at: r.to, backend: r.backend, detail: detalhe };
 };
 
 const handleDrag: ActionHandler = async (svc, req) => {
   const page = pageOf(svc, req);
   const { pointer } = svc.enginesFor(req.session_id, page);
-  const from = await resolveOn(svc, page, readTarget(req.body.from, "from"), num(req.body, "timeout_ms"));
-  const to = await resolveOn(svc, page, readTarget(req.body.to, "to"), num(req.body, "timeout_ms"));
+  const from = await resolveOn(svc, req, page, readTarget(req.body.from, "from"), num(req.body, "timeout_ms"));
+  const to = await resolveOn(svc, req, page, readTarget(req.body.to, "to"), num(req.body, "timeout_ms"));
   const spec = readVerification(req.body.verification);
+
+  // Um arrasto precisa das DUAS pontas simultaneamente acionáveis. Rolar até o
+  // destino pode tirar a origem de vista, então a origem é reconferida DEPOIS —
+  // e sem rolar, porque rolar de volta só recomeçaria o pêndulo. Se as duas não
+  // couberem juntas na tela, isso é TARGET_NOT_ACTIONABLE e não um arrasto
+  // torto despachado com uma ponta numa coordenada morta.
+  const aFrom = await acionavel(svc, page, from, pointer);
+  const aTo = await acionavel(svc, page, to, pointer);
+  const aFromDepois = await acionavel(svc, page, from, pointer, false);
+
   const { value, verification } = await withVerification(page, spec, () =>
-    pointer.drag(centerOf(from), centerOf(to), { action_id: req.action_id, steps: 12 }),
+    pointer.drag(aFromDepois.ponto, aTo.ponto, { action_id: req.action_id, steps: 12 }),
   );
   return {
     dragged: { from: value.from, to: value.to, steps: value.steps },
     verification,
     from_target: publicTarget(from),
     to_target: publicTarget(to),
+    detail: {
+      ...aFromDepois.detalhe,
+      // `scrolled` da linha de audit tem de somar as duas pontas: o auditor
+      // precisa ver o deslocamento total que a ação causou na página.
+      scrolled: {
+        dx: aFrom.detalhe.scrolled.dx + aTo.detalhe.scrolled.dx + aFromDepois.detalhe.scrolled.dx,
+        dy: aFrom.detalhe.scrolled.dy + aTo.detalhe.scrolled.dy + aFromDepois.detalhe.scrolled.dy,
+      },
+      stabilized_after:
+        aFrom.detalhe.stabilized_after + aTo.detalhe.stabilized_after + aFromDepois.detalhe.stabilized_after,
+      destino: aTo.detalhe,
+      // Arrasto não produz evento `click`: a prova de entrega do clique não se
+      // aplica aqui, e fingir que se aplica seria pior que não ter.
+      delivery_checked: false,
+      delivery_verified: null,
+    },
   };
 };
 
@@ -930,9 +1538,13 @@ const handleDownload: ActionHandler = async (svc, req) => {
     // Navegar para um recurso baixável dispara o evento e aborta a navegação.
     await page.goto(safe).catch(() => undefined);
   } else {
-    const resolved = await resolveOn(svc, page, readTarget(req.body.target), num(req.body, "timeout_ms"));
+    const resolved = await resolveOn(svc, req, page, readTarget(req.body.target), num(req.body, "timeout_ms"));
     const { pointer } = svc.enginesFor(req.session_id, page);
-    await pointer.click(centerOf(resolved), { action_id: req.action_id });
+    // Mesmo funil: um link de download fora do viewport recebia clique morto e
+    // o handler culpava o TIMEOUT do download por uma falha que era de mira.
+    // A prova de entrega aqui é o próprio evento `download`, então não há sonda.
+    const acao = await acionavel(svc, page, resolved, pointer);
+    await pointer.click(acao.ponto, { action_id: req.action_id });
   }
 
   let dl: Download;
@@ -984,7 +1596,7 @@ const handleUpload: ActionHandler = async (svc, req) => {
   }
   const file = decision.resolved!;
 
-  const resolved = await resolveOn(svc, page, readTarget(req.body.target), num(req.body, "timeout_ms"));
+  const resolved = await resolveOn(svc, req, page, readTarget(req.body.target), num(req.body, "timeout_ms"));
   const loc = resolved.handle as Locator | undefined;
   if (loc === undefined) throw new ApiError("TARGET_NOT_FOUND", "upload exige um <input type=file>; alvo por coordenada não serve");
 
@@ -1033,10 +1645,25 @@ const handleTask: ActionHandler = async (svc, req) => {
     updated_at: now,
   };
   svc.registerTask(task);
+  // A partir daqui as linhas desta task carregam SEU task_id, nao o da sessao.
+  req.task = task.task_id;
+  req.provider = agent?.name ?? null;
 
   if (agent === null) {
     task.state = "FAILED";
     task.updated_at = nowIso();
+    await svc.note({
+      session: req.session_id,
+      event: "task",
+      action: "task.failed",
+      actor: actorOf(req),
+      task: task.task_id,
+      action_id: req.action_id,
+      result: "error",
+      verified: false,
+      error: { code: "INVALID_REQUEST", message: "nenhum AgentProvider injetado" },
+      detail: { code: "INVALID_REQUEST", task_id: task.task_id, goal, state: task.state },
+    });
     // Devolver um QUEUED que ninguém executará seria mentir por omissão.
     throw new ApiError(
       "INVALID_REQUEST",
@@ -1047,41 +1674,113 @@ const handleTask: ActionHandler = async (svc, req) => {
 
   const page = pageOf(svc, req);
   svc.emit("task.started", req.session_id, req.action_id, { task_id: task.task_id, goal }, agent.name);
+  const nota = async (
+    action: string,
+    event: AuditEvent,
+    result: "ok" | "error" | "denied",
+    detail: Record<string, unknown>,
+    error: { code: string; message: string } | null = null,
+  ): Promise<void> => {
+    await svc.note({
+      session: req.session_id,
+      event,
+      action,
+      actor: actorOf(req),
+      provider: agent.name,
+      task: task.task_id,
+      page: req.page_id ?? null,
+      action_id: req.action_id,
+      result,
+      verified: result === "ok",
+      error,
+      detail,
+    });
+  };
+  /**
+   * Toda chamada ao provider passa por aqui. E o ponto — e o unico — em que a
+   * RESPOSTA do provider e avaliada, entao e onde `provider.degraded` nasce:
+   * erro ou timeout do modelo vira linha de trilha em vez de sumir dentro de um
+   * `catch` generico da task.
+   */
+  const viaProvider = async <T>(etapa: string, fn: () => Promise<T>): Promise<T> => {
+    const inicio = Date.now();
+    try {
+      return await fn();
+    } catch (e) {
+      const err = toActionError(e);
+      await nota("provider.degraded", "provider", "error", {
+        code: err.code,
+        etapa,
+        provider: agent.name,
+        elapsed_ms: Date.now() - inicio,
+      }, { code: err.code, message: err.message });
+      throw e;
+    }
+  };
+  await nota("task.started", "task", "ok", { task_id: task.task_id, goal, state: "QUEUED" });
   try {
     task.state = "PLANNING";
     const raw = await svc.perception.observe(page, { limit: svc.config.observe_limit });
-    const observation = await agent.observe({ session_id: req.session_id, observation: raw });
-    const reasoning = await agent.reason({ goal, observation });
-    const plan: Plan = await agent.plan({ goal, observation, reasoning });
+    const observation = await viaProvider("observe", () => agent.observe({ session_id: req.session_id, observation: raw }));
+    const reasoning = await viaProvider("reason", () => agent.reason({ goal, observation }));
+    const plan: Plan = await viaProvider("plan", () => agent.plan({ goal, observation, reasoning }));
     task.plan = plan;
     task.state = "RUNNING";
 
     for (const step of plan.steps) {
-      const response = await agent.act({ session_id: req.session_id, step });
+      const response = await viaProvider("act", () => agent.act({ session_id: req.session_id, step }));
       task.actions.push(response.action_id);
       svc.emit("task.progress", req.session_id, response.action_id, {
         task_id: task.task_id,
         step: step.id,
         success: response.success,
       }, agent.name);
+      const passoErro = response.success
+        ? null
+        : { code: String(response.error?.code ?? "INTERNAL"), message: String(response.error?.message ?? "passo falhou") };
+      await nota("task.progress", "task", response.success ? "ok" : "error", {
+        task_id: task.task_id,
+        step: step.id,
+        success: response.success,
+        state: task.state,
+        ...(passoErro === null ? {} : { code: passoErro.code }),
+      }, passoErro);
       if (!response.success) {
         task.state = "FAILED";
         task.result = response.error;
         task.updated_at = nowIso();
         svc.emit("task.failed", req.session_id, req.action_id, { task_id: task.task_id, step: step.id }, agent.name);
+        await nota("task.failed", "task", "error", {
+          code: passoErro!.code,
+          task_id: task.task_id,
+          step: step.id,
+          state: task.state,
+        }, passoErro);
         return task;
       }
-      const v = await agent.verify({ step, response });
+      const v = await viaProvider("verify", () => agent.verify({ step, response }));
       task.evidence.push(`${step.id}:${v.kind}:${v.verified ? "verified" : "unverified"}`);
     }
     task.state = "COMPLETED";
     task.updated_at = nowIso();
     svc.emit("task.completed", req.session_id, req.action_id, { task_id: task.task_id, steps: plan.steps.length }, agent.name);
+    await nota("task.completed", "task", "ok", {
+      task_id: task.task_id,
+      steps: plan.steps.length,
+      state: task.state,
+      evidence: task.evidence.length,
+    });
     return task;
   } catch (e) {
     task.state = "FAILED";
     task.updated_at = nowIso();
-    svc.emit("task.failed", req.session_id, req.action_id, { task_id: task.task_id, error: toActionError(e).code }, agent.name);
+    const err = toActionError(e);
+    svc.emit("task.failed", req.session_id, req.action_id, { task_id: task.task_id, error: err.code }, agent.name);
+    await nota("task.failed", "task", "error", {
+      code: err.code,
+      task_id: task.task_id,
+      state: task.state,
+    }, { code: err.code, message: err.message });
     throw e;
   }
 };
@@ -1119,23 +1818,64 @@ export function handlerFor(tool: string): ActionHandler | null {
 }
 
 /** Trilha de auditoria de uma ação. Não recebe corpo — corpo pode carregar segredo. */
+/**
+ * Quem pediu a ação, em ordem de especificidade:
+ *
+ *   1. `x-nomos-client` — a identidade que o agente declara por chamada;
+ *   2. o sujeito do token que autenticou o pedido;
+ *   3. o dono da sessão.
+ *
+ * A trilha antiga tinha só (1), e como quase nenhum cliente manda o header o
+ * campo era "unknown" em 100% das linhas — o dado mais importante da auditoria
+ * era o único que faltava. "unknown" só sobra quando não há sessão, token nem
+ * dono, e nesse caso o fato é do próprio runtime: `runtime`.
+ */
+export function actorOf(req: ActionRequest): string {
+  for (const cand of [req.client, req.subject, req.owner]) {
+    if (typeof cand === "string" && cand.trim() !== "") return cand;
+  }
+  return "runtime";
+}
+
+/** Capability exigida pela ferramenta, direto do contrato. */
+export function capabilityFor(tool: string): string | null {
+  return Object.hasOwn(REQUIRED_CAPABILITY, tool) ? REQUIRED_CAPABILITY[tool]! : null;
+}
+
 export function auditEntryFor(
   req: ActionRequest,
   result: "ok" | "error" | "denied",
-  verified: boolean,
+  verified: boolean | null,
   detail?: Record<string, unknown>,
+  over?: Partial<AuditEntry>,
 ): AuditEntry {
-  return {
+  const base: Record<string, unknown> = {
     timestamp: nowIso(),
+    event: "action" as AuditEvent,
     session: req.session_id === "" ? null : req.session_id,
-    actor: req.client ?? "unknown",
+    browser: req.browser ?? null,
+    page: req.page_id ?? null,
+    task: req.task ?? null,
+    owner: req.owner ?? null,
+    actor: actorOf(req),
+    provider: req.provider ?? null,
     action: req.tool,
+    capability: capabilityFor(req.tool),
+    policy_decision: result === "denied" ? "deny" : "allow",
+    policy_reason: null,
     target: typeof req.body.target === "object" && req.body.target !== null ? JSON.stringify(req.body.target) : null,
     result,
     verified,
+    error: null,
+    detail: detail ?? {},
     action_id: req.action_id,
-    ...(detail !== undefined ? { detail } : {}),
   };
+  if (over !== undefined) {
+    for (const [k, v] of Object.entries(over)) {
+      if (v !== undefined) base[k] = v;
+    }
+  }
+  return makeAuditEntry(base as Partial<AuditEntry>);
 }
 
 export { newActionId };

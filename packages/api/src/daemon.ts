@@ -62,7 +62,10 @@ const UI_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..
 import {
   ApiError,
   RuntimeServices,
+  auditAcionabilidadeDetail,
+  auditActionDetail,
   auditEntryFor,
+  capabilityFor,
   handlerFor,
   toActionError,
   type ActionRequest,
@@ -209,6 +212,18 @@ export interface StartDaemonOptions extends LoadConfigOptions {
 
 const MAX_URL_LENGTH = 8192;
 
+/**
+ * A aba que o RESULTADO nomeia. `browser.open`, `browser.new_tab`,
+ * `browser.switch_tab` e `browser.close_tab` não passam por `pageOf()` — eles
+ * criam, trocam ou fecham a aba —, então sem isto a linha de audit apontaria
+ * para a aba que estava ativa ANTES da ação, que é a resposta errada.
+ */
+function paginaDoResultado(result: unknown): string | null {
+  if (result === null || typeof result !== "object") return null;
+  const id = (result as { page_id?: unknown }).page_id;
+  return typeof id === "string" && id !== "" ? id : null;
+}
+
 function jsonResponse(res: http.ServerResponse, status: number, payload: unknown): void {
   const body = Buffer.from(JSON.stringify(payload), "utf8");
   res.writeHead(status, {
@@ -308,9 +323,29 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
   // um SIGKILL o `scan()` devolve lista VAZIA, e um teste que percorre essa lista
   // passa por vacuidade. Foi exatamente o que aconteceu na primeira execução
   // deste gate — o flag ficou verde sem que nada tivesse sido recuperado.
-  const recovery = new RecoveryManager(
-    config.sessions_root !== null ? { root: config.sessions_root } : {},
-  );
+  const recovery = new RecoveryManager({
+    ...(config.sessions_root !== null ? { root: config.sessions_root } : {}),
+    // Recuperação em silêncio é recuperação inauditável. Cada tentativa de
+    // reattach vira linha na trilha da sessão recuperada.
+    onRecovery: (p) => {
+      void services.note({
+        session: p.session_id,
+        event: "recovery",
+        action: p.phase === "start" ? "recovery.start" : "recovery.complete",
+        actor: "runtime",
+        result: p.phase === "complete" && p.error !== null ? "error" : "ok",
+        verified: p.phase === "complete" ? p.connected === true : null,
+        ...(p.error !== null ? { error: { code: String(p.reason ?? "recover"), message: p.error } } : {}),
+        detail: {
+          phase: p.phase,
+          decision: p.decision,
+          reason: p.reason,
+          connected: p.connected,
+          ...(p.error !== null ? { code: String(p.reason ?? "recover"), error: p.error } : {}),
+        },
+      });
+    },
+  });
 
   /** Grava o estado da sessão. Falha aqui NÃO derruba a ação — só perde o recovery. */
   async function snapshot(session_id: string): Promise<void> {
@@ -348,6 +383,7 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
     max_workers: config.max_workers,
     headless: config.headless,
     viewport: config.viewport,
+    device_scale_factor: config.device_scale_factor,
     ...(config.profiles_root !== null ? { profiles_root: config.profiles_root } : {}),
     onEvent: (e: RuntimeEvent) => {
       bus.emit(e);
@@ -405,7 +441,11 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
     params: Record<string, string>,
     body: Body,
     client: string | null,
+    subject: string | null,
   ): Promise<unknown> {
+    // Quem PEDIU a operação de controle. O header do cliente ganha do sujeito
+    // do token porque é o mais específico dos dois; nunca cai em "unknown".
+    const ator = client ?? subject ?? "runtime";
     switch (name) {
       case "health":
         return health();
@@ -429,13 +469,83 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
           client: typeof body.client === "string" ? body.client : client,
         });
         await snapshot(info.session_id);
+        const task_raiz = services.rootTaskFor(info.session_id);
+        const aba = info.pages.find((p) => p.active) ?? info.pages[0] ?? null;
+        await services.note({
+          session: info.session_id,
+          event: "control",
+          action: "session.created",
+          actor: ator,
+          owner: info.owner,
+          page: aba?.page_id ?? null,
+          task: task_raiz,
+          result: "ok",
+          verified: true,
+          detail: {
+            profile: info.profile,
+            capabilities: info.permissions,
+            goal: info.task,
+            attached_client: info.attached_client,
+            pages: info.pages.length,
+            // Mapeia a identidade desta sessão ao BrowserContext do pool.
+            pool_context: info.context_id,
+          },
+        });
+        // A sessão É uma task raiz: sem isto, toda ação fora de `browser.task`
+        // ficaria com `task: null` e a trilha não diria a que trabalho serviu.
+        await services.note({
+          session: info.session_id,
+          event: "task",
+          action: "task.started",
+          actor: ator,
+          owner: info.owner,
+          task: task_raiz,
+          result: "ok",
+          verified: true,
+          detail: { task_id: task_raiz, goal: info.task, scope: "session_root" },
+        });
         return info;
       }
       case "sessions.get":
         return sessions.observe(params.id!);
       case "sessions.delete": {
         const id = params.id!;
-        await sessions.closeSession(id, typeof body.reason === "string" ? body.reason : "requested");
+        const motivo = typeof body.reason === "string" ? body.reason : "requested";
+        // O contexto é lido ANTES do fechamento: depois dele `sessions.get` já
+        // não devolve dono nem context_id, e a linha sairia oca.
+        const antes = (() => {
+          try {
+            return sessions.get(id);
+          } catch {
+            return null;
+          }
+        })();
+        const raiz = services.rootTaskFor(id);
+        await sessions.closeSession(id, motivo);
+        await services.note({
+          session: id,
+          event: "control",
+          action: "session.closed",
+          actor: ator,
+          owner: antes?.owner ?? null,
+          page: null,
+          task: raiz,
+          result: "ok",
+          verified: true,
+          detail: { reason: motivo, pages: antes?.pages.length ?? 0 },
+        });
+        await services.note({
+          session: id,
+          event: "task",
+          action: motivo === "requested" ? "task.completed" : "task.cancelled",
+          actor: ator,
+          owner: antes?.owner ?? null,
+          page: null,
+          task: raiz,
+          result: "ok",
+          verified: true,
+          detail: { task_id: raiz, reason: motivo, scope: "session_root" },
+        });
         // Sessão fechada de propósito não é órfã. Marcar CLOSED faz o próximo
         // `scan()` decidir `terminate` — o comportamento que o RecoveryManager
         // já implementa. (Eu havia inventado um `recovery.remove()` que não
@@ -452,24 +562,121 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
       case "sessions.attach": {
         const who = typeof body.client === "string" ? body.client : client;
         if (who === null) throw new ApiError("INVALID_REQUEST", "attach exige `client` no corpo ou header x-nomos-client");
-        return sessions.attach(params.id!, who, { force: body.force === true });
+        const atada = sessions.attach(params.id!, who, { force: body.force === true });
+        await services.note({
+          session: atada.session_id,
+          event: "control",
+          action: "session.attach",
+          actor: who,
+          owner: atada.owner,
+          result: "ok",
+          verified: true,
+          detail: { client: who, force: body.force === true, status: atada.status },
+        });
+        // Sessão órfã que volta a ter condutor retoma a task raiz.
+        await services.note({
+          session: atada.session_id,
+          event: "task",
+          action: "task.resume",
+          actor: who,
+          owner: atada.owner,
+          result: "ok",
+          verified: true,
+          detail: { task_id: services.rootTaskFor(atada.session_id), client: who, scope: "session_root" },
+        });
+        return atada;
       }
-      case "sessions.detach":
+      case "sessions.detach": {
         // Desconecta o CLIENTE. A sessão continua viva, órfã e reatável.
-        return sessions.detach(params.id!);
+        const solta = sessions.detach(params.id!);
+        await services.note({
+          session: solta.session_id,
+          event: "control",
+          action: "session.detach",
+          actor: ator,
+          owner: solta.owner,
+          result: "ok",
+          verified: true,
+          detail: { status: solta.status, orphan: solta.attached_client === null },
+        });
+        return solta;
+      }
       case "sessions.handoff": {
         const to_owner = body.to_owner;
         if (typeof to_owner !== "string" || to_owner.trim() === "") {
           throw new ApiError("INVALID_REQUEST", "handoff exige `to_owner`");
         }
-        return sessions.handoff(params.id!, to_owner, {
+        const de = (() => {
+          try {
+            return sessions.get(params.id!).owner;
+          } catch {
+            return null;
+          }
+        })();
+        const passada = await sessions.handoff(params.id!, to_owner, {
           ...(body.client === null || typeof body.client === "string" ? { client: body.client as string | null } : {}),
         });
+        await services.note({
+          session: passada.session_id,
+          event: "control",
+          action: "session.handoff",
+          actor: ator,
+          // O dono na linha é o NOVO: é quem responde pela sessão a partir daqui.
+          owner: passada.owner,
+          result: "ok",
+          verified: true,
+          detail: { from_owner: de, to_owner: passada.owner, attached_client: passada.attached_client },
+        });
+        return passada;
       }
-      case "sessions.takeover":
-        return sessions.takeover(params.id!, typeof body.actor === "string" ? body.actor : "human");
-      case "sessions.release":
-        return sessions.release(params.id!, typeof body.actor === "string" ? body.actor : "human");
+      case "sessions.takeover": {
+        const quem = typeof body.actor === "string" ? body.actor : "human";
+        const tomada = sessions.takeover(params.id!, quem);
+        await services.note({
+          session: tomada.session_id,
+          event: "control",
+          action: "session.takeover",
+          actor: quem,
+          owner: tomada.owner,
+          result: "ok",
+          verified: true,
+          detail: { by: quem, control: tomada.control, status: tomada.status },
+        });
+        return tomada;
+      }
+      case "sessions.release": {
+        const quem = typeof body.actor === "string" ? body.actor : "human";
+        const devolvida = await sessions.release(params.id!, quem);
+        await services.note({
+          session: devolvida.session_id,
+          event: "control",
+          action: "session.release",
+          actor: quem,
+          owner: devolvida.owner,
+          result: "ok",
+          verified: true,
+          detail: { by: quem, control: devolvida.control, status: devolvida.status },
+        });
+        // `release` NÃO devolve para ACTIVE: devolve para RECOVERING, porque o
+        // humano pode ter navegado, fechado abas ou trocado de conta. Isso é o
+        // INÍCIO de uma recuperação, e agora deixa rastro — `recovery.complete`
+        // sai do lado de `browser.observe`, que é quem de fato reobserva.
+        await services.note({
+          session: devolvida.session_id,
+          event: "recovery",
+          action: "recovery.start",
+          actor: quem,
+          owner: devolvida.owner,
+          result: "ok",
+          verified: false,
+          detail: {
+            trigger: "control.returned",
+            state: devolvida.status,
+            needs_reobservation: true,
+          },
+        });
+        return devolvida;
+      }
       default:
         throw new ApiError("INTERNAL", `rota de gestão sem implementação: ${name}`);
     }
@@ -482,6 +689,7 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
     body: Body,
     query: URLSearchParams,
     client: string | null,
+    subject: string | null,
     res: http.ServerResponse,
   ): Promise<void> {
     const action_id = newActionId();
@@ -500,23 +708,56 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
       return;
     }
 
-    const req: ActionRequest = { tool, action_id, session_id, body, client };
+    const req: ActionRequest = { tool, action_id, session_id, body, client, subject };
 
     let info: SessionInfo;
     try {
       info = sessions.get(session_id);
     } catch (e) {
       const err = toActionError(e);
-      await services.record(auditEntryFor(req, "error", false, { code: err.code }));
+      await services.record(
+        auditEntryFor(req, "error", false, { code: err.code }, { error: { code: err.code, message: err.message } }),
+      );
       jsonResponse(res, httpStatusFor(err.code), fail(action_id, "FAILED", err.code, err.message, t.done(), err.detail));
       return;
     }
+
+    // Contexto forense do pedido. É preenchido ANTES de qualquer gate para que
+    // até a linha de NEGAÇÃO saiba dono, navegador, aba e task — a negação é o
+    // evento que mais importa e era justamente o que saía mais pobre.
+    req.owner = info.owner;
+    req.browser = services.browserFor(session_id);
+    req.task = services.rootTaskFor(session_id);
+    const abaAtiva = info.pages.find((p) => p.active) ?? info.pages[0] ?? null;
+    req.page_id = abaAtiva?.page_id ?? null;
+    const capability = capabilityFor(tool);
 
     // 1. CAPABILITY — antes de qualquer contato com o navegador.
     const decision = services.policy.check(tool, info.permissions, info.owner);
     if (!decision.allowed) {
       const code = decision.code ?? "CAPABILITY_DENIED";
-      await services.record(auditEntryFor(req, "denied", false, { required: decision.required, reason: decision.reason }));
+      await services.record(
+        auditEntryFor(
+          req,
+          "denied",
+          false,
+          {
+            code,
+            required: decision.required,
+            reason: decision.reason,
+            class: decision.class,
+            source: decision.source,
+          },
+          {
+            event: "policy",
+            action: "policy.deny",
+            capability: decision.required ?? capability,
+            policy_decision: "deny",
+            policy_reason: `${code}: ${decision.reason}`,
+            error: { code, message: decision.reason },
+          },
+        ),
+      );
       services.emit("action.failed", session_id, action_id, { tool, code, reason: decision.reason }, client ?? "agent");
       jsonResponse(
         res,
@@ -542,7 +783,22 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
     // pedir screenshot enquanto está congelado.
     if (info.control === "human") {
       const message = `sessão ${session_id} está sob controle humano`;
-      await services.record(auditEntryFor(req, "denied", false, { reason: "control_held_by_human" }));
+      await services.record(
+        auditEntryFor(
+          req,
+          "denied",
+          false,
+          { code: "CONTROL_HELD_BY_HUMAN", reason: "control_held_by_human", control: info.control },
+          {
+            event: "policy",
+            action: "policy.deny",
+            capability,
+            policy_decision: "deny",
+            policy_reason: `CONTROL_HELD_BY_HUMAN: ${message}`,
+            error: { code: "CONTROL_HELD_BY_HUMAN", message },
+          },
+        ),
+      );
       jsonResponse(
         res,
         httpStatusFor("CONTROL_HELD_BY_HUMAN"),
@@ -559,6 +815,24 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
       return;
     }
 
+    // A DECISÃO DE POLÍTICA É UM FATO PRÓPRIO. Ela é registrada aqui, depois de
+    // os dois gates terem passado e antes de o handler tocar no navegador: a
+    // linha de ação diz o que aconteceu, esta diz o que foi PERMITIDO acontecer.
+    await services.record(
+      auditEntryFor(
+        req,
+        "ok",
+        null,
+        { required: decision.required, class: decision.class, source: decision.source },
+        {
+          event: "policy",
+          action: "policy.allow",
+          capability: decision.required ?? capability,
+          policy_decision: "allow",
+        },
+      ),
+    );
+
     services.emit("action.started", session_id, action_id, { tool }, client ?? "agent");
 
     try {
@@ -568,13 +842,31 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
         typeof result === "object" && result !== null && "verification" in result
           ? ((result as { verification?: { verified?: boolean } }).verification?.verified ?? false)
           : false;
-      await services.record(auditEntryFor(req, "ok", verified));
+      // O detalhe de procedência entra na trilha só para observe/extract, que são
+      // as duas ações que leem página. Sem isto, "o agente viu um ataque hoje?"
+      // não teria resposta no audit log — só no corpo de uma resposta já perdida.
+      await services.record(
+        auditEntryFor(req, "ok", verified, auditActionDetail(result), {
+          capability,
+          policy_decision: "allow",
+          page: paginaDoResultado(result) ?? req.page_id ?? null,
+        }),
+      );
       services.emit("action.completed", session_id, action_id, { tool, verified }, client ?? "agent");
       jsonResponse(res, 200, ok(action_id, state, result, t.done()));
     } catch (e) {
       const err = toActionError(e);
       const state = sessions.has(session_id) ? sessions.get(session_id).status : "FAILED";
-      await services.record(auditEntryFor(req, "error", false, { code: err.code }));
+      await services.record(
+        // A recusa carrega o MESMO detalhe de acionabilidade da linha de sucesso.
+        // Sem isso, "por que TARGET_NOT_ACTIONABLE?" só se responderia relendo o
+        // corpo de uma resposta HTTP que ninguém guardou.
+        auditEntryFor(req, "error", false, { code: err.code, ...(auditAcionabilidadeDetail(err.detail) ?? {}) }, {
+          capability,
+          policy_decision: "allow",
+          error: { code: err.code, message: err.message },
+        }),
+      );
       services.emit("action.failed", session_id, action_id, { tool, code: err.code }, client ?? "agent");
       jsonResponse(
         res,
@@ -787,6 +1079,30 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
           if (alvoSessao !== null && alvoSessao !== "") {
             const d = leases.check(alvoSessao, ator, { tool: route.tool! });
             if (!d.allowed) {
+              // Negação de arbitragem acontecia ANTES de `handleAction` e por
+              // isso escapava inteira da trilha: o agente barrado não deixava
+              // nenhum rastro de ter tentado.
+              await services.note({
+                session: alvoSessao,
+                event: "policy",
+                action: "policy.deny",
+                actor: ator,
+                capability: capabilityFor(route.tool!),
+                policy_decision: "deny",
+                policy_reason: `${CONTROL_NOT_OWNED_CODE}: ${d.message}`,
+                target: null,
+                result: "denied",
+                verified: false,
+                action_id,
+                error: { code: CONTROL_NOT_OWNED_CODE, message: d.message },
+                detail: {
+                  code: CONTROL_NOT_OWNED_CODE,
+                  lease: CONTROL_NOT_OWNED,
+                  reason: d.reason,
+                  current_holder: d.current_holder ?? null,
+                  tool: route.tool,
+                },
+              });
               envelopeError(res, action_id, "FAILED", CONTROL_NOT_OWNED_CODE, d.message, {
                 lease: CONTROL_NOT_OWNED,
                 reason: d.reason,
@@ -797,11 +1113,17 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
               return;
             }
           }
-          await handleAction(route.tool!, body, url.searchParams, client, res);
+          await handleAction(route.tool!, body, url.searchParams, client, autenticado.token.subject, res);
           return;
         }
 
-        const result = await handleManagement(route.name, route.params, body, client);
+        const result = await handleManagement(
+          route.name,
+          route.params,
+          body,
+          client,
+          autenticado.token.subject,
+        );
         jsonResponse(res, route.name === "sessions.create" ? 201 : 200, result);
       } catch (e) {
         const err = toActionError(e);

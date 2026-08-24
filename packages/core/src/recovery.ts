@@ -280,9 +280,30 @@ export interface ReattachResult {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Fato de recuperação observável de fora (FASE 3 forense).
+ *
+ * O `RecoveryManager` decidia e reatava em silêncio: quem lesse a trilha depois
+ * de uma queda não encontrava NADA sobre a recuperação — nem que ela começou,
+ * nem como terminou. O hook existe para que o daemon transforme cada tentativa
+ * em linha de `actions.jsonl`.
+ */
+export interface RecoveryProgress {
+  phase: "start" | "complete";
+  session_id: string;
+  decision: RecoveryDecision | null;
+  reason: RecoveryReason | null;
+  connected: boolean | null;
+  error: string | null;
+}
+
+export type RecoveryHook = (progress: RecoveryProgress) => void;
+
 export interface RecoveryManagerOptions {
   /** Raiz das sessões. Default: a mesma de `audit.ts`. */
   root?: string;
+  /** Observador das tentativas de reattach. Falha dele não derruba a recuperação. */
+  onRecovery?: RecoveryHook;
   /** Timeout da sonda HTTP do CDP. */
   probe_timeout_ms?: number;
   /** Timeout do `connectOverCDP`. */
@@ -297,10 +318,23 @@ export class RecoveryManager {
   /** Uma cadeia de escrita por arquivo: dois saves não intercalam rename. */
   #chains = new Map<string, Promise<unknown>>();
 
+  readonly #onRecovery: RecoveryHook | null;
+
   constructor(opts: RecoveryManagerOptions = {}) {
     this.root = opts.root ?? SESSIONS_ROOT;
     this.probe_timeout_ms = opts.probe_timeout_ms ?? 1_500;
     this.connect_timeout_ms = opts.connect_timeout_ms ?? 5_000;
+    this.#onRecovery = opts.onRecovery ?? null;
+  }
+
+  /** Avisa o observador. Um hook que estoura não pode abortar a recuperação. */
+  #progress(progress: RecoveryProgress): void {
+    if (this.#onRecovery === null) return;
+    try {
+      this.#onRecovery(progress);
+    } catch (e) {
+      console.error("[recovery] hook falhou:", (e as Error).message);
+    }
   }
 
   file(session_id: string): string {
@@ -590,6 +624,27 @@ export class RecoveryManager {
    * `needs_reobservation`, nunca "assume que continua onde estava".
    */
   async reattach(verdict: RecoveryVerdict): Promise<ReattachResult> {
+    this.#progress({
+      phase: "start",
+      session_id: verdict.session_id,
+      decision: verdict.decision,
+      reason: verdict.reason,
+      connected: null,
+      error: null,
+    });
+    const out = await this.#reattach(verdict);
+    this.#progress({
+      phase: "complete",
+      session_id: out.session_id,
+      decision: out.decision,
+      reason: out.reason,
+      connected: out.connected,
+      error: out.error,
+    });
+    return out;
+  }
+
+  async #reattach(verdict: RecoveryVerdict): Promise<ReattachResult> {
     const snap = verdict.snapshot;
     const shell: ReattachResult = {
       session_id: verdict.session_id,

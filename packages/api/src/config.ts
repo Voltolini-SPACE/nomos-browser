@@ -37,6 +37,15 @@ export class ConfigError extends Error {
   }
 }
 
+/** Política de entrega do texto cru de página. Ver `DaemonConfig.raw_web_content`. */
+export type RawWebContentPolicy = "withhold_on_detection" | "always" | "never";
+
+export const RAW_WEB_CONTENT_POLICIES: readonly RawWebContentPolicy[] = Object.freeze([
+  "withhold_on_detection",
+  "always",
+  "never",
+]);
+
 export interface DaemonConfig {
   host: string;
   /** 0 = porta efêmera escolhida pelo SO; a porta real sai em `startDaemon()`. */
@@ -66,6 +75,47 @@ export interface DaemonConfig {
   /** Raiz do audit log JSONL. */
   sessions_root: string | null;
   audit: boolean;
+  /**
+   * O que fazer com o texto CRU lido da web quando há injeção detectada.
+   *
+   * O default é `withhold_on_detection` — fail-safe, não fail-closed total.
+   * `never` seria mais seguro no papel e inútil na prática: o agente perderia a
+   * capacidade de ler qualquer página e o dono desligaria a defesa inteira na
+   * primeira semana. `always` mantém o comportamento antigo (marca mas entrega),
+   * e existe para quem precisa auditar o cru sem intermediação.
+   *
+   * Reter só em severidade ALTA é deliberado: média/baixa marcam e entregam,
+   * porque um falso positivo de severidade média que apaga conteúdo legítimo
+   * transforma a defesa em bug.
+   */
+  raw_web_content: RawWebContentPolicy;
+  /**
+   * FASE 4 — ACIONABILIDADE DO GESTO.
+   *
+   * `scroll_into_view`: rolar o alvo para dentro do viewport antes de clicar,
+   * arrastar, focar para digitar ou rolar com `target`. Default LIGADO porque
+   * desligado o runtime volta a despachar gesto para coordenada fora da tela —
+   * o defeito que a FASE 4 fechou. Existe desligado só para quem precisa medir
+   * o comportamento antigo (é assim que os controles negativos do teste provam
+   * que a defesa é o que pega o caso).
+   */
+  scroll_into_view: boolean;
+  /** Amostras CONSECUTIVAS iguais da bounding box para declará-la assentada. */
+  stability_samples: number;
+  /** Intervalo entre amostras de estabilização. */
+  stability_interval_ms: number;
+  /**
+   * Exigir prova de que o evento de clique chegou ao alvo. Default LIGADO: sem
+   * ele, `success:true` volta a significar "despachei", não "chegou".
+   */
+  click_delivery_check: boolean;
+  /**
+   * `deviceScaleFactor` do contexto do Chromium (DPR). 1 = tela comum, 2 =
+   * retina. As coordenadas do runtime são CSS px em qualquer DPR; esta chave
+   * existe para que isso seja TESTÁVEL contra um navegador de DPR 2 de verdade,
+   * em vez de afirmado.
+   */
+  device_scale_factor: number;
   /** Proveniência por campo: "default" | "file:<caminho>" | "env:<VAR>" | "override". */
   sources: Record<string, string>;
 }
@@ -108,6 +158,12 @@ function baseDefaults(): DaemonConfig {
     download_root: null,
     sessions_root: null,
     audit: true,
+    raw_web_content: "withhold_on_detection",
+    scroll_into_view: true,
+    stability_samples: 3,
+    stability_interval_ms: 50,
+    click_delivery_check: true,
+    device_scale_factor: 1,
     sources: {},
   };
 }
@@ -154,6 +210,18 @@ function asPolicy(raw: unknown, field: string, origin: string): PolicyName {
     });
   }
   return s as PolicyName;
+}
+
+function asRawWebContent(raw: unknown, field: string, origin: string): RawWebContentPolicy {
+  const s = asString(raw, field, origin);
+  if (!(RAW_WEB_CONTENT_POLICIES as readonly string[]).includes(s)) {
+    throw new ConfigError(`${field} (${origin}) desconhecida: ${s}`, {
+      field,
+      origin,
+      known: [...RAW_WEB_CONTENT_POLICIES],
+    });
+  }
+  return s as RawWebContentPolicy;
 }
 
 function asPath(raw: unknown, field: string, origin: string): string {
@@ -258,6 +326,12 @@ export const ENV_KEYS: Readonly<Record<string, string>> = Object.freeze({
   download_root: "NOMOS_BROWSER_DOWNLOAD_ROOT",
   sessions_root: "NOMOS_SESSIONS_ROOT",
   audit: "NOMOS_BROWSER_AUDIT",
+  raw_web_content: "NOMOS_BROWSER_RAW_WEB_CONTENT",
+  scroll_into_view: "NOMOS_BROWSER_SCROLL_INTO_VIEW",
+  stability_samples: "NOMOS_BROWSER_STABILITY_SAMPLES",
+  stability_interval_ms: "NOMOS_BROWSER_STABILITY_INTERVAL_MS",
+  click_delivery_check: "NOMOS_BROWSER_CLICK_DELIVERY_CHECK",
+  device_scale_factor: "NOMOS_BROWSER_DEVICE_SCALE_FACTOR",
 });
 
 export interface LoadConfigOptions extends Partial<Omit<DaemonConfig, "sources" | "viewport">> {
@@ -318,6 +392,26 @@ function applyKey(cfg: DaemonConfig, key: string, raw: unknown, origin: string):
       break;
     case "default_policy":
       cfg.default_policy = asPolicy(raw, key, origin);
+      break;
+    case "raw_web_content":
+      cfg.raw_web_content = asRawWebContent(raw, key, origin);
+      break;
+    case "scroll_into_view":
+      cfg.scroll_into_view = asBool(raw, key, origin);
+      break;
+    case "click_delivery_check":
+      cfg.click_delivery_check = asBool(raw, key, origin);
+      break;
+    case "stability_samples":
+      // Mínimo 2: com 1 amostra "consecutivas iguais" não compara nada e a
+      // estabilização vira um `await` decorativo.
+      cfg.stability_samples = asInt(raw, key, origin, 2, 100);
+      break;
+    case "stability_interval_ms":
+      cfg.stability_interval_ms = asInt(raw, key, origin, 0, 10_000);
+      break;
+    case "device_scale_factor":
+      cfg.device_scale_factor = asInt(raw, key, origin, 1, 8);
       break;
     case "profiles_root":
       cfg.profiles_root = asPath(raw, key, origin);

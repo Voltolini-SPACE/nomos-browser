@@ -23,7 +23,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ElementHandle, Locator, Page } from "playwright";
-import { nowIso, type AuditEntry, type RuntimeEvent, type SecretProvider } from "./contract.ts";
+import { makeAuditEntry, nowIso, type AuditEntry, type RuntimeEvent, type SecretProvider } from "./contract.ts";
 
 /** `packages/core/src/vault.ts` → raiz do repo → `profiles/`. */
 export const DEFAULT_VAULT_ROOT: string = path.resolve(
@@ -190,17 +190,19 @@ export type SecretUsedHook = (usage: SecretUsage) => void | Promise<void>;
 
 /** Converte o uso no `AuditEntry` do contrato (FASE 24). */
 export function secretUsageToAuditEntry(u: SecretUsage, action_id: string | null = null): AuditEntry {
-  return {
+  return makeAuditEntry({
     timestamp: u.timestamp,
+    event: "action",
     session: u.session,
     actor: u.provider,
+    provider: u.provider,
     action: "secret.used",
     target: u.destino,
     result: u.verified ? "ok" : "error",
     verified: u.verified,
     action_id,
     detail: { credential_ref: u.ref },
-  };
+  });
 }
 
 /** Converte o uso no `RuntimeEvent` `secret.used` (FASE 5). */

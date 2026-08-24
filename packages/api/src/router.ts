@@ -151,6 +151,16 @@ export const HTTP_STATUS: Readonly<Record<ActionErrorCode, number>> = Object.fre
   CAPABILITY_DENIED: 403,
   TARGET_NOT_FOUND: 404,
   TARGET_AMBIGUOUS: 409,
+  // 409 Conflict: o alvo EXISTE (404 seria mentira) mas o estado atual da
+  // página conflita com o gesto pedido — coberto, fora de vista, em movimento.
+  // É a mesma família de TARGET_AMBIGUOUS: recurso encontrado, pedido
+  // irrealizável como está. Um retry depois de mudar a página pode funcionar.
+  TARGET_NOT_ACTIONABLE: 409,
+  // 500: o runtime fez tudo que lhe cabia — resolveu, rolou, conferiu que o
+  // ponto estava livre — despachou o clique e o evento não chegou. Isso é falha
+  // do LADO DO SERVIDOR (do runtime ou do navegador), não pedido malformado do
+  // cliente, e nenhum 4xx descreveria isso honestamente.
+  CLICK_NOT_DELIVERED: 500,
   VERIFICATION_FAILED: 422,
   NAVIGATION_FAILED: 502,
   TIMEOUT: 504,

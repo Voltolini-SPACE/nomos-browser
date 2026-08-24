@@ -156,6 +156,13 @@ export interface SessionManagerOptions {
   /** Default do produto: headful — takeover humano precisa de janela visível. */
   headless?: boolean;
   viewport?: { width: number; height: number };
+  /**
+   * DPR do contexto (`deviceScaleFactor`). Default 1. As coordenadas do runtime
+   * são CSS px em qualquer DPR — o que muda é só a resolução do bitmap. Isto
+   * está aqui para que essa afirmação possa ser MEDIDA contra um Chromium de
+   * DPR 2 de verdade (tests/click-entrega.test.ts), em vez de assumida.
+   */
+  device_scale_factor?: number;
   onEvent?: (event: RuntimeEvent) => void;
   /** Quantas sessões CLOSED ficam consultáveis antes da poda. */
   max_closed_retained?: number;
@@ -240,6 +247,7 @@ export class SessionManager {
   #sweeper: ReturnType<typeof setInterval> | null = null;
   #headless: boolean;
   #viewport: { width: number; height: number };
+  #deviceScaleFactor: number;
   #onEvent: ((event: RuntimeEvent) => void) | null;
   #hookErrors: unknown[] = [];
   #maxClosedRetained: number;
@@ -256,6 +264,7 @@ export class SessionManager {
     this.#sweepIntervalMs = opts.sweep_interval_ms ?? 30_000;
     this.#headless = opts.headless ?? false;
     this.#viewport = opts.viewport ?? { width: 1280, height: 800 };
+    this.#deviceScaleFactor = opts.device_scale_factor ?? 1;
     this.#onEvent = opts.onEvent ?? null;
     this.#maxClosedRetained = opts.max_closed_retained ?? 200;
 
@@ -452,6 +461,7 @@ export class SessionManager {
       context = await chromium.launchPersistentContext(user_data_dir, {
         headless,
         viewport: this.#viewport,
+        deviceScaleFactor: this.#deviceScaleFactor,
       });
     } catch (e) {
       if (ephemeral) await rm(user_data_dir, { recursive: true, force: true }).catch(() => undefined);

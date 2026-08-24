@@ -28,7 +28,7 @@ import { fileURLToPath } from "node:url";
 import { WebSocketServer, type WebSocket } from "ws";
 
 import type { HealthResponse, RuntimeEvent, SessionInfo } from "../packages/core/src/contract.ts";
-import { RESTRICTED_CAPABILITIES } from "../packages/core/src/contract.ts";
+import { RESTRICTED_CAPABILITIES, makeAuditEntry } from "../packages/core/src/contract.ts";
 import { SessionRecorder } from "../packages/observability/src/replay.ts";
 import { CLI_VERSION, EXIT, eventsWsUrl, normalizeBaseUrl, parseArgs, UsageError } from "../packages/cli/src/main.ts";
 
@@ -617,7 +617,7 @@ describe("CLI contra runtime falso (subprocesso real)", () => {
       event: "page.loaded",
       payload: { url: "https://exemplo.test/" },
     });
-    await recorder.recordAction({
+    await recorder.recordAction(makeAuditEntry({
       timestamp: "2026-08-24T10:00:02.000Z",
       session: sid,
       actor: "agent",
@@ -626,7 +626,7 @@ describe("CLI contra runtime falso (subprocesso real)", () => {
       result: "ok",
       verified: true,
       action_id: "act_9",
-    });
+    }));
     await recorder.flush();
 
     const r = await runCliProcess(["replay", sid, "--sessions-root", ROOT]);

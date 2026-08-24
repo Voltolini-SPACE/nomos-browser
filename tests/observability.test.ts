@@ -15,6 +15,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { makeAuditEntry } from "../packages/core/src/contract.ts";
 import type { AuditEntry, RuntimeEvent } from "../packages/core/src/contract.ts";
 import {
   REDACTED,
@@ -64,7 +65,7 @@ function evt(over: Partial<RuntimeEvent> = {}): RuntimeEvent {
 }
 
 function auditEntry(over: Partial<AuditEntry> = {}): AuditEntry {
-  return {
+  return makeAuditEntry({
     timestamp: "2026-08-24T10:00:00.000Z",
     session: null,
     actor: "agent",
@@ -74,7 +75,7 @@ function auditEntry(over: Partial<AuditEntry> = {}): AuditEntry {
     verified: true,
     action_id: "act_1",
     ...over,
-  };
+  });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

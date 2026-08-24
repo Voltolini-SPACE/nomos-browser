@@ -88,8 +88,11 @@ requisição
   → policy.check(tool, capabilities)        ← negado aqui não chega no navegador
   → fila da sessão (backpressure)
   → TargetResolver.resolve()                ← cascata; registra o que tentou
+  → Acionabilidade.rolar → assentar → remedir → conferir ponto   (FASE 4)
   → captura do snapshot "antes"
+  → sonda de entrega armada (listener de captura em `document`)  (FASE 4)
   → PointerEngine / KeyboardEngine
+  → prova de entrega lida                   ← o evento chegou ao alvo?
   → ActionVerifier.verify()                 ← confidence derivada de sinal observado
   → EventBus.emit() + AuditLog.append()     ← ambos já redigidos
   → ActionResponse
@@ -98,6 +101,38 @@ requisição
 Falha em qualquer etapa vira `ActionResponse` com `error.code`. Não existe fallback
 silencioso: uma ação que não pôde ser verificada volta `verified=false`, não
 `success=true` otimista.
+
+### Acionabilidade e entrega (FASE 4)
+
+`verified=false` sozinho nunca foi pista suficiente, porque é também o valor
+devolvido quando NENHUMA verificação foi pedida. Um clique despachado para uma
+coordenada fora do viewport voltava `success:true, verified:false` — indistinguível
+de "cliquei e ninguém me pediu prova". Dois códigos novos separam as duas coisas:
+
+| código | quando | HTTP |
+| --- | --- | --- |
+| `TARGET_NOT_ACTIONABLE` | alvo existe mas não pode receber o gesto: fora do viewport mesmo após rolar, área zero, invisível, coberto no ponto, removido do DOM, ou em movimento que não assenta | 409 |
+| `CLICK_NOT_DELIVERED` | o gesto foi despachado e nenhum evento chegou ao alvo | 500 |
+
+A prova de entrega tem três formas, todas armadas ANTES do gesto (sinal armado
+antes só pode disparar por algo que veio depois, e é isso que o torna prova):
+
+| `delivery_evidence` | o que provou |
+| --- | --- |
+| `listener` | o evento chegou ao alvo — listener de CAPTURA em `document` |
+| `navegacao` | a navegação destruiu o contexto de JS e levou o registro junto; `framenavigated` no frame principal, mudança de `page.url()` ou erro de contexto destruído provam que o clique agiu |
+| `nova_aba` | o clique abriu uma aba (`target="_blank"`); evento `page` do contexto |
+| `entrega_errada` | o evento chegou a OUTRO elemento — reprova mesmo que a página navegue |
+| `sem_prova` | nada chegou e nada navegou ⇒ `CLICK_NOT_DELIVERED` |
+
+A sonda é consultada PRIMEIRO, sempre: uma âncora (`href="#fim"`) também dispara
+`framenavigated`, e dar precedência ao sinal trocaria prova forte por fraca. Quem
+escreve o registro é o despacho de eventos do Chromium, não o runtime. O runtime não tem como marcar "entregue" sem que um evento real
+tenha percorrido a árvore, e a fase de captura em `document` roda antes de
+qualquer handler da página — logo a página não consegue suprimi-la.
+
+Configuração: `scroll_into_view`, `stability_samples`, `stability_interval_ms`,
+`click_delivery_check` (ver `packages/api/src/config.ts`).
 
 ## Estado e recuperação
 

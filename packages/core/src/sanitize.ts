@@ -33,37 +33,23 @@
  * Tipos de página vêm de `contract.ts`. Nada aqui é redefinido.
  */
 import { randomBytes } from "node:crypto";
-import type { ObservedElement, Observation } from "./contract.ts";
+import type {
+  AxNode,
+  ObservedElement,
+  Observation,
+  Suspeita,
+  SuspeitaCategoria,
+  SuspeitaSeveridade,
+} from "./contract.ts";
+
+// O vocabulário de suspeita passou para `contract.ts` porque `Provenance` (que é
+// contrato de API) precisa descrever `findings`. Reexportado aqui para não
+// quebrar quem já importava daqui.
+export type { Suspeita, SuspeitaCategoria, SuspeitaSeveridade };
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Vocabulário
 // ─────────────────────────────────────────────────────────────────────────────
-
-export type SuspeitaCategoria =
-  | "instrucao"
-  | "impersonacao"
-  | "exfiltracao"
-  | "execucao"
-  | "oculto"
-  | "delimitador";
-
-export type SuspeitaSeveridade = "alta" | "media" | "baixa";
-
-export interface Suspeita {
-  /** `S1`, `S2`… — o mesmo id aparece como marcador dentro de `texto_seguro`. */
-  id: string;
-  /** Identificador estável do padrão que disparou. */
-  padrao: string;
-  categoria: SuspeitaCategoria;
-  severidade: SuspeitaSeveridade;
-  /** Onde foi encontrado, em linguagem de auditor. */
-  onde: string;
-  /** `ref` do elemento (`e12`), ou `null` quando não veio de um elemento. */
-  ref: string | null;
-  /** Excerto LITERAL da página, com contexto. Nunca reescrito. */
-  trecho: string;
-  motivo: string;
-}
 
 export interface ObservacaoSanitizada {
   /** Texto pronto para entregar ao modelo: delimitado, com procedência e marcas. */
@@ -147,6 +133,28 @@ const PADROES: readonly Padrao[] = Object.freeze([
     severidade: "alta",
     re: /\b(execute|executar|rode|rodar|run|exec|eval|invoque|invoke)\b[^.\n]{0,25}?\b(comando|command|script|c[oó]digo|code|shell|bash|zsh|powershell|terminal|payload|snippet)\b|\bexecute\s*:|\b(curl|wget)\s+https?:\/\/|\b(rm\s+-rf|sudo\s+\w|npm\s+install\s|pip\s+install\s)/i,
     motivo: "instrui execução de comando ou código",
+  },
+  {
+    id: "invocacao_de_ferramenta",
+    categoria: "execucao",
+    severidade: "alta",
+    // `execute o comando` já era coberto; `execute browser.download` não era, e é
+    // a forma que importa aqui: a página não pede um shell, pede que o AGENTE
+    // gaste uma capability do dono. Exige verbo + namespace pontuado (`browser.x`),
+    // porque `use o navegador` sozinho é frase de página legítima.
+    re: /\b(execute|executar|executa|rode|rodar|chame|chamar|invoque|invocar|use|usar|acione|acionar|dispare|disparar|call|run|invoke|trigger|perform)\b[^.\n]{0,30}?\b(browser|tool|mcp|agent|runtime|playwright)[._]\w+/i,
+    motivo: "instrui o agente a invocar uma ferramenta do runtime",
+  },
+  {
+    id: "instrucao_financeira",
+    categoria: "instrucao",
+    severidade: "alta",
+    // Três sinais obrigatórios: verbo de pagamento + VALOR + destino precedido de
+    // "para". Menos que isso marcaria toda página de e-commerce ("Pague R$ 49,90"),
+    // que é o falso positivo mais caro possível — e um detector que marca toda
+    // loja online deixa de ser lido em uma semana.
+    re: /\b(transfira|transferir|transfere|pague|pagar|deposite|depositar|remeta|remeter|envie|enviar|wire|transfer|deposit|pay|send)\b[^.\n]{0,50}?(?:(?:R\$|US\$|USD|BRL|EUR|€|\$)\s?\d[\d.,]*|\d[\d.,]*\s*(?:reais|d[oó]lares|euros|btc|bitcoins?|eth))[^.\n]{0,60}?\b(?:para|pra|to)\s+(?:a\s+|o\s+|the\s+)?\b(conta|chave\s+pix|pix|iban|ted|carteira|wallet|account|benefici[aá]rio|beneficiary)\b/i,
+    motivo: "instrui movimentação de dinheiro para destino ditado pela página",
   },
   {
     id: "autorizacao_forjada",
@@ -463,6 +471,46 @@ function camposDaObservacao(obs: Observation, opts: SanitizeOptions): Campo[] {
       });
     }
   }
+  campos.push(...camposDaArvoreAx(obs.accessibility ?? null));
+  return campos;
+}
+
+/**
+ * Campos da ÁRVORE DE ACESSIBILIDADE.
+ *
+ * Existe porque `name`, `value` e `description` de um nó AX são conteúdo da
+ * página tanto quanto `el.text` — vêm de `aria-label`, `alt`, `title`. Um
+ * atacante que só escreve o payload num `aria-label` de um nó que o observador
+ * de DOM não devolveu (ou cujo elemento foi cortado pelo `limit`) passaria
+ * inteiro pelo inspetor se a árvore ficasse de fora, e a árvore é justamente o
+ * que `browser.observe --accessibility` entrega ao modelo.
+ *
+ * O `onde` carrega o CAMINHO do nó (`ax`, `ax.0.3`) porque é o único
+ * identificador estável de um nó AX — ele não tem `ref`. Quem for redigir o
+ * campo cru depois precisa saber exatamente qual nó reescrever.
+ */
+function camposDaArvoreAx(raiz: AxNode | null): Campo[] {
+  const campos: Campo[] = [];
+  const visita = (no: AxNode, caminho: string): void => {
+    const partes: ReadonlyArray<[string, string | null | undefined]> = [
+      ["nome", no.name],
+      ["valor", no.value],
+      ["descricao", no.description],
+    ];
+    for (const [qual, valor] of partes) {
+      if (typeof valor !== "string" || valor.trim() === "") continue;
+      campos.push({
+        ref: null,
+        onde: `acessibilidade ${caminho} (${qual})`,
+        rotulo: `[${caminho}] ax:${no.role} @${qual}`,
+        texto: valor,
+        ocultacao: [],
+      });
+    }
+    const filhos = no.children ?? [];
+    for (let i = 0; i < filhos.length; i += 1) visita(filhos[i]!, `${caminho}.${i}`);
+  };
+  if (raiz !== null) visita(raiz, "ax");
   return campos;
 }
 

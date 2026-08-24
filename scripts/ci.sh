@@ -38,9 +38,9 @@ checar() {
 testes() { node --test "$@"; }
 
 RAPIDOS="auth lease skills traceability observability replay-hardening bench sdk-ts mcp cli policy-vault security-files-secrets security-net-injection ui-build"
-INTEGRACAO="session perception pointer-keyboard target-verifier api"
+INTEGRACAO="session perception pointer-keyboard target-verifier click-entrega api"
 E2E="e2e-gate product02-gate"
-ADVERSARIAIS="security-net-injection security-files-secrets recovery-watchdog"
+ADVERSARIAIS="security-net-injection security-files-secrets recovery-watchdog injection-wired audit-forense"
 
 if [ "$ESTAGIO" = "fast" ] || [ "$ESTAGIO" = "all" ]; then
   titulo "fast — unidade pura"
