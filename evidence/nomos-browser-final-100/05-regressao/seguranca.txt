@@ -1,0 +1,125 @@
+BLOQUEOU  [REST_AUTH] sem credencial                                       status=401 code=CAPABILITY_DENIED
+BLOQUEOU  [REST_AUTH] credencial inventada                                 status=401 failure=INVALID_CREDENTIAL
+BLOQUEOU  [REST_AUTH] replay de credencial REVOGADA                        status=401 failure=REVOKED_CREDENTIAL
+BLOQUEOU  [REST_AUTH] replay de credencial EXPIRADA                        status=401 failure=EXPIRED_CREDENTIAL
+BLOQUEOU  [REST_AUTH] UI (/) sem credencial                                status=401
+BLOQUEOU  [REST_AUTH] screenshots sem credencial                           status=401
+BLOQUEOU  [WEBSOCKET_AUTH] upgrade sem credencial                               desfecho=recusado status=401 (HTTP 401)
+BLOQUEOU  [WEBSOCKET_AUTH] upgrade com credencial inválida                      desfecho=recusado status=401
+BLOQUEOU  [WEBSOCKET_AUTH] upgrade com credencial REVOGADA                      desfecho=recusado status=401
+BLOQUEOU  [WEBSOCKET_AUTH] querystring ?token= inválido                         desfecho=recusado status=401
+PERMITIU  [WEBSOCKET_AUTH] credencial válida por HEADER conecta                 desfecho=aberto status=101 (conexão estabelecida)
+PERMITIU  [WEBSOCKET_AUTH] credencial válida por ?token= conecta                desfecho=aberto status=101
+BLOQUEOU  [MCP_AUTHORIZATION] servidor MCP sem NOMOS_BROWSER_TOKEN                 isError=true sessoes_antes=1 depois=1
+BLOQUEOU  [MCP_AUTHORIZATION] MCP com credencial de ESCOPO INSUFICIENTE            isError=true NOMOS_BROWSER_ERROR code=MCP_SCOPE_DENIED contract_code=CAPABILITY_DENIED required_scope=INPUT
+PERMITIU  [MCP_AUTHORIZATION] whoami revela poderes, nunca o segredo               subject=agente scopes=OBSERVE|NAVIGATE|INPUT|CONTROL segredo_no_corpo=false
+BLOQUEOU  [SSRF_PROTECTION] metadata da nuvem 169.254.169.254                    status=403 code=POLICY_BLOCKED
+BLOQUEOU  [SSRF_PROTECTION] RFC1918 10.0.0.1                                     status=403 code=POLICY_BLOCKED
+BLOQUEOU  [SSRF_PROTECTION] RFC1918 192.168.0.1                                  status=403 code=POLICY_BLOCKED
+BLOQUEOU  [SSRF_PROTECTION] loopback explícito                                   status=403 code=POLICY_BLOCKED
+BLOQUEOU  [SSRF_PROTECTION] mDNS .local                                          status=403 code=POLICY_BLOCKED
+BLOQUEOU  [SSRF_PROTECTION] file:///etc/passwd                                   status=403 code=POLICY_BLOCKED
+BLOQUEOU  [SSRF_PROTECTION] javascript: URL                                      status=403 code=POLICY_BLOCKED
+BLOQUEOU  [SSRF_PROTECTION] data: URL                                            status=403 code=POLICY_BLOCKED
+BLOQUEOU  [SSRF_PROTECTION] chrome://settings                                    status=403 code=POLICY_BLOCKED
+BLOQUEOU  [SSRF_PROTECTION] devtools://                                          status=403 code=POLICY_BLOCKED
+BLOQUEOU  [FILESYSTEM_PROTECTION] upload com traversal                                 status=403 code=UPLOAD_DENIED
+BLOQUEOU  [FILESYSTEM_PROTECTION] upload com caminho absoluto fora da raiz             status=403 code=UPLOAD_DENIED
+BLOQUEOU  [FILESYSTEM_PROTECTION] upload por SYMLINK que aponta para fora da raiz      status=403 code=UPLOAD_DENIED
+BLOQUEOU  [FILESYSTEM_PROTECTION] upload com BYTE NULO no caminho                      status=403 code=UPLOAD_DENIED
+BLOQUEOU  [FILESYSTEM_PROTECTION] download de file://                                  status=403 code=POLICY_BLOCKED
+BLOQUEOU  [FILESYSTEM_PROTECTION] screenshot com traversal na rota                     status=404
+BLOQUEOU  [CAPABILITY_ENFORCEMENT] ação sem capability (send) é negada                  status=404 code=INVALID_REQUEST
+BLOQUEOU  [CAPABILITY_ENFORCEMENT] ferramenta fora do contrato é negada                 status=404 code=INVALID_REQUEST
+BLOQUEOU  [CAPABILITY_ENFORCEMENT] capability não se concede pelo CORPO do pedido       status=404 code=INVALID_REQUEST
+BLOQUEOU  [CAPABILITY_ENFORCEMENT] escopo insuficiente no token (observador clica)      status=403 failure=SCOPE_DENIED exigido=INPUT
+BLOQUEOU  [CAPABILITY_ENFORCEMENT] escalada: takeover exige ADMIN, agente não tem       status=403 failure=SCOPE_DENIED
+BLOQUEOU  [CAPABILITY_ENFORCEMENT] escalada: delegar identidade exige ADMIN             status=403
+BLOQUEOU  [SESSION_ISOLATION] token amarrado a OUTRA sessão não toca esta          status=403 failure=SESSION_NOT_OWNED
+BLOQUEOU  [SESSION_ISOLATION] arbitragem barra segunda identidade na sessão        status=409 lease=CONTROL_NOT_OWNED dono=daemon-root
+BLOQUEOU  [SESSION_ISOLATION] sessão inexistente responde 404, não 409             status=404 code=SESSION_NOT_FOUND
+BLOQUEOU  [INPUT_HARDENING] corpo que não é JSON                                 status=400 code=INVALID_REQUEST
+BLOQUEOU  [INPUT_HARDENING] corpo JSON que não é objeto                          status=400 code=INVALID_REQUEST
+BLOQUEOU  [INPUT_HARDENING] corpo maior que max_body_bytes (4096)                status=400 code=INVALID_REQUEST enviados=12335
+BLOQUEOU  [INPUT_HARDENING] URL absurdamente longa                               status=400
+BLOQUEOU  [INPUT_HARDENING] rota inexistente sai no ENVELOPE, não em HTML de stack status=404 envelope=true
+BLOQUEOU  [INPUT_HARDENING] método errado devolve 405 com allow                  status=405
+BLOQUEOU  [SECRET_LEAK_TEST] nenhum token na trilha de auditoria em disco         trilha limpa
+BLOQUEOU  [SECRET_LEAK_TEST] nenhum token em corpo de resposta ou de erro         41 corpos limpos
+BLOQUEOU  [SECRET_LEAK_TEST] nenhum token no fluxo de eventos do WebSocket        3 eventos, 0 com segredo
+BLOQUEOU  [SECRET_LEAK_TEST] arquivo de token do daemon é 0600                    modo=600
+PERMITIU  [CONTROLES_POSITIVOS] credencial válida + dono do lease AGE                status=200 success=true
+PERMITIU  [CONTROLES_POSITIVOS] capability CONCEDIDA passa (o verbo antes negado)    status=404 code=INVALID_REQUEST
+PERMITIU  [CONTROLES_POSITIVOS] observador LÊ o que lhe cabe                         status=200
+
+--- placar -----------------------------------------------
+REST_AUTH=PASS  (6/6)
+WEBSOCKET_AUTH=PASS  (6/6)
+MCP_AUTHORIZATION=PASS  (3/3)
+SSRF_PROTECTION=PASS  (10/10)
+FILESYSTEM_PROTECTION=PASS  (6/6)
+CAPABILITY_ENFORCEMENT=PASS  (6/6)
+SECRET_LEAK_TEST=PASS  (4/4)
+INPUT_HARDENING=PASS  (6/6)
+SESSION_ISOLATION=PASS  (3/3)
+CONTROLES_POSITIVOS=PASS  (3/3)
+ADVERSARIAL_TOTAL=53
+ADVERSARIAL_OK=53
+OPEN_SECURITY_P1=0
+SECURITY_SUITE=PASS
+
+BLOQUEADOS:
+  BLOQUEADO sem credencial
+  BLOQUEADO credencial inventada
+  BLOQUEADO replay de credencial REVOGADA
+  BLOQUEADO replay de credencial EXPIRADA
+  BLOQUEADO UI (/) sem credencial
+  BLOQUEADO screenshots sem credencial
+  BLOQUEADO upgrade sem credencial
+  BLOQUEADO upgrade com credencial inválida
+  BLOQUEADO upgrade com credencial REVOGADA
+  BLOQUEADO querystring ?token= inválido
+  BLOQUEADO servidor MCP sem NOMOS_BROWSER_TOKEN
+  BLOQUEADO MCP com credencial de ESCOPO INSUFICIENTE
+  BLOQUEADO metadata da nuvem 169.254.169.254
+  BLOQUEADO RFC1918 10.0.0.1
+  BLOQUEADO RFC1918 192.168.0.1
+  BLOQUEADO loopback explícito
+  BLOQUEADO mDNS .local
+  BLOQUEADO file:///etc/passwd
+  BLOQUEADO javascript: URL
+  BLOQUEADO data: URL
+  BLOQUEADO chrome://settings
+  BLOQUEADO devtools://
+  BLOQUEADO upload com traversal
+  BLOQUEADO upload com caminho absoluto fora da raiz
+  BLOQUEADO upload por SYMLINK que aponta para fora da raiz
+  BLOQUEADO upload com BYTE NULO no caminho
+  BLOQUEADO download de file://
+  BLOQUEADO screenshot com traversal na rota
+  BLOQUEADO ação sem capability (send) é negada
+  BLOQUEADO ferramenta fora do contrato é negada
+  BLOQUEADO capability não se concede pelo CORPO do pedido
+  BLOQUEADO escopo insuficiente no token (observador clica)
+  BLOQUEADO escalada: takeover exige ADMIN, agente não tem
+  BLOQUEADO escalada: delegar identidade exige ADMIN
+  BLOQUEADO token amarrado a OUTRA sessão não toca esta
+  BLOQUEADO arbitragem barra segunda identidade na sessão
+  BLOQUEADO sessão inexistente responde 404, não 409
+  BLOQUEADO corpo que não é JSON
+  BLOQUEADO corpo JSON que não é objeto
+  BLOQUEADO corpo maior que max_body_bytes (4096)
+  BLOQUEADO URL absurdamente longa
+  BLOQUEADO rota inexistente sai no ENVELOPE, não em HTML de stack
+  BLOQUEADO método errado devolve 405 com allow
+  BLOQUEADO nenhum token na trilha de auditoria em disco
+  BLOQUEADO nenhum token em corpo de resposta ou de erro
+  BLOQUEADO nenhum token no fluxo de eventos do WebSocket
+  BLOQUEADO arquivo de token do daemon é 0600
+PERMITIDOS (controles positivos):
+  PERMITIDO credencial válida por HEADER conecta
+  PERMITIDO credencial válida por ?token= conecta
+  PERMITIDO whoami revela poderes, nunca o segredo
+  PERMITIDO credencial válida + dono do lease AGE
+  PERMITIDO capability CONCEDIDA passa (o verbo antes negado)
+  PERMITIDO observador LÊ o que lhe cabe

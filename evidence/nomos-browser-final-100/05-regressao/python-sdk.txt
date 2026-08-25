@@ -1,0 +1,6 @@
+test_unknown_capability_is_rejected_before_the_wire (test_client.TestWireFormat.test_unknown_capability_is_rejected_before_the_wire) ... ok
+
+----------------------------------------------------------------------
+Ran 31 tests in 0.954s
+
+OK

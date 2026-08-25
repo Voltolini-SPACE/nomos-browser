@@ -1,0 +1,52 @@
+=== 1. daemons do nomos-browser ===
+nenhum
+=== 2. Chromium do Playwright ===
+0
+=== 3. servidores MCP ===
+nenhum
+=== 4. lock e sessao MCP ===
+total 16
+drwx------@   4 AI  staff   128 Aug 25 11:32 .
+drwxr-x---+ 125 AI  staff  4000 Aug 25 11:08 ..
+-rw-------@   1 AI  staff    44 Aug 25 11:32 control-token
+-rw-------@   1 AI  staff   165 Aug 25 11:14 mcp-session.json
+=== 5. LaunchAgent nosso ===
+nao carregado
+plist ausente
+=== 6. alvos HTTP e node soltos do teste ===
+nenhum
+=== 7. portas de teste ===
+(vazio acima = livres)
+=== 8. ollama residente ===
+{"models":[]}
+=== PROVA: registro de sessao obsoleto NAO e reaproveitado (sem inferencia) ===
+ANTES:
+{  "session_id": "ses_bd399c0ebec446b5",  "runtime_url": "http://127.0.0.1:50717",  "criada_em": "2026-08-25T14:14:34.481Z",  "owner": "mcp:nomos-browser-mcp"}
+route=browser.tabs session_id=ses_f01f75439dab4985 http=200 action_id=act_mt8rnosq_6 state=IDLE duration_ms=2
+DEPOIS:
+{  "session_id": "ses_f01f75439dab4985",  "runtime_url": "http://127.0.0.1:7777",  "criada_em": "2026-08-25T14:34:42.117Z",  "owner": "mcp:nomos-browser-mcp"}
+
+=== ENCERRAMENTO LIMPO E CONTAGEM FINAL ===
+MCP_SESSION_CLOSED session_id=ses_f01f75439dab4985 http=- arquivo_apagado=true
+daemons=0
+chromium=0
+servidor_mcp=0
+lock=AUSENTE
+mcp_session=AUSENTE
+launchagent=0
+porta_7777=0
+alvos_teste=0
+
+=== servicos de PRODUCAO (comparar PIDs com o inicio) ===
+83005	-9	br.com.se7enpay.nomos.servico
+-	0	com.gi.nomos.worker
+-	1	com.se7enpay.command-center.mom-canonical-check
+12728	0	ai.sovereign.omniroute
+83034	-9	com.nomos.panel
+1032	0	com.se7enpay.command-center
+1048	0	com.se7enpay.resumo
+51446	-15	com.gijarvis.backend
+-	0	com.se7enpay.crmsync
+-	0	com.se7enpay.tpv.mom.canonical
+1003	0	ai.sovereign.ollama
+86909	-15	com.gi.nomos.gateway
