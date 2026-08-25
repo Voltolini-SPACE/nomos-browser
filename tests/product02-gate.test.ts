@@ -233,11 +233,23 @@ test("FASE 10 — dois providers REAIS, ownership arbitrado, handoff e auditoria
     port: 0, headless: true, allow_internal_urls: true,
     sessions_root: path.join(RAIZ, "sessions"),
   } as never);
-  const TOKEN = daemon.token;
+  // FASE 10 — DUAS IDENTIDADES DE VERDADE, NÃO DOIS HEADERS.
+  //
+  // Antes as duas "IAs" eram o mesmo token com `x-nomos-client` diferente. Isso
+  // provava menos do que parecia: `x-nomos-client` é texto que o chamador
+  // escreve sobre si mesmo, e um runtime que arbitrasse por ele deixaria
+  // qualquer processo local dizer "eu sou a AI-A" e herdar o controle dela.
+  // Com a FASE 10 o principal de controle é o SUJEITO DO TOKEN, então cada IA
+  // recebe a sua credencial — e "AI-B é barrada" passa a ser uma afirmação
+  // sobre credencial, não sobre etiqueta.
+  const TOKENS: Record<string, string> = {
+    "AI-A": daemon.auth.issue({ subject: "AI-A", preset: "agent" }).secret,
+    "AI-B": daemon.auth.issue({ subject: "AI-B", preset: "agent" }).secret,
+  };
   const hdr = (cliente: string): Record<string, string> => ({
     "content-type": "application/json",
     "x-nomos-client": cliente,
-    ...(TOKEN !== null ? { authorization: `Bearer ${TOKEN}` } : {}),
+    ...(TOKENS[cliente] !== undefined ? { authorization: `Bearer ${TOKENS[cliente]}` } : {}),
   });
   const acaoComo = async (cliente: string, tool: string, corpo: unknown): Promise<{ status: number; env: any }> => {
     const r = await fetch(`${daemon.url}/api/v1/${tool}`, { method: "POST", headers: hdr(cliente), body: JSON.stringify(corpo) });

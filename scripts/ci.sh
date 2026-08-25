@@ -44,7 +44,12 @@ checar() {
 
 testes() { node --test "$@"; }
 
-RAPIDOS="auth lease skills traceability observability replay-hardening bench sdk-ts mcp cli policy-vault security-files-secrets security-net-injection ui-build"
+# FASE 10-14 — acrescentados SEM remover nada do que já estava aqui.
+#   supervisor  (FASE 14) fica em `fast`: ele não sobe Chromium e não toca no
+#               launchd da máquina — roda com HOME sandboxado. O ciclo completo
+#               contra o launchd real é o `prova-supervisor.sh`, que é ato
+#               deliberado e não entra em CI (esta máquina roda produção).
+RAPIDOS="auth lease skills traceability observability replay-hardening bench sdk-ts mcp cli policy-vault security-files-secrets security-net-injection ui-build supervisor"
 # `cascata-percepcao` fica AQUI e não em `providers`: ele usa um VisionProvider
 # espião determinístico e não carrega modelo nenhum. O que ele prova é o FIO —
 # que a cascata chega ao 5º degrau em produção; quem prova o modelo é o estágio
@@ -53,7 +58,10 @@ RAPIDOS="auth lease skills traceability observability replay-hardening bench sdk
 # Chromium real, derruba um `BrowserContext` por baixo de uma sessão e mata um
 # processo filho com SIGKILL. Nenhuma dessas coisas cabe em "unidade pura" — e
 # nenhuma delas carrega modelo, então também não pertence ao estágio `providers`.
-INTEGRACAO="session perception pointer-keyboard target-verifier click-entrega cascata-percepcao api task-engine"
+# `ownership` (FASE 10) e `watchdog-wired` (FASE 13) sobem daemon com Chromium
+# real, matam o processo do navegador e bloqueiam o event loop de verdade —
+# integração, nunca unidade.
+INTEGRACAO="session perception pointer-keyboard target-verifier click-entrega cascata-percepcao api task-engine ownership watchdog-wired"
 E2E="e2e-gate product02-gate"
 ADVERSARIAIS="security-net-injection security-files-secrets recovery-watchdog injection-wired audit-forense"
 
@@ -124,6 +132,38 @@ if [ "$ESTAGIO" = "guards" ] || [ "$ESTAGIO" = "all" ]; then
     if (loadConfig({ host: "0.0.0.0" }).host !== "0.0.0.0") { console.error("bind explícito deveria ser possível"); process.exit(1); }
   '
 
+  # FASE 10 — a sessão não pode voltar a nascer sem dono. `allow_unleased`
+  # verdadeiro por default foi a ressalva registrada na FINAL_REPORT anterior;
+  # este guarda existe para que ela não volte por descuido de configuração.
+  checar "lease:fechado-por-default" node --input-type=module -e '
+    const { loadConfig } = await import("./packages/api/src/config.ts");
+    const c = loadConfig({ read_file: false, env: {} });
+    if (c.allow_unleased !== false) { console.error("allow_unleased voltou a nascer true"); process.exit(1); }
+    if (c.sources.allow_unleased !== "default") { console.error("proveniencia errada"); process.exit(1); }
+    const p = loadConfig({ read_file: false, env: { NOMOS_BROWSER_ALLOW_UNLEASED: "true" } });
+    if (p.allow_unleased !== true) { console.error("modo permissivo explicito deixou de funcionar"); process.exit(1); }
+  '
+
+  # FASE 13 — o vigia nasce ligado. Um supervisor que nasce desligado é um
+  # supervisor que ninguém liga.
+  checar "watchdog:ligado-por-default" node --input-type=module -e '
+    const { loadConfig } = await import("./packages/api/src/config.ts");
+    const c = loadConfig({ read_file: false, env: {} });
+    if (c.watchdog_enabled !== true) { console.error("watchdog nasceu desligado"); process.exit(1); }
+  '
+
+  # FASE 11 — o SECURITY.md não pode voltar a declarar o T7 como gap aberto sem
+  # que alguém tenha reaberto o buraco de propósito.
+  checar "seguranca:t7-fechado" bash -c \
+    '! /usr/bin/grep -q "Gap conhecido e aberto" docs/SECURITY.md'
+
+  # FASE 14 — a label do supervisor não pode colidir com produção.
+  checar "supervisor:label-propria" bash -c '
+    for L in br.com.se7enpay.nomos.servico com.nomos.panel ai.sovereign.omniroute com.gijarvis.backend; do
+      if /usr/bin/grep -q "^LABEL=\"$L\"" scripts/service.sh; then echo "colide com $L"; exit 1; fi
+    done
+    /usr/bin/plutil -lint packaging/launchd/ai.nomos.browser.plist >/dev/null'
+
   # Autenticação ligada por default. `auth_disabled` existe para migração e não
   # pode virar o caminho normal por descuido.
   checar "auth:ligada-por-default" node --input-type=module -e '
@@ -147,6 +187,16 @@ if [ "$ESTAGIO" = "adversarial" ] || [ "$ESTAGIO" = "all" ]; then
   for t in $ADVERSARIAIS; do
     [ -f "tests/$t.test.ts" ] && checar "test:$t" testes "tests/$t.test.ts"
   done
+fi
+
+if [ "$ESTAGIO" = "adversarial" ] || [ "$ESTAGIO" = "all" ]; then
+  # FASE 11 — a bateria COMPLETA (53 vetores) roda como passo próprio, e não
+  # como `node --test`: ela é um programa que imprime placar por grupo e sai
+  # !=0 quando um vetor não se comporta como o produto promete. A bateria
+  # anterior (16 vetores, `final-validation/05-security`) continua valendo e
+  # roda ao lado — nenhuma das duas substitui a outra.
+  checar "seguranca:bateria-completa" node evidence/nomos-browser-final-loop/11-security/bateria-completa.ts
+  checar "seguranca:guardas-vivos" node evidence/nomos-browser-final-validation/05-security/prova-guardas-vivos.ts
 fi
 
 if [ "$ESTAGIO" = "e2e" ] || [ "$ESTAGIO" = "all" ]; then

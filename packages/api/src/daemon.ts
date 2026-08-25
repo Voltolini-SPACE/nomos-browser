@@ -26,7 +26,7 @@
  */
 import http from "node:http";
 import path from "node:path";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync, mkdirSync, unlinkSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import type { AddressInfo } from "node:net";
 import { WebSocketServer, type WebSocket } from "ws";
@@ -59,9 +59,29 @@ import { EventBus } from "../../observability/src/eventbus.ts";
 import { AuditLog } from "../../observability/src/audit.ts";
 import { loadConfig, type DaemonConfig, type LoadConfigOptions } from "./config.ts";
 import { EVENTS_PATH, httpStatusFor, matchRoute, parseEventFilter } from "./router.ts";
-import { AuthManager, scopeForRoute, scopeForTool, type IssuedToken } from "./auth.ts";
-import { LeaseManager, CONTROL_NOT_OWNED, CONTROL_NOT_OWNED_CODE } from "../../core/src/lease.ts";
+import {
+  DEFAULT_RUNTIME_DIR,
+  AuthManager,
+  DELEGATION_HEADER,
+  principalFor,
+  scopeForRoute,
+  scopeForTool,
+  TOOL_SCOPE,
+  ROUTE_SCOPE,
+  type IssuedToken,
+  type TokenRecord,
+} from "./auth.ts";
+import {
+  LeaseManager,
+  CONTROL_NOT_OWNED,
+  CONTROL_NOT_OWNED_CODE,
+  isLease,
+  type LeaseResult,
+} from "../../core/src/lease.ts";
+import { verifyReplay } from "../../observability/src/replay-verify.ts";
+import { selarSessao } from "../../observability/src/replay.ts";
 import { RecoveryManager } from "../../core/src/recovery.ts";
+import { HealthWatchdog, type HealthEvent, type HealthStats } from "../../observability/src/watchdog.ts";
 
 /** Raiz do pacote de UI, resolvida a partir deste arquivo (não do cwd do processo). */
 const UI_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../ui");
@@ -93,6 +113,14 @@ export class SessionQueue {
   readonly maxQueue: number;
   #running = 0;
   #waiting: QueueJob[] = [];
+  /**
+   * FASE 13 — quando cada trabalho EM EXECUÇÃO começou.
+   *
+   * `#running` é um contador e não diz há quanto tempo. Sem isto, "worker preso"
+   * seria indetectável: uma ação travada dentro do Playwright mantém
+   * `running: 1` para sempre e o número sozinho parece saudável.
+   */
+  #inicios = new Set<{ at: number }>();
 
   constructor(concurrency: number, maxQueue: number) {
     this.concurrency = concurrency;
@@ -105,6 +133,13 @@ export class SessionQueue {
 
   get waiting(): number {
     return this.#waiting.length;
+  }
+
+  /** Idade (ms) do trabalho em execução mais antigo; `null` se nada roda. */
+  oldestRunningMs(now = Date.now()): number | null {
+    let maisVelho: number | null = null;
+    for (const i of this.#inicios) if (maisVelho === null || i.at < maisVelho) maisVelho = i.at;
+    return maisVelho === null ? null : now - maisVelho;
   }
 
   /**
@@ -132,6 +167,8 @@ export class SessionQueue {
           if (job.cancelled) return;
           started = true;
           this.#running += 1;
+          const marca = { at: Date.now() };
+          this.#inicios.add(marca);
           void (async () => {
             try {
               const value = await fn();
@@ -146,6 +183,7 @@ export class SessionQueue {
               }
             } finally {
               this.#running -= 1;
+              this.#inicios.delete(marca);
               this.#pump();
             }
           })();
@@ -192,6 +230,22 @@ export interface DaemonHandle {
   readonly startedAt: number;
   /** Arbitragem de controle entre agentes (FASE 9). */
   readonly leases: LeaseManager;
+  /**
+   * FASE 13 — o vigia de subsistemas. `null` com `watchdog_enabled: false`.
+   * Exposto para que um teste possa mandar sondar AGORA (`tick()`) em vez de
+   * dormir e torcer — provocar a falha e conferir na hora é mais honesto.
+   */
+  readonly watchdog: HealthWatchdog | null;
+  /**
+   * FASE 10 — o emissor de credenciais deste daemon.
+   *
+   * Exposto porque "duas IAs disputando a mesma sessão" só é demonstrável com
+   * DUAS IDENTIDADES, e identidade neste runtime é o sujeito de um token. Sem
+   * isto, um teste multi-agente só conseguiria fingir a segunda IA trocando um
+   * header auto-declarado — que é exatamente o que a FASE 10 deixou de aceitar
+   * como prova de quem é quem.
+   */
+  readonly auth: AuthManager;
   /** Segredo do token raiz. Devolvido UMA vez; nunca vai para log. */
   readonly token: string | null;
   readonly tokenPath: string | null;
@@ -230,6 +284,16 @@ export interface StartDaemonOptions extends LoadConfigOptions {
 }
 
 const MAX_URL_LENGTH = 8192;
+
+/**
+ * FASE 14 — código de saída para "já tem um rodando".
+ *
+ * Precisa ser DIFERENTE de 1: o `KeepAlive` do launchd reinicia em saída
+ * malsucedida, e um daemon que sai com 1 porque já existe outro seria
+ * reiniciado em laço para descobrir de novo que já existe outro. Com um código
+ * próprio, o `service.sh` distingue "falhou" de "não era para subir".
+ */
+export const EXIT_JA_RODANDO = 9;
 
 /**
  * A aba que o RESULTADO nomeia. `browser.open`, `browser.new_tab`,
@@ -381,9 +445,36 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
   //
   // `handoff` trocava o dono, mas nada impedia o agente B de mandar um clique
   // enquanto A ainda operava: dois donos lógicos disputando o mesmo Chromium.
-  // `allow_unleased` fica LIGADO para não quebrar o cliente de agente único que
-  // nunca pediu lease — mas assim que alguém adquire, os demais são barrados.
-  const leases = new LeaseManager({ allow_unleased: true });
+  //
+  // FASE 10: `allow_unleased` deixou de ser `true` embutido aqui e passou a sair
+  // da CONFIGURAÇÃO, com default `false`. O default antigo tinha um efeito que a
+  // própria FINAL_REPORT registrou como ressalva: a sessão que ninguém tivesse
+  // "leaseado" ficava aberta para qualquer principal, então a arbitragem só
+  // valia contra quem já tinha se anunciado. Agora quem CRIA a sessão recebe
+  // lease exclusivo no mesmo ato (ver `sessions.create`), e o resto do mundo
+  // precisa adquirir, herdar ou esperar expirar.
+  //
+  // Os eventos do lease vão para o bus: `control.taken`, `control.returned` e
+  // `session.handoff` são fatos de quem manda na sessão, e um cliente que
+  // observa /events precisa vê-los para saber que perdeu o volante.
+  const leases = new LeaseManager({
+    allow_unleased: config.allow_unleased,
+    onEvent: (e) => {
+      bus.emit(e);
+    },
+  });
+
+  /**
+   * FASE 10 — de quem é a task que está correndo nesta sessão.
+   *
+   * O executor de passo fala com a própria API por loopback e precisa agir como
+   * o agente que abriu a task, não como o daemon. Guardar o holder no INÍCIO e
+   * mantê-lo FIXO é o que faz a troca de dono no meio do caminho ser detectada:
+   * se o lease mudou de mãos, o passo seguinte é recusado com CONTROL_NOT_OWNED
+   * e a task falha de forma declarada — em vez de continuar agindo em nome de
+   * um dono que já não é dono.
+   */
+  const taskHolders = new Map<string, string>();
 
   // FASE 11-14 — snapshot de sessão em disco.
   //
@@ -508,6 +599,7 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
 
     // `0.0.0.0`/`::` são endereços de ESCUTA, não de destino.
     const destino = config.host === "0.0.0.0" || config.host === "::" ? "127.0.0.1" : config.host;
+    const dono = taskHolders.get(ctx.session_id);
     try {
       const r = await fetch(`http://${destino}:${boundPort}${API_PREFIX}/${ferramenta}`, {
         method: "POST",
@@ -515,6 +607,11 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
           "content-type": "application/json",
           // A trilha passa a dizer que quem agiu foi o MODELO, não "agent".
           "x-nomos-client": agent?.name ?? "agent",
+          // FASE 10 — o passo age COMO o dono da task, não como o daemon. Sem
+          // isto, sob `allow_unleased: false`, todo passo de plano bateria na
+          // arbitragem: o lease é do agente que pediu a task, e o token daqui é
+          // o do runtime. O header só é aceito de token ADMIN (ver auth.ts).
+          ...(dono !== undefined ? { [DELEGATION_HEADER]: dono } : {}),
           ...(rootToken !== null ? { authorization: `Bearer ${rootToken.secret}` } : {}),
         },
         body: JSON.stringify(corpo),
@@ -611,8 +708,31 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
   /** Porta efetiva. Só é conhecida depois do listen (config.port pode ser 0). */
   let boundPort = config.port;
 
+  // ── FASE 13 — O VIGIA DENTRO DO RUNTIME ───────────────────────────────────
+  //
+  // `watchdog.ts` tinha 557 linhas, backoff, janela deslizante e trava de
+  // crash-loop — e ZERO instanciações no runtime. Um supervisor que ninguém
+  // constrói é documentação executável, não defesa: quando o Chromium morresse
+  // por baixo de uma sessão, o daemon continuaria devolvendo `contexts: 1` e
+  // `browser: "ok"` para uma sessão que já não existe.
+  //
+  // As sondas abaixo são as do produto. Todas leem o estado REAL do subsistema
+  // (Playwright, fila, motor de task) em vez da nossa própria contabilidade —
+  // é justamente a contabilidade que fica mentindo quando algo morre.
+  let watchdog: HealthWatchdog | null = null;
+
   const health = (): HealthResponse => {
     const stats = sessions.poolStats();
+    // FASE 13 — o vigia aparece no /health.
+    //
+    // `frozen` é medido de FORA do laço: quando o event loop trava, nenhum
+    // timer dispara, inclusive o que fiscalizaria o travamento. Quem lê daqui
+    // compara o último tique com o relógio AGORA e vê a verdade — é a diferença
+    // entre "o laço notou que esteve travado" (heartbeat_expired, depois) e "o
+    // laço está travado neste instante" (daemon_frozen, agora).
+    const wstats = watchdog === null ? null : watchdog.stats();
+    const desdeUltimoTique =
+      wstats === null || wstats.last_tick_at === null ? null : Date.now() - Date.parse(wstats.last_tick_at);
     const browser: HealthResponse["browser"] =
       stats.contexts > 0 ? "ok" : stats.sessions.total > 0 ? "down" : "starting";
     return {
@@ -623,6 +743,23 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
       version: config.version,
       contract: CONTRACT_VERSION,
       uptime_s: Math.round((Date.now() - startedAt) / 1000),
+      ...(wstats === null
+        ? { watchdog: { enabled: false } }
+        : {
+            watchdog: {
+              enabled: true,
+              state: wstats.state,
+              ticks: wstats.ticks,
+              stale_ms: desdeUltimoTique,
+              frozen:
+                desdeUltimoTique !== null && desdeUltimoTique > (watchdog as HealthWatchdog).heartbeat_timeout_ms,
+              freezes: wstats.freezes,
+              last_freeze_ms: wstats.last_freeze_ms,
+              degraded_by: wstats.degraded_by,
+              detected: wstats.detected,
+              recovered: wstats.recovered,
+            },
+          }),
     };
   };
 
@@ -639,6 +776,15 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
      * corpo, e sem isto o filtro só existiria na documentação.
      */
     search: URLSearchParams,
+    /**
+     * FASE 10 — quem PODE, para efeito de lease. É o sujeito do token (ou o
+     * delegado, quando um token ADMIN age por outro). Deliberadamente diferente
+     * de `ator`, que é quem APARECE na trilha: `x-nomos-client` é auto-declarado
+     * e não serve para decidir controle.
+     */
+    principal: string,
+    /** A credencial já autenticada. `whoami` a lê; ninguém mais precisa dela. */
+    tokenAtual: TokenRecord,
   ): Promise<unknown> {
     // Quem PEDIU a operação de controle. O header do cliente ganha do sujeito
     // do token porque é o mais específico dos dois; nunca cai em "unknown".
@@ -646,6 +792,27 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
     switch (name) {
       case "health":
         return health();
+      case "whoami": {
+        // O SEGREDO NUNCA SAI DAQUI. Só identidade, poderes e prazo — que é
+        // exatamente o que um cliente precisa para se autolimitar, e nada do
+        // que um atacante precisaria para se passar por ele.
+        const tok = tokenAtual;
+        return {
+          subject: tok.subject,
+          token_id: tok.token_id,
+          scopes: [...tok.scopes],
+          expires_at: tok.expires_at,
+          session_scoped: tok.session_allowlist.size > 0,
+          principal,
+          delegated: principal !== tok.subject,
+          // A tabela de escopo POR FERRAMENTA viaja daqui para que clientes
+          // (o servidor MCP em primeiro lugar) possam se autolimitar sem
+          // manter uma cópia que diverge. Não é segredo: é o contrato de
+          // autorização, e saber o que EXIGE uma ferramenta não concede nada.
+          tool_scopes: { ...TOOL_SCOPE },
+          route_scopes: { ...ROUTE_SCOPE },
+        };
+      }
       case "sessions.list": {
         const include_closed = body.include_closed === true;
         return sessions.list({ include_closed });
@@ -666,6 +833,19 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
           client: typeof body.client === "string" ? body.client : client,
         });
         await snapshot(info.session_id);
+        // FASE 10 — QUEM CRIA, MANDA. O lease exclusivo é concedido no mesmo
+        // ato da criação. Sem isto, com `allow_unleased: false`, o cliente
+        // criaria a sessão e seria barrado na primeira ação da própria sessão —
+        // que é o jeito mais rápido de um "fail closed" virar "fail sempre".
+        const leaseInicial = leases.acquire(info.session_id, principal, { mode: "exclusive" });
+        if (!isLease(leaseInicial)) {
+          // Sessão recém-criada não pode ter dono anterior. Se tem, o estado
+          // interno está corrompido e seguir seria operar às cegas.
+          throw new ApiError("INTERNAL", `sessão ${info.session_id} nasceu com lease alheio: ${leaseInicial.message}`, {
+            lease_reason: leaseInicial.reason,
+            current_holder: leaseInicial.current_holder,
+          });
+        }
         const task_raiz = services.rootTaskFor(info.session_id);
         const aba = info.pages.find((p) => p.active) ?? info.pages[0] ?? null;
         await services.note({
@@ -686,6 +866,24 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
             pages: info.pages.length,
             // Mapeia a identidade desta sessão ao BrowserContext do pool.
             pool_context: info.context_id,
+            lease_holder: leaseInicial.holder,
+            lease_id: leaseInicial.lease_id,
+          },
+        });
+        await services.note({
+          session: info.session_id,
+          event: "control",
+          action: "lease.acquired",
+          actor: ator,
+          owner: info.owner,
+          result: "ok",
+          verified: true,
+          detail: {
+            holder: leaseInicial.holder,
+            lease_id: leaseInicial.lease_id,
+            mode: leaseInicial.mode,
+            expires_at: leaseInicial.expires_at,
+            granted_by: "session.create",
           },
         });
         // A sessão É uma task raiz: sem isto, toda ação fora de `browser.task`
@@ -709,7 +907,12 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
       case "tasks.get":
       case "tasks.cancel":
       case "tasks.resume":
-        return handleTaskRoute(services, name, params, body, search, ator);
+        // `principal` (e não `ator`) é quem decide controle; `taskHolders` entra
+        // por injeção para que o `resume` delegue como `browser.task` já delega.
+        return handleTaskRoute(services, name, params, body, search, ator, principal, (sid, quem) => {
+          if (quem === null) taskHolders.delete(sid);
+          else taskHolders.set(sid, quem);
+        });
       case "sessions.get":
         return sessions.observe(params.id!);
       case "sessions.delete": {
@@ -759,9 +962,81 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
         } catch {
           // Snapshot ausente é normal: nem toda sessão chegou a ser gravada.
         }
+        // FASE 10 — sessão fechada não deixa lease pendurado. Sem isto, o
+        // `session_id` continuaria "dono" de um lease de uma sessão que já não
+        // existe, e o próximo que reusasse o id herdaria uma recusa fantasma.
+        const soltos = leases.releaseAll(id, "session_closed");
+        leases.forget(id);
+        taskHolders.delete(id);
+        if (soltos.length > 0) {
+          await services.note({
+            session: id,
+            event: "control",
+            action: "lease.released",
+            actor: ator,
+            owner: antes?.owner ?? null,
+            result: "ok",
+            verified: true,
+            // `releaseAll` devolve os LEASE_IDs revogados, não nomes de holder.
+            detail: { revoked_lease_ids: soltos, reason: "session_closed" },
+          });
+        }
         services.forget(id);
         queues.delete(id);
-        return { closed: true, session_id: id };
+
+        // ── FASE 12 — SELA O BUNDLE DE REPLAY NO FECHAMENTO ──────────────────
+        //
+        // Este é o instante certo e o único: depois daqui nada mais é escrito na
+        // trilha da sessão, então o digest de agora é o digest do que de fato
+        // aconteceu. Selar antes deixaria o selo obsoleto na última linha;
+        // selar sob demanda, depois, seria selar o que o disco tiver virado.
+        //
+        // Falhar ao selar NÃO derruba o fechamento: a sessão está encerrada e o
+        // navegador já foi fechado. O que não pode é falhar em silêncio — sem a
+        // linha abaixo, "por que este bundle não tem selo?" não teria resposta.
+        // A LINHA VEM ANTES DO SELO, e a ordem não é estilo.
+        //
+        // Primeira tentativa: selar e depois anotar. O resultado foi que TODO
+        // bundle nascia divergente — a própria linha `replay.sealed` era escrita
+        // em `actions.jsonl` DEPOIS do digest e quebrava o selo que ela anunciava.
+        // Anotar primeiro faz o selo cobrir a linha que fala dele, que é o
+        // fechamento correto da trilha.
+        await services.note({
+          session: id,
+          event: "control",
+          action: "replay.sealed",
+          actor: ator,
+          owner: antes?.owner ?? null,
+          result: "ok",
+          verified: true,
+          detail: {
+            algo: "sha256",
+            // O selo é hash SEM CHAVE: fecha corrupção e adulteração
+            // oportunista, não fecha adversário com acesso de escrita ao
+            // diretório. Está declarado assim em docs/SECURITY.md.
+            escopo: "integridade de conteúdo, não autenticidade",
+          },
+        });
+        let selo_arquivos: number | null = null;
+        try {
+          const selo = await selarSessao(id, config.sessions_root !== null ? { root: config.sessions_root } : {});
+          selo_arquivos = selo.files.length;
+        } catch (e) {
+          // Aqui a anotação de falha NÃO invalida nada: não há selo para quebrar.
+          console.error(`[daemon] selo de replay falhou para ${id}:`, (e as Error).message);
+          await services.note({
+            session: id,
+            event: "control",
+            action: "replay.seal_failed",
+            actor: ator,
+            owner: antes?.owner ?? null,
+            result: "error",
+            verified: false,
+            error: { code: "INTERNAL", message: (e as Error).message },
+            detail: { motivo: (e as Error).message },
+          });
+        }
+        return { closed: true, session_id: id, replay_sealed: selo_arquivos !== null, sealed_files: selo_arquivos };
       }
       case "sessions.attach": {
         const who = typeof body.client === "string" ? body.client : client;
@@ -820,6 +1095,56 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
         const passada = await sessions.handoff(params.id!, to_owner, {
           ...(body.client === null || typeof body.client === "string" ? { client: body.client as string | null } : {}),
         });
+        // ── FASE 10 — DONO (rótulo) E HOLDER (controle) NÃO SÃO A MESMA COISA
+        //
+        // `owner` é a identidade a que a sessão PERTENCE — é ela que o
+        // capability engine consulta. `holder` é o principal AUTENTICADO que tem
+        // o volante agora. Eu tentei fazer `handoff` arrastar o lease para
+        // `to_owner` e a medição mostrou por que está errado: `to_owner` é um
+        // rótulo livre ("DONO-2", "outro-agente"), não um sujeito de token. Mover
+        // o lease para um nome que nenhuma credencial carrega TRANCA a sessão —
+        // ninguém mais consegue agir nela, nunca.
+        //
+        // Então o lease só muda de mãos quando o chamador diz explicitamente
+        // PARA QUEM (`to_holder`). Sem isso, quem tinha o volante continua com
+        // ele — e a linha de trilha registra que não houve troca, para que
+        // "por que o novo dono não consegue agir?" tenha resposta no audit em
+        // vez de virar mistério. A rota dedicada é `POST /lease/transfer`.
+        const destinoLease = typeof body.to_holder === "string" && body.to_holder.trim() !== ""
+          ? body.to_holder.trim()
+          : null;
+        const donoLeaseAtual = leases.currentHolder(params.id!);
+        let transferencia: LeaseResult | null = null;
+        if (destinoLease !== null && donoLeaseAtual !== null && donoLeaseAtual !== destinoLease) {
+          transferencia = leases.transfer(params.id!, donoLeaseAtual, destinoLease);
+          if (!isLease(transferencia)) {
+            throw new ApiError(CONTROL_NOT_OWNED_CODE, `handoff não conseguiu transferir o lease: ${transferencia.message}`, {
+              lease_reason: transferencia.reason,
+              from: donoLeaseAtual,
+              to: destinoLease,
+            });
+          }
+        } else if (destinoLease !== null && donoLeaseAtual === null) {
+          const novo = leases.acquire(params.id!, destinoLease, { mode: "exclusive" });
+          transferencia = isLease(novo) ? novo : null;
+        }
+        await services.note({
+          session: passada.session_id,
+          event: "control",
+          action: "lease.transferred",
+          actor: ator,
+          owner: passada.owner,
+          result: "ok",
+          verified: transferencia !== null && isLease(transferencia),
+          detail: {
+            from_holder: donoLeaseAtual,
+            to_holder: destinoLease,
+            moved: transferencia !== null && isLease(transferencia),
+            // Sem `to_holder` o volante NÃO troca — e isso é dito, não omitido.
+            reason: destinoLease === null ? "handoff sem to_holder: lease preservado com o holder atual" : "handoff com to_holder",
+            lease_id: transferencia !== null && isLease(transferencia) ? transferencia.lease_id : null,
+          },
+        });
         await services.note({
           session: passada.session_id,
           event: "control",
@@ -829,7 +1154,12 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
           owner: passada.owner,
           result: "ok",
           verified: true,
-          detail: { from_owner: de, to_owner: passada.owner, attached_client: passada.attached_client },
+          detail: {
+            from_owner: de,
+            to_owner: passada.owner,
+            attached_client: passada.attached_client,
+            lease_holder: leases.currentHolder(passada.session_id),
+          },
         });
         return passada;
       }
@@ -880,6 +1210,163 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
           },
         });
         return devolvida;
+      }
+      // ── FASE 10 — ciclo de vida do lease ─────────────────────────────────
+      //
+      // Todas exigem que a sessão EXISTA: adquirir lease de uma sessão que não
+      // há criaria um dono para o nada, e o id ficaria envenenado para quando a
+      // sessão de verdade nascesse.
+      case "lease.get": {
+        sessions.get(params.id!);
+        const snap = leases.snapshot(params.id!);
+        return snap ?? {
+          session_id: params.id!,
+          current_holder: null,
+          leases: [],
+          allow_unleased: leases.allow_unleased,
+        };
+      }
+      case "lease.acquire": {
+        sessions.get(params.id!);
+        const r = leases.acquire(params.id!, principal, {
+          ...(typeof body.ttl_ms === "number" ? { ttl_ms: body.ttl_ms } : {}),
+          ...(body.mode === "shared" || body.mode === "exclusive" ? { mode: body.mode } : {}),
+        });
+        if (!isLease(r)) {
+          throw new ApiError(r.code ?? CONTROL_NOT_OWNED_CODE, r.message, {
+            lease: CONTROL_NOT_OWNED,
+            lease_reason: r.reason,
+            lease_cause: r.cause,
+            current_holder: r.current_holder,
+            holder: principal,
+          });
+        }
+        await services.note({
+          session: params.id!,
+          event: "control",
+          action: "lease.acquired",
+          actor: ator,
+          result: "ok",
+          verified: true,
+          detail: { holder: r.holder, lease_id: r.lease_id, mode: r.mode, reentrant: r.reentrant, fencing_token: r.fencing_token, expires_at: r.expires_at },
+        });
+        return r;
+      }
+      case "lease.release": {
+        sessions.get(params.id!);
+        const lease_id = body.lease_id;
+        if (typeof lease_id !== "string" || lease_id.trim() === "") {
+          // Soltar por NOME de holder deixaria qualquer um derrubar o controle
+          // alheio: o `lease_id` é a prova de que quem solta é quem detém.
+          throw new ApiError("INVALID_REQUEST", "release exige `lease_id`");
+        }
+        const r = leases.release(params.id!, principal, lease_id.trim());
+        if (!r.released) {
+          throw new ApiError(CONTROL_NOT_OWNED_CODE, r.message, { lease_reason: r.reason, holder: principal });
+        }
+        await services.note({
+          session: params.id!,
+          event: "control",
+          action: "lease.released",
+          actor: ator,
+          result: "ok",
+          verified: true,
+          detail: { holder: principal, lease_id: lease_id.trim(), reason: r.reason },
+        });
+        return r;
+      }
+      case "lease.renew": {
+        sessions.get(params.id!);
+        const lease_id = body.lease_id;
+        if (typeof lease_id !== "string" || lease_id.trim() === "") {
+          throw new ApiError("INVALID_REQUEST", "renew exige `lease_id`");
+        }
+        const r = leases.renew(params.id!, principal, lease_id.trim(), {
+          ...(typeof body.ttl_ms === "number" ? { ttl_ms: body.ttl_ms } : {}),
+        });
+        if (!isLease(r)) {
+          throw new ApiError(r.code ?? CONTROL_NOT_OWNED_CODE, r.message, {
+            lease_reason: r.reason,
+            current_holder: r.current_holder,
+            holder: principal,
+          });
+        }
+        return r;
+      }
+      case "lease.transfer": {
+        sessions.get(params.id!);
+        const to = body.to;
+        if (typeof to !== "string" || to.trim() === "") {
+          throw new ApiError("INVALID_REQUEST", "transfer exige `to`");
+        }
+        const r = leases.transfer(params.id!, principal, to.trim(), {
+          ...(typeof body.lease_id === "string" ? { lease_id: body.lease_id } : {}),
+          ...(typeof body.ttl_ms === "number" ? { ttl_ms: body.ttl_ms } : {}),
+        });
+        if (!isLease(r)) {
+          throw new ApiError(r.code ?? CONTROL_NOT_OWNED_CODE, r.message, {
+            lease_reason: r.reason,
+            current_holder: r.current_holder,
+            holder: principal,
+          });
+        }
+        await services.note({
+          session: params.id!,
+          event: "control",
+          action: "lease.transferred",
+          actor: ator,
+          result: "ok",
+          verified: true,
+          detail: { from_holder: principal, to_holder: r.holder, lease_id: r.lease_id },
+        });
+        return r;
+      }
+      case "lease.takeover": {
+        // ADMIN (ver ROUTE_SCOPE): arranca o lease de quem o detém SEM o
+        // consentimento dele. É o equivalente, na arbitragem, ao `takeover`
+        // humano da sessão — e por isso não cabe no escopo de agente.
+        sessions.get(params.id!);
+        const anterior = leases.currentHolder(params.id!);
+        const soltos = leases.releaseAll(params.id!, "takeover");
+        const r = leases.acquire(params.id!, principal, { mode: "exclusive" });
+        if (!isLease(r)) {
+          throw new ApiError("INTERNAL", `takeover não conseguiu adquirir após revogar: ${r.message}`, {
+            lease_reason: r.reason,
+            previous_holder: anterior,
+          });
+        }
+        await services.note({
+          session: params.id!,
+          event: "control",
+          action: "lease.takeover",
+          actor: ator,
+          result: "ok",
+          verified: true,
+          detail: { previous_holder: anterior, revoked_lease_ids: soltos, new_holder: r.holder, lease_id: r.lease_id },
+        });
+        return { ...r, previous_holder: anterior, revoked_lease_ids: soltos };
+      }
+      // ── FASE 12 — verificação de integridade do replay ────────────────────
+      case "replay.verify": {
+        const relatorio = await verifyReplay(params.id!, {
+          ...(config.sessions_root !== null ? { root: config.sessions_root } : {}),
+          ...(search.get("pixels") === "1" ? { decodificar_pixels: true } : {}),
+        });
+        await services.note({
+          session: params.id!,
+          event: "control",
+          action: "replay.verified",
+          actor: ator,
+          result: relatorio.integro ? "ok" : "error",
+          verified: relatorio.integro,
+          detail: {
+            integro: relatorio.integro,
+            erros: relatorio.contagens.erros,
+            avisos: relatorio.contagens.avisos,
+            checagens: relatorio.cobertura.checagens.length,
+          },
+        });
+        return relatorio;
       }
       default:
         throw new ApiError("INTERNAL", `rota de gestão sem implementação: ${name}`);
@@ -1259,6 +1746,21 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
           return;
         }
 
+        // ── FASE 10 — QUEM PODE (principal de controle) ─────────────────────
+        //
+        // Separado de "quem diz que é" de propósito. `x-nomos-client` é texto
+        // que o chamador escreve sobre si mesmo e continua servindo à trilha;
+        // a arbitragem de lease usa o SUJEITO DO TOKEN, que é a única coisa
+        // nesta requisição que alguém teve de provar. Se um token ADMIN declara
+        // agir por outro (`x-nomos-on-behalf-of`), é esse o principal — e só
+        // ADMIN pode fazê-lo, senão qualquer agente escolheria de quem ser.
+        const dono = principalFor(autenticado.token, req.headers as Record<string, string | undefined>);
+        if (!dono.ok) {
+          envelopeError(res, action_id, "FAILED", "CAPABILITY_DENIED", dono.reason, { auth: dono.failure }, 403);
+          return;
+        }
+        const principal = dono.holder;
+
         if (route.name === "events") {
           envelopeError(res, action_id, "FAILED", "INVALID_REQUEST", "/events exige upgrade para WebSocket", {
             hint: `ws://${config.host}:${boundPort}${EVENTS_PATH}`,
@@ -1275,12 +1777,47 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
           // Lease (FASE 9/10): depois de autenticar, autorizar E ler o corpo —
           // o `session_id` chega no corpo, não na query. Checar antes seria
           // pular a arbitragem em praticamente toda chamada real.
-          const ator = client ?? autenticado.token.subject;
+          // O ATOR da trilha continua sendo o mais específico dos dois; quem
+          // decide o lease é o `principal`, que passou pela autenticação.
+          const ator = principal;
           const alvoSessao =
             typeof (body as Record<string, unknown>).session_id === "string"
               ? ((body as Record<string, unknown>).session_id as string)
               : url.searchParams.get("session_id");
+          // A arbitragem só faz sentido sobre uma sessão que EXISTE. Checar
+          // lease antes da existência trocava o 404 honesto ("essa sessão não
+          // há") por um 409 ("você não é o dono") — que além de errado é vazamento:
+          // diria a um estranho que a sessão existe e tem dono. `handleAction`
+          // continua sendo quem produz o SESSION_NOT_FOUND.
+          // ── FASE 11 — A ALLOWLIST DE SESSÃO VALE NAS AÇÕES, NÃO SÓ NA GESTÃO
+          //
+          // DEFEITO MEDIDO NESTA FASE. O gate de autorização roda antes de ler o
+          // corpo, e o `session_id` de uma AÇÃO chega NO CORPO — então
+          // `sessaoAlvo` era `null` ali em cima e a checagem de
+          // `session_allowlist` simplesmente não acontecia nas rotas que mais
+          // importam. Um token emitido para a sessão A operava a sessão B.
+          //
+          // Na bateria adversarial isso apareceu como 409 em vez de 403: quem
+          // barrou foi a ARBITRAGEM de lease, por acidente. Com
+          // `allow_unleased: true`, ou numa sessão sem lease, o mesmo token
+          // teria passado. Defesa que só funciona quando outra defesa está
+          // ligada não é defesa — é coincidência.
           if (alvoSessao !== null && alvoSessao !== "") {
+            const daSessao = auth.authorize(autenticado.token, escopo, alvoSessao);
+            if (!daSessao.ok) {
+              envelopeError(
+                res,
+                action_id,
+                "FAILED",
+                "CAPABILITY_DENIED",
+                daSessao.reason,
+                { auth: daSessao.failure, required_scope: escopo, subject: autenticado.token.subject, session_id: alvoSessao },
+                403,
+              );
+              return;
+            }
+          }
+          if (alvoSessao !== null && alvoSessao !== "" && sessions.has(alvoSessao)) {
             const d = leases.check(alvoSessao, ator, { tool: route.tool! });
             if (!d.allowed) {
               // Negação de arbitragem acontecia ANTES de `handleAction` e por
@@ -1317,7 +1854,21 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
               return;
             }
           }
-          await handleAction(route.tool!, body, url.searchParams, client, autenticado.token.subject, res);
+          // FASE 10 — a task nasce amarrada a QUEM a pediu. O executor de
+          // passo lê daqui para se apresentar como esse dono nas chamadas de
+          // volta pela API. Trocar o dono no meio faz o passo seguinte ser
+          // recusado — que é exatamente o comportamento pedido: a task para,
+          // declaradamente, em vez de seguir agindo em nome de quem já saiu.
+          if (route.tool === "browser.task" && alvoSessao !== null && alvoSessao !== "") {
+            taskHolders.set(alvoSessao, principal);
+          }
+          try {
+            await handleAction(route.tool!, body, url.searchParams, client, autenticado.token.subject, res);
+          } finally {
+            if (route.tool === "browser.task" && alvoSessao !== null && alvoSessao !== "") {
+              taskHolders.delete(alvoSessao);
+            }
+          }
           return;
         }
 
@@ -1328,6 +1879,8 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
           client,
           autenticado.token.subject,
           url.searchParams,
+          principal,
+          autenticado.token,
         );
         jsonResponse(res, route.name === "sessions.create" ? 201 : 200, result);
       } catch (e) {
@@ -1441,6 +1994,134 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
     console.error("[daemon] crash recovery de task falhou:", (e as Error).message);
   }
 
+  if (config.watchdog_enabled) {
+    watchdog = new HealthWatchdog({
+      interval_ms: config.watchdog_interval_ms,
+      max_restarts: config.watchdog_max_restarts,
+      onEvent: (e: HealthEvent) => {
+        // Tique normal não vira linha de trilha: seriam 17 mil linhas por dia
+        // dizendo "nada aconteceu", e a trilha existe para o que aconteceu.
+        if (e.name === "tick" || e.name === "started") return;
+        void services.record(
+          makeAuditEntry({
+            event: e.name === "degraded" ? "policy" : "recovery",
+            action: `watchdog.${e.name}`,
+            session: null,
+            actor: "watchdog",
+            result: e.name === "recovered" ? "ok" : "error",
+            verified: e.name === "recovered",
+            ...(e.name === "recovered" ? {} : { error: { code: "INTERNAL", message: `${e.kind ?? "watchdog"}: ${e.name}` } }),
+            detail: { kind: e.kind, state: e.state, ...e.detail },
+          }),
+        );
+        bus.publish(e.name === "recovered" ? "session.resumed" : "action.failed", {
+          source: "watchdog",
+          payload: { watchdog: e.name, kind: e.kind, state: e.state, ...e.detail },
+        });
+      },
+      probes: [
+        {
+          // ── NAVEGADOR MORTO ────────────────────────────────────────────────
+          // Pergunta ao Playwright, não ao nosso mapa de contextos: é o mapa que
+          // continua dizendo "tudo bem" depois de o Chromium ser morto.
+          // O QUE ESTA SONDA ACRESCENTA AO QUE JÁ EXISTIA
+          //
+          // O `SessionManager` já ouve `context.on("close")` e, quando o
+          // navegador morre sem ordem nossa, marca as sessões como FAILED. Isso
+          // funciona e não foi mexido. O que NINGUÉM fazia é o resto: a sessão
+          // morta continuava DONA do seu lease e com fila viva no daemon. O
+          // `session_id` ficava preso a um dono de uma sessão que já não existe,
+          // e nenhum outro agente conseguiria assumi-lo — nunca, porque não há
+          // mais navegador para expirar coisa alguma.
+          //
+          // Somado a isso, esta sonda pergunta ao Playwright se cada contexto
+          // ainda RESPONDE: o evento `close` cobre a morte que o Playwright
+          // percebe; ele não cobre o contexto que ficou no mapa e não responde
+          // mais.
+          kind: "browser_dead",
+          check: async () => {
+            const { vivos, mortos } = await sessions.probeContexts();
+            const orfas: { session_id: string; status: string; lease: string | null }[] = [];
+            for (const s of sessions.list({ include_closed: false })) {
+              if (s.status !== "FAILED") continue;
+              const dono = leases.currentHolder(s.session_id);
+              if (dono !== null || queues.has(s.session_id)) {
+                orfas.push({ session_id: s.session_id, status: s.status, lease: dono });
+              }
+            }
+            return {
+              ok: mortos.length === 0 && orfas.length === 0,
+              detail: { vivos, contextos_mortos: mortos, orfas },
+            };
+          },
+          recover: async (detalhe) => {
+            // NÃO ressuscita o Chromium. A sessão do dono (cookies, abas,
+            // formulário meio preenchido) morreu com ele; recriar um contexto
+            // vazio com o mesmo session_id entregaria ao agente uma sessão que
+            // PARECE a dele e não é. Marcar FAILED é dizer a verdade — e soltar
+            // o que ficou pendurado é a parte que faltava.
+            const afetadas = await sessions.reapDeadContexts();
+            const orfas = (detalhe.orfas ?? []) as { session_id: string }[];
+            for (const sid of [...afetadas, ...orfas.map((o) => o.session_id)]) {
+              leases.releaseAll(sid, "browser_dead");
+              leases.forget(sid);
+              queues.delete(sid);
+              taskHolders.delete(sid);
+            }
+          },
+        },
+        {
+          // ── WORKER PRESO ───────────────────────────────────────────────────
+          // Sem recuperação automática de propósito: a ação travada está dentro
+          // do Playwright, e "destravar" daqui seria abandonar um gesto no meio
+          // sem saber se ele chegou à página. O prazo da própria fila é quem
+          // encerra; o vigia existe aqui para que o fato APAREÇA.
+          kind: "worker_stuck",
+          check: async () => {
+            const limite = config.watchdog_worker_stall_ms;
+            const presos: { session_id: string; ha_ms: number }[] = [];
+            const agora = Date.now();
+            for (const [sid, fila] of queues) {
+              const idade = fila.oldestRunningMs(agora);
+              if (idade !== null && idade > limite) presos.push({ session_id: sid, ha_ms: idade });
+            }
+            return { ok: presos.length === 0, detail: { limite_ms: limite, presos } };
+          },
+        },
+        {
+          // ── TASK ESTAGNADA ─────────────────────────────────────────────────
+          // RUNNING é uma afirmação sobre o presente. Uma task que não move o
+          // checkpoint há minutos está em RUNNING mentindo — e o motor de task
+          // não tem como saber sozinho, porque quem parou foi o passo, não ele.
+          kind: "task_stalled",
+          check: async () => {
+            const agora = Date.now();
+            const paradas = services.taskEngine
+              .list({ state: "RUNNING" })
+              .map((t) => ({
+                task_id: t.task_id,
+                session_id: t.session_id,
+                parada_ha_ms: agora - Date.parse(t.checkpoint?.updated_at ?? t.updated_at),
+                step_index: t.checkpoint?.step_index ?? null,
+              }))
+              .filter((t) => Number.isFinite(t.parada_ha_ms) && t.parada_ha_ms > config.watchdog_task_stall_ms);
+            return { ok: paradas.length === 0, detail: { limite_ms: config.watchdog_task_stall_ms, paradas } };
+          },
+          recover: async (detalhe) => {
+            // PAUSA, não mata. Uma task pausada é retomável por `POST /resume` e
+            // deixa o operador decidir; uma task morta pelo vigia perderia o
+            // trabalho já feito sem que ninguém tenha pedido isso.
+            const paradas = (detalhe.paradas ?? []) as { task_id: string }[];
+            for (const p of paradas) {
+              await services.taskEngine.pause(p.task_id, "watchdog: sem progresso além do limiar");
+            }
+          },
+        },
+      ],
+    });
+    watchdog.start();
+  }
+
   bus.publish("runtime.started", {
     source: "runtime",
     payload: { host, port, contract: CONTRACT_VERSION, version: config.version, headless: config.headless },
@@ -1459,6 +2140,10 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
         }
       }
       sockets.clear();
+      // O vigia para ANTES dos subsistemas: fechar sessões faz contexto sumir, e
+      // um watchdog vivo leria isso como "navegador morreu" e tentaria recuperar
+      // uma sessão que nós mesmos estamos encerrando.
+      watchdog?.stop();
       await new Promise<void>((r) => wss.close(() => r()));
       // Nenhum Chromium fica para trás.
       await sessions.closeAll(reason);
@@ -1493,6 +2178,8 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
     services,
     startedAt,
     leases,
+    auth,
+    watchdog,
     token: rootToken?.secret ?? null,
     tokenPath: auth.tokenPath,
     ai,
@@ -1520,6 +2207,95 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
 
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ─────────────────────────────────────────────────────────────────────────────
+// FASE 14 — INSTÂNCIA ÚNICA
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Nome do arquivo de trava dentro do `runtime_dir`. */
+export const LOCK_FILE = "daemon.lock";
+
+export interface LockInfo {
+  pid: number;
+  port: number;
+  started_at: string;
+  /** Como o processo foi iniciado — ajuda o dono a achar o que ele não lembra de ter subido. */
+  argv: string;
+}
+
+/** `true` quando o PID existe E é acessível. Sinal 0 não entrega sinal nenhum. */
+function processoVivo(pid: number): boolean {
+  if (!Number.isInteger(pid) || pid <= 1) return false;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (e) {
+    // EPERM = existe mas é de outro usuário. Vivo, e não é nosso: recusar.
+    return (e as NodeJS.ErrnoException).code === "EPERM";
+  }
+}
+
+export function lerLock(runtimeDir: string): LockInfo | null {
+  try {
+    const cru = readFileSync(path.join(runtimeDir, LOCK_FILE), "utf8");
+    const o = JSON.parse(cru) as Partial<LockInfo>;
+    if (typeof o.pid !== "number" || typeof o.port !== "number") return null;
+    return { pid: o.pid, port: o.port, started_at: String(o.started_at ?? ""), argv: String(o.argv ?? "") };
+  } catch {
+    // Ausente ou ilegível: tratado como "sem trava". Uma trava que não dá para
+    // ler não pode impedir o daemon de subir para sempre.
+    return null;
+  }
+}
+
+/**
+ * Recusa subir quando JÁ HÁ um daemon vivo.
+ *
+ * DUAS PERGUNTAS, NÃO UMA. O PID sozinho mente nos dois sentidos: um arquivo de
+ * trava sobrevive a um `kill -9` (PID morto, trava viva ⇒ o daemon nunca mais
+ * subiria) e um PID pode ter sido reciclado pelo SO para outro programa. A porta
+ * sozinha também mente: outro processo qualquer pode estar ocupando a 7777.
+ *
+ * Então: PID vivo ⇒ recusa. PID morto ⇒ trava obsoleta, segue e reescreve. A
+ * porta é conferida depois, pelo próprio `listen`, que devolve EADDRINUSE — e é
+ * essa a mensagem que o operador precisa ver, não "não sei o que houve".
+ */
+export function assertInstanciaUnica(runtimeDir: string): LockInfo | null {
+  const lock = lerLock(runtimeDir);
+  if (lock === null) return null;
+  if (!processoVivo(lock.pid)) return lock; // obsoleta: quem chamou vai reescrever
+  throw new ApiError(
+    "BROWSER_UNAVAILABLE",
+    `já existe um nomos-browser vivo (pid ${lock.pid}, porta ${lock.port}, desde ${lock.started_at}) — ` +
+      "instância única por diretório de runtime. Pare o outro antes, ou use NOMOS_RUNTIME_DIR diferente.",
+    { pid: lock.pid, port: lock.port, started_at: lock.started_at, lock: path.join(runtimeDir, LOCK_FILE) },
+  );
+}
+
+export function escreverLock(runtimeDir: string, port: number): string {
+  mkdirSync(runtimeDir, { recursive: true, mode: 0o700 });
+  const alvo = path.join(runtimeDir, LOCK_FILE);
+  const info: LockInfo = {
+    pid: process.pid,
+    port,
+    started_at: new Date().toISOString(),
+    argv: process.argv.slice(1).join(" "),
+  };
+  writeFileSync(alvo, `${JSON.stringify(info, null, 2)}\n`, { mode: 0o600 });
+  return alvo;
+}
+
+/** Some com a trava — e SÓ com a nossa. */
+export function removerLock(runtimeDir: string): void {
+  try {
+    const lock = lerLock(runtimeDir);
+    // Apagar a trava de OUTRO daemon deixaria dois rodando na próxima subida.
+    if (lock !== null && lock.pid !== process.pid) return;
+    unlinkSync(path.join(runtimeDir, LOCK_FILE));
+  } catch {
+    // Já removida: nada a fazer.
+  }
+}
+
 /** Entrada de processo: `node packages/api/src/daemon.ts`. */
 export async function main(): Promise<void> {
   // `runtime_dir` e `auth_disabled` precisam de caminho por ambiente: sem isso o
@@ -1528,6 +2304,21 @@ export async function main(): Promise<void> {
   // cenário em que se precisa de um diretório descartável.
   const runtimeDir = process.env.NOMOS_RUNTIME_DIR;
   const authOff = process.env.NOMOS_BROWSER_AUTH === "off";
+
+  // FASE 14 — instância única. A checagem vem ANTES de qualquer socket abrir:
+  // subir um segundo daemon sobre o mesmo perfil significa dois Chromium
+  // disputando o mesmo `userDataDir`, que é como se corrompe o perfil do dono.
+  const dirTrava = runtimeDir !== undefined && runtimeDir !== "" ? path.resolve(runtimeDir) : DEFAULT_RUNTIME_DIR;
+  try {
+    const obsoleta = assertInstanciaUnica(dirTrava);
+    if (obsoleta !== null) {
+      console.error(`[daemon] trava obsoleta de pid ${obsoleta.pid} (morto) — assumindo`);
+    }
+  } catch (e) {
+    console.error(`[daemon] ${(e as Error).message}`);
+    process.exit(EXIT_JA_RODANDO);
+  }
+
   const handle = await startDaemon({
     install_signal_handlers: true,
     ...(runtimeDir !== undefined && runtimeDir !== "" ? { runtime_dir: runtimeDir } : {}),
@@ -1537,7 +2328,14 @@ export async function main(): Promise<void> {
     `nomos-browser em ${handle.url} — contrato v${CONTRACT_VERSION}, versão ${handle.config.version}, ` +
       `headless=${String(handle.config.headless)}, política=${handle.config.default_policy}`,
   );
+  const arquivoTrava = escreverLock(dirTrava, handle.port);
+  // Encerramento gracioso REMOVE a trava. Sem isto, um SIGTERM limpo deixaria o
+  // arquivo para trás e o próximo arranque gastaria a checagem de PID morto —
+  // que funciona, mas transforma o caminho normal no caminho de exceção.
+  const soltarTrava = (): void => removerLock(dirTrava);
+  process.once("exit", soltarTrava);
   console.error(`eventos: ws://${handle.host}:${handle.port}${EVENTS_PATH}`);
+  console.error(`trava de instância: ${arquivoTrava}`);
   // FASE 5 — silêncio sobre qual modelo está ligado não é opção. "sem
   // AIProvider" / "sem VisionProvider" é uma resposta e vai para o log; a
   // ausência de linha nenhuma era a única saída inaceitável, e era a de antes.

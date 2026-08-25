@@ -526,6 +526,31 @@ export interface HealthResponse {
   version: string;
   contract: string;
   uptime_s: number;
+  /**
+   * FASE 13 — estado do vigia de subsistemas.
+   *
+   * Sai no `/health` porque é ali que um supervisor externo (o LaunchAgent da
+   * FASE 14, um painel, um `curl` do dono) pergunta se o runtime está bem. Um
+   * daemon que responde 200 enquanto o navegador dele morreu não está bem, e
+   * antes desta fase era exatamente isso que ele respondia.
+   *
+   * `frozen` é medido de fora do laço, comparando o último tique com o relógio
+   * agora: quando o event loop trava, nenhum timer dispara — inclusive o que
+   * fiscalizaria o travamento —, então só quem lê de fora enxerga.
+   */
+  watchdog?: {
+    enabled: boolean;
+    state?: "idle" | "running" | "degraded" | "stopped";
+    ticks?: number;
+    stale_ms?: number | null;
+    frozen?: boolean;
+    /** Quantas vezes o event loop já ficou travado além do limite. */
+    freezes?: number;
+    last_freeze_ms?: number | null;
+    degraded_by?: string | null;
+    detected?: Record<string, number>;
+    recovered?: Record<string, number>;
+  };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

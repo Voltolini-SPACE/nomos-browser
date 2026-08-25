@@ -301,6 +301,49 @@ async function trilha(session_id: string): Promise<Record<string, unknown>[]> {
     .map((l) => JSON.parse(l) as Record<string, unknown>);
 }
 
+interface BaseDeLease {
+  holder: string | null;
+  count: number;
+  lease_id: string | null;
+}
+
+async function capturarLease(sid: string): Promise<BaseDeLease> {
+  const r = await chamar<{ current_holder: string | null; leases: { lease_id: string }[] }>(
+    "GET", `/api/v1/sessions/${sid}/lease`,
+  );
+  const ls = Array.isArray(r.body.leases) ? r.body.leases : [];
+  return { holder: r.body.current_holder ?? null, count: ls.length, lease_id: ls[0]?.lease_id ?? null };
+}
+
+/**
+ * A PROPRIEDADE de limpeza quanto ao lease: a task não mexe no controle da sessão.
+ *
+ * A asserção original era `lease_holder === null && lease_count === 0` e passava
+ * por VACUIDADE: com `allow_unleased: true` ninguém adquiria lease algum, então
+ * ela media "não sobrou lease" num mundo sem leases. Com a FASE 10 a sessão
+ * NASCE com lease exclusivo de quem a criou — lease da SESSÃO, que deve
+ * sobreviver ao fim da task —, e exigir `null` reprovaria o comportamento certo.
+ *
+ * É mais forte que "não cresceu": exige IGUALDADE. Uma task que SOLTASSE o lease
+ * da sessão (deixando-a órfã para o próximo agente) passaria em "não cresceu" e
+ * é tão defeito quanto vazar um lease novo.
+ *
+ * Usada pelo caso bom E pelo controle negativo (teste 14b) — é a MESMA função
+ * nos dois lados, senão o controle não provaria nada sobre este instrumento.
+ */
+function leaseIntacto(base: BaseDeLease, d: Record<string, unknown>): { ok: boolean; porque: string } {
+  if (base.holder === null || base.count === 0) {
+    return { ok: false, porque: "a sessão nasceu SEM lease — a arbitragem não está ligada e a medição seria vácua" };
+  }
+  if (d.lease_holder !== base.holder) {
+    return { ok: false, porque: `holder mudou: ${JSON.stringify(base.holder)} → ${JSON.stringify(d.lease_holder)}` };
+  }
+  if (Number(d.lease_count) !== base.count) {
+    return { ok: false, porque: `contagem mudou: ${base.count} → ${JSON.stringify(d.lease_count)}` };
+  }
+  return { ok: true, porque: `holder ${base.holder} e contagem ${base.count} preservados` };
+}
+
 const dormir = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 
 /**
@@ -1096,6 +1139,13 @@ test("13. alvo que muda de identidade entre passos falha e NUNCA é clicado de n
 
 test("14. depois do estado final não sobra processo, aba órfã nem lease", async () => {
   const sid = await novaSessao("DONO-14");
+  // FASE 10 — de quem é o volante ANTES da task. A sessão passa a nascer com
+  // lease exclusivo do principal que a criou (`allow_unleased` virou `false`
+  // por default), então este valor é o ponto de comparação do fim.
+  const baseLease = await capturarLease(sid);
+  const donoDoLease = baseLease.holder;
+  assert.ok(donoDoLease !== null, "a sessão nasceu sem lease — a arbitragem da FASE 10 não está ligada");
+  assert.equal(baseLease.count, 1, "a sessão deveria nascer com exatamente um lease exclusivo");
   roteiro = {
     steps: [
       passoGoto("l1", "/passo/l1"),
@@ -1114,8 +1164,30 @@ test("14. depois do estado final não sobra processo, aba órfã nem lease", asy
   const d = limpeza.detail as Record<string, unknown>;
   assert.equal(d.released, true);
   assert.equal(d.aborted, true, "o AbortController da task não foi abortado no fim");
-  assert.equal(d.lease_holder, null, "a task deixou um lease pendurado");
-  assert.equal(d.lease_count, 0);
+  // A asserção anterior era `lease_holder === null && lease_count === 0`. Ela
+  // passava por VACUIDADE: com `allow_unleased: true`, ninguém adquiria lease
+  // nenhum e "zero lease no fim" era o estado de sempre, task ou não. Com a
+  // FASE 10 a sessão nasce com dono, e a pergunta certa fica mais forte: a task
+  // MEXEU no lease? Holder igual ao do início e contagem exatamente 1 provam
+  // que ela não adquiriu lease próprio nem derrubou o de quem a chamou.
+  assert.equal(d.lease_holder, donoDoLease, "a task trocou o dono do lease da sessão");
+  assert.equal(d.lease_count, 1, "a task deixou lease EXTRA pendurado na sessão");
+  const leaseDepois = await chamar<{ current_holder: string | null; leases: unknown[] }>(
+    "GET",
+    `/api/v1/sessions/${sid}/lease`,
+  );
+  assert.equal(leaseDepois.body.current_holder, donoDoLease, "o holder mudou entre o início e o fim da task");
+  assert.equal(leaseDepois.body.leases.length, 1, "sobrou mais de um lease vivo na sessão");
+  // A MESMA função que o controle negativo (14b) usa para REPROVAR.
+  const vereditoLease = leaseIntacto(baseLease, d);
+  assert.equal(vereditoLease.ok, true, `a limpeza mexeu no lease: ${vereditoLease.porque}`);
+  // Identidade do lease, não só do holder: soltar e readquirir devolveria o
+  // mesmo holder com outro `lease_id` e escaparia da igualdade de nome.
+  assert.equal(
+    (leaseDepois.body.leases[0] as { lease_id?: string } | undefined)?.lease_id,
+    baseLease.lease_id,
+    "o lease foi solto e readquirido no meio — mesmo holder, outro lease_id",
+  );
   assert.equal(d.queue_waiting, 0, "sobrou trabalho enfileirado depois do fim da task");
   assert.equal(typeof d.pages_open, "number", "a limpeza não mediu as abas — sem número não há prova");
 
@@ -1141,6 +1213,66 @@ test("14. depois do estado final não sobra processo, aba órfã nem lease", asy
     }
   })();
   assert.equal(resto, "", `sobrou processo do daemon-filho: ${resto}`);
+});
+
+// ═════════════════════════════════════════════════════════════════════════════
+// 14b. CONTROLE DE VACUIDADE DO LEASE — um vazamento REAL tem de REPROVAR
+//
+// Sem este caso, "nenhum lease vazou" poderia ser verdade apenas porque o
+// instrumento não sabe olhar — que foi exatamente o defeito da versão anterior
+// (`lease_holder === null` num mundo onde ninguém adquiria lease).
+//
+// Aqui o lease é DE FATO desviado para um holder de task, no meio de uma task
+// viva, pela rota REAL de transferência. Nada é simulado: o desvio acontece no
+// LeaseManager de verdade, e a MESMA função que aprova o caminho bom (teste 14)
+// tem de reprovar este.
+// ═════════════════════════════════════════════════════════════════════════════
+
+test("14b. lease desviado para um delegado de task no meio: o instrumento REPROVA", async () => {
+  const sid = await novaSessao("DONO-14B");
+  const base = await capturarLease(sid);
+  assert.ok(base.holder !== null, "a sessão nasceu sem lease — nada a vazar, o controle seria vácuo");
+
+  const DELEGADO = "delegado-de-task-vazado";
+  roteiro = {
+    steps: [
+      passoGoto("z1", "/passo/z1"),
+      // Pendura o passo para dar tempo do desvio acontecer COM a task viva.
+      passoGoto("z2", "/nunca-responde/z2"),
+      passoGoto("z3", "/passo/z3-nunca"),
+    ],
+  };
+
+  const emVoo = abrirTask(sid, "vazar um lease de propósito");
+  await ate(async () => (fixture.vezes("/nunca-responde/z2") >= 1 ? true : null), 15_000);
+
+  // O desvio REAL, pela rota de produção.
+  const t = await chamar<{ holder?: string }>("POST", `/api/v1/sessions/${sid}/lease/transfer`, { to: DELEGADO });
+  assert.equal(t.status, 200, `a transferência não aconteceu: ${JSON.stringify(t.body)}`);
+
+  const env = await emVoo;
+  assert.equal(env.body.success, false, "perder o volante no meio não pode terminar em sucesso");
+
+  const task_id = String((env.body.error!.detail as Record<string, unknown>).task_id);
+  const tl = (await linhaDoTempo(sid)).filter((l) => l.task_id === task_id);
+  const limpeza = tl.find((l) => l.action === "task.cleanup");
+  assert.ok(limpeza !== undefined, "nem com o lease desviado a task deixou de ser limpa");
+  const d = limpeza.detail as Record<string, unknown>;
+
+  // O vazamento ACONTECEU de verdade — sem isto o controle seria encenação.
+  assert.equal(d.lease_holder, DELEGADO, `o desvio não chegou ao cleanup: ${JSON.stringify(d)}`);
+
+  // E A PROVA: a MESMA função do teste 14 reprova.
+  const veredito = leaseIntacto(base, d);
+  assert.equal(veredito.ok, false, "o instrumento ACEITOU um lease desviado para um delegado de task");
+  assert.match(veredito.porque, /holder mudou/);
+
+  // Perder o volante é FATAL, nunca retentável: martelar a porta de quem tomou
+  // o controle é o comportamento que a política existe para proibir.
+  const disco = await doDisco(sid, task_id);
+  assert.equal(disco.state, "FAILED");
+  assert.equal(disco.last_error?.classe, "fatal", `perder o lease virou ${disco.last_error?.classe}`);
+  assert.equal(fixture.vezes("/passo/z3-nunca"), 0, "a task seguiu agindo depois de perder o volante");
 });
 
 // ═════════════════════════════════════════════════════════════════════════════

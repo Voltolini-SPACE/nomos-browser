@@ -84,6 +84,52 @@ export interface DaemonConfig {
   default_policy: PolicyName;
   /** Navegar em 127.0.0.1/rede interna exige ato explícito (anti-SSRF, FASE 40). */
   allow_internal_urls: boolean;
+  /**
+   * FASE 10 — SESSÃO SEM LEASE PODE SER OPERADA?
+   *
+   * Default `false`, e a inversão é a decisão desta fase. Antes o daemon
+   * embutia `allow_unleased: true` no código: quem nunca pedisse lease agia à
+   * vontade, e a arbitragem só valia contra quem tivesse sido educado o
+   * bastante para adquirir um. Um controle que só barra quem já se anunciou não
+   * é controle — é etiqueta.
+   *
+   * Fechado por default, o dono da sessão passa a ser um FATO do runtime: quem
+   * cria a sessão recebe lease exclusivo no mesmo ato, e qualquer outro
+   * principal é recusado com CONTROL_NOT_OWNED até adquirir, herdar por
+   * handoff, ou esperar o lease do outro expirar.
+   *
+   * `true` continua existindo porque há instalação de agente único que não quer
+   * saber de lease algum — mas agora é ESCOLHA ESCRITA, com nome e proveniência
+   * na configuração, e não um default escondido no fonte do daemon.
+   */
+  allow_unleased: boolean;
+
+  // ── FASE 13 — watchdog dentro do runtime ──────────────────────────────────
+  //
+  // Ligado por default. Um supervisor que nasce desligado é um supervisor que
+  // ninguém liga: a falha que ele existe para pegar acontece na madrugada de uma
+  // instalação onde ninguém leu a documentação.
+  watchdog_enabled: boolean;
+  /** Período entre sondagens. Também é a base da deriva que denuncia congelamento. */
+  watchdog_interval_ms: number;
+  /**
+   * Recuperações da MESMA falha dentro da janela antes de DEGRADAR e parar.
+   * É o T10 do SECURITY.md: watchdog sem teto transforma falha em negação de
+   * serviço local.
+   */
+  watchdog_max_restarts: number;
+  /** Task em RUNNING sem avançar o checkpoint por mais que isto é task estagnada. */
+  watchdog_task_stall_ms: number;
+  /**
+   * Ação EM EXECUÇÃO há mais que isto é worker preso.
+   *
+   * Limiar PRÓPRIO, e não `action_timeout_ms * 2` como eu tinha derivado. A
+   * medição mostrou por quê: os dois prazos servem a coisas diferentes e
+   * amarrá-los tornava impossível configurar um sem estragar o outro. O prazo de
+   * ação é o que o CLIENTE espera; este é o tempo a partir do qual o trabalho
+   * que ficou rodando depois do prazo vira sintoma de travamento.
+   */
+  watchdog_worker_stall_ms: number;
   upload_root: string | null;
   download_root: string | null;
   /** Raiz do audit log JSONL. */
@@ -305,6 +351,12 @@ function baseDefaults(): DaemonConfig {
     max_body_bytes: 1_048_576,
     default_policy: DEFAULT_POLICY_NAME,
     allow_internal_urls: false,
+    allow_unleased: false,
+    watchdog_enabled: true,
+    watchdog_interval_ms: 5_000,
+    watchdog_max_restarts: 3,
+    watchdog_task_stall_ms: 120_000,
+    watchdog_worker_stall_ms: 60_000,
     upload_root: null,
     download_root: null,
     sessions_root: null,
@@ -508,6 +560,12 @@ export const ENV_KEYS: Readonly<Record<string, string>> = Object.freeze({
   max_body_bytes: "NOMOS_BROWSER_MAX_BODY_BYTES",
   default_policy: "NOMOS_BROWSER_POLICY",
   allow_internal_urls: "NOMOS_BROWSER_ALLOW_INTERNAL",
+  allow_unleased: "NOMOS_BROWSER_ALLOW_UNLEASED",
+  watchdog_enabled: "NOMOS_BROWSER_WATCHDOG_ENABLED",
+  watchdog_interval_ms: "NOMOS_BROWSER_WATCHDOG_INTERVAL_MS",
+  watchdog_max_restarts: "NOMOS_BROWSER_WATCHDOG_MAX_RESTARTS",
+  watchdog_task_stall_ms: "NOMOS_BROWSER_WATCHDOG_TASK_STALL_MS",
+  watchdog_worker_stall_ms: "NOMOS_BROWSER_WATCHDOG_WORKER_STALL_MS",
   upload_root: "NOMOS_BROWSER_UPLOAD_ROOT",
   download_root: "NOMOS_BROWSER_DOWNLOAD_ROOT",
   sessions_root: "NOMOS_SESSIONS_ROOT",
@@ -567,6 +625,27 @@ function applyKey(cfg: DaemonConfig, key: string, raw: unknown, origin: string):
       break;
     case "allow_internal_urls":
       cfg.allow_internal_urls = asBool(raw, key, origin);
+      break;
+    case "allow_unleased":
+      cfg.allow_unleased = asBool(raw, key, origin);
+      break;
+    case "watchdog_enabled":
+      cfg.watchdog_enabled = asBool(raw, key, origin);
+      break;
+    case "watchdog_interval_ms":
+      // Piso 50 ms: abaixo disso o vigia gasta mais CPU do que aquilo que ele
+      // vigia, e a deriva do escalonador vira falso positivo de congelamento.
+      cfg.watchdog_interval_ms = asInt(raw, key, origin, 50, 3_600_000);
+      break;
+    case "watchdog_max_restarts":
+      // 0 é legítimo: "detecte e reporte, mas nunca tente recuperar sozinho".
+      cfg.watchdog_max_restarts = asInt(raw, key, origin, 0, 1_000);
+      break;
+    case "watchdog_task_stall_ms":
+      cfg.watchdog_task_stall_ms = asInt(raw, key, origin, 100, 86_400_000);
+      break;
+    case "watchdog_worker_stall_ms":
+      cfg.watchdog_worker_stall_ms = asInt(raw, key, origin, 100, 86_400_000);
       break;
     case "viewport.width":
       cfg.viewport = { ...cfg.viewport, width: asInt(raw, key, origin, 1, 20000) };

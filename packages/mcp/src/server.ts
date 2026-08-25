@@ -56,7 +56,14 @@ const RPC_INTERNAL_ERROR = -32603;
 // Cliente HTTP do runtime
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type FetchLike = (input: string, init: { method: string; headers: Record<string, string>; body: string; signal: AbortSignal }) => Promise<{
+export type FetchLike = (
+  input: string,
+  // `body` é OPCIONAL porque GET não leva corpo — `fetch` recusa a requisição
+  // inteira quando um GET traz `body`, e o erro sai como "falha ao falar com o
+  // runtime", que aponta para a rede quando o defeito é aqui. Foi assim que a
+  // primeira versão de `whoami` falhou.
+  init: { method: string; headers: Record<string, string>; body?: string; signal: AbortSignal },
+) => Promise<{
   status: number;
   text: () => Promise<string>;
 }>;
@@ -66,6 +73,28 @@ export type FetchLike = (input: string, init: { method: string; headers: Record<
  * Fica separada de `ActionError` de propósito — inventar um `ActionErrorCode`
  * para "não consegui falar com o daemon" seria mentir sobre a origem da falha.
  */
+/**
+ * FASE 11 — CREDENCIAL AUSENTE NÃO É FALHA DE REDE.
+ *
+ * O `SECURITY.md` declarava, verbatim, que "autorização MCP ainda não está
+ * implementada" e que "qualquer processo local fala com o runtime". A parte que
+ * cabia a este arquivo era esta: o servidor MCP repassava o token do ambiente
+ * QUANDO ele existia, e seguia adiante quando não existia — deixando a recusa
+ * para o runtime, que naquele momento também não recusava.
+ *
+ * Agora é fechado aqui também, e com erro PRÓPRIO: um agente que recebe
+ * "falha ao falar com o runtime" quando o problema é credencial vai depurar a
+ * rede pelo resto da tarde.
+ */
+export class RuntimeAuthError extends Error {
+  readonly detail: Record<string, unknown>;
+  constructor(message: string, detail: Record<string, unknown> = {}) {
+    super(message);
+    this.name = "RuntimeAuthError";
+    this.detail = detail;
+  }
+}
+
 export class RuntimeTransportError extends Error {
   readonly detail: Record<string, unknown>;
   constructor(message: string, detail: Record<string, unknown>) {
@@ -79,12 +108,20 @@ export interface RuntimeClientOptions {
   runtimeUrl?: string;
   timeoutMs?: number;
   fetchImpl?: FetchLike;
+  /**
+   * Credencial do control plane. Ausente aqui, cai em `NOMOS_BROWSER_TOKEN`.
+   * Ausente nos dois, NENHUMA chamada sai — ver `RuntimeAuthError`.
+   */
+  token?: string | null;
 }
 
 export class RuntimeClient {
   readonly baseUrl: string;
   readonly timeoutMs: number;
+  /** `true` quando há credencial. O SEGREDO em si não é exposto por getter. */
+  readonly authenticated: boolean;
   readonly #fetch: FetchLike;
+  readonly #token: string | null;
 
   constructor(opts: RuntimeClientOptions = {}) {
     const raw = opts.runtimeUrl ?? process.env.NOMOS_BROWSER_URL ?? DEFAULT_RUNTIME_URL;
@@ -102,6 +139,29 @@ export class RuntimeClient {
     this.baseUrl = raw.replace(/\/+$/, "");
     this.timeoutMs = opts.timeoutMs ?? readIntEnv("NOMOS_BROWSER_TIMEOUT_MS", 120_000);
     this.#fetch = opts.fetchImpl ?? (globalThis.fetch as unknown as FetchLike);
+    // `undefined` e `null` são coisas diferentes aqui, como em `agent` no
+    // daemon: ausente ⇒ herde do ambiente; `null` ⇒ NENHUMA credencial, mesmo
+    // que o ambiente tenha uma. Sem essa distinção não haveria como um teste
+    // provar a recusa numa máquina cujo operador exporta NOMOS_BROWSER_TOKEN.
+    const cru = opts.token !== undefined ? opts.token : (process.env.NOMOS_BROWSER_TOKEN ?? null);
+    this.#token = cru !== null && cru.trim() !== "" ? cru.trim() : null;
+    this.authenticated = this.#token !== null;
+  }
+
+  /**
+   * Recusa ANTES de abrir socket. Não é otimização: mandar a chamada sem
+   * credencial e deixar o runtime devolver 401 significaria que o servidor MCP
+   * considera aceitável tentar — e num dia em que alguém suba o daemon com
+   * `NOMOS_BROWSER_AUTH=off` para depurar, "tentar" vira "conseguir".
+   */
+  #exigirCredencial(path: string): void {
+    if (this.#token === null) {
+      throw new RuntimeAuthError(
+        "nomos-browser-mcp exige NOMOS_BROWSER_TOKEN: o runtime não conversa com processo não identificado. " +
+          "O token do daemon fica em ~/.nomos-browser/control-token (0600).",
+        { path, runtime_url: this.baseUrl, env: "NOMOS_BROWSER_TOKEN" },
+      );
+    }
   }
 
   /**
@@ -113,13 +173,34 @@ export class RuntimeClient {
    */
   #authHeaders(): Record<string, string> {
     const h: Record<string, string> = { "content-type": "application/json", accept: "application/json" };
-    const t = process.env.NOMOS_BROWSER_TOKEN;
-    if (t !== undefined && t.trim() !== "") h["authorization"] = `Bearer ${t.trim()}`;
+    if (this.#token !== null) h["authorization"] = `Bearer ${this.#token}`;
     return h;
+  }
+
+  /** GET JSON. Usado por `whoami`; mesma exigência de credencial do POST. */
+  async get(path: string): Promise<{ status: number; json: unknown }> {
+    this.#exigirCredencial(path);
+    const url = `${this.baseUrl}${path}`;
+    try {
+      const res = await this.#fetch(url, {
+        method: "GET",
+        headers: this.#authHeaders(),
+        signal: AbortSignal.timeout(this.timeoutMs),
+      });
+      const text = await res.text();
+      return { status: res.status, json: text === "" ? null : (JSON.parse(text) as unknown) };
+    } catch (err) {
+      throw new RuntimeTransportError(`falha ao falar com o Browser Runtime em ${this.baseUrl}${path}`, {
+        path,
+        runtime_url: this.baseUrl,
+        cause: err instanceof Error ? `${err.name}: ${err.message}` : String(err),
+      });
+    }
   }
 
   /** POST JSON. Devolve status + corpo já parseado; não interpreta o envelope. */
   async post(path: string, body: unknown): Promise<{ status: number; json: unknown }> {
+    this.#exigirCredencial(path);
     const url = `${this.baseUrl}${path}`;
     let status: number;
     let text: string;
@@ -264,8 +345,24 @@ function envelopeToResult(route: string, httpStatus: number, envelope: ActionRes
   const err = envelope.error;
   const code = err?.code ?? "INTERNAL";
   const detail = err?.detail === undefined ? "" : `\ndetail: ${JSON.stringify(err.detail, null, 2)}`;
+  // FASE 11 — a recusa POR ESCOPO ganha nome próprio.
+  //
+  // `CAPABILITY_DENIED` cobre coisas diferentes demais: capability de sessão,
+  // arbitragem de lease e escopo de token saem todas com o mesmo código. Para
+  // quem opera, "seu token não tem o escopo INPUT" e "outra IA está com o
+  // volante" pedem ações opostas, e um agente que lê só o código não tem como
+  // distinguir. O código do contrato é preservado no texto; o rótulo MCP é que
+  // fica específico.
+  const d = (err?.detail ?? {}) as Record<string, unknown>;
+  const escopoExigido = typeof d.required_scope === "string" ? d.required_scope : null;
+  const rotulo =
+    escopoExigido !== null && d.auth === "SCOPE_DENIED"
+      ? `MCP_SCOPE_DENIED contract_code=${code} required_scope=${escopoExigido}`
+      : d.lease === "CONTROL_NOT_OWNED"
+        ? `MCP_CONTROL_NOT_OWNED contract_code=${code}`
+        : code;
   return textResult(
-    `NOMOS_BROWSER_ERROR code=${code}\n${head}\nmessage: ${err?.message ?? "(runtime não informou mensagem)"}${detail}`,
+    `NOMOS_BROWSER_ERROR code=${rotulo}\n${head}\nmessage: ${err?.message ?? "(runtime não informou mensagem)"}${detail}`,
     true,
   );
 }
@@ -290,6 +387,8 @@ export interface McpServer {
   handleMessage(msg: unknown): Promise<JsonRpcResponse | null>;
   /** Executa uma ferramenta. Exposto para teste sem passar pelo framing. */
   callTool(name: string, args: Record<string, unknown>): Promise<McpToolResult>;
+  /** Identidade e escopos desta credencial, perguntados ao runtime. */
+  whoami(): Promise<Record<string, unknown> | null>;
 }
 
 export function createMcpServer(opts: McpServerOptions = {}): McpServer {
@@ -300,6 +399,24 @@ export function createMcpServer(opts: McpServerOptions = {}): McpServer {
   /** Diagnóstico em stderr. Só nome de método/ferramenta — argumento nunca. */
   function trace(line: string): void {
     if (debug) process.stderr.write(`[${SERVER_NAME}] ${line}\n`);
+  }
+
+  /**
+   * FASE 11 — QUEM É ESTA CREDENCIAL.
+   *
+   * SOB DEMANDA, nunca no caminho de toda chamada. A tentação era perguntar uma
+   * vez no arranque e pré-checar escopo localmente; a medição mostrou o custo:
+   * uma requisição a mais em TODA sessão MCP, e o servidor MCP se colocando como
+   * autoridade de autorização que ele não é. A autoridade é o runtime. O que
+   * este servidor faz é (1) EXIGIR credencial antes de qualquer socket abrir e
+   * (2) PROPAGÁ-LA em todo POST, para que os escopos do runtime valham; quando
+   * ele recusa por escopo, a recusa é traduzida em erro MCP legível — ver
+   * `envelopeToResult`.
+   */
+  async function whoami(): Promise<Record<string, unknown> | null> {
+    const { status, json } = await client.get(`${API_PREFIX}/whoami`);
+    if (status !== 200 || typeof json !== "object" || json === null) return null;
+    return json as Record<string, unknown>;
   }
 
   /**
@@ -321,6 +438,16 @@ export function createMcpServer(opts: McpServerOptions = {}): McpServer {
     // colateral de abrir um navegador no runtime.
     const rpcSemSessao = buildRuntimeCall(name, rest, "");
 
+    // ── credencial ──────────────────────────────────────────────────────────
+    if (!client.authenticated) {
+      return textResult(
+        `NOMOS_BROWSER_ERROR code=MCP_NO_CREDENTIAL\nroute=${rpcSemSessao.route}\n` +
+          "message: nomos-browser-mcp exige NOMOS_BROWSER_TOKEN. O runtime não conversa com processo não identificado.\n" +
+          "detail: exporte NOMOS_BROWSER_TOKEN com o conteúdo de ~/.nomos-browser/control-token (arquivo 0600 gravado pelo daemon no arranque).",
+        true,
+      );
+    }
+
     try {
       const sessionId = await sessions.resolve(typeof pinned === "string" ? pinned : undefined);
       const rpc = { ...rpcSemSessao, body: { ...rpcSemSessao.body, session_id: sessionId } };
@@ -336,6 +463,12 @@ export function createMcpServer(opts: McpServerOptions = {}): McpServer {
       }
       return envelopeToResult(rpc.route, status, json);
     } catch (err) {
+      if (err instanceof RuntimeAuthError) {
+        return textResult(
+          `NOMOS_BROWSER_ERROR code=MCP_NO_CREDENTIAL\nroute=${rpcSemSessao.route}\nmessage: ${err.message}\ndetail: ${JSON.stringify(err.detail, null, 2)}`,
+          true,
+        );
+      }
       if (err instanceof RuntimeTransportError) {
         return textResult(
           `NOMOS_BROWSER_ERROR code=MCP_TRANSPORT_ERROR\nroute=${rpcSemSessao.route}\nmessage: ${err.message}\ndetail: ${JSON.stringify(err.detail, null, 2)}`,
@@ -444,7 +577,7 @@ export function createMcpServer(opts: McpServerOptions = {}): McpServer {
     }
   }
 
-  return { client, sessions, handleMessage, callTool };
+  return { client, sessions, handleMessage, callTool, whoami };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

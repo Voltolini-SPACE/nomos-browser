@@ -19,6 +19,7 @@
  * `orphan`; `result.json` ilegível vira `result_error`, não `result: null` mudo.
  */
 import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
 import path from "node:path";
 import type { AuditEntry, RuntimeEvent } from "../../core/src/contract.ts";
 import { newId, nowIso } from "../../core/src/contract.ts";
@@ -43,6 +44,138 @@ export const NETWORK_FILE = "network.jsonl";
 export const RESULT_FILE = "result.json";
 export const SCREENSHOTS_DIR = "screenshots";
 export const SCREENSHOT_INDEX = "index.jsonl";
+/** FASE 12 — selo de integridade do bundle. Ver `selarSessao`. */
+export const SEAL_FILE = "seal.json";
+
+/**
+ * FASE 12 — SELO DE INTEGRIDADE DO BUNDLE DE REPLAY
+ *
+ * O PROBLEMA QUE O SELO RESOLVE E O QUE ELE NÃO RESOLVE
+ * ----------------------------------------------------
+ * `verifyReplay` já detectava muita coisa: JSONL corrompido, arquivo truncado,
+ * screenshot com bytes divergentes do índice, timestamp fora de ordem, ação sem
+ * desfecho. Nenhuma dessas checagens pega o ataque mais simples de todos —
+ * ABRIR O JSONL E TROCAR UM VALOR. Se o JSON continua válido, o timestamp
+ * continua no lugar e a contagem de linhas não muda, o bundle passa. Foi
+ * medido: trocar a URL de uma linha de `actions.jsonl` era invisível.
+ *
+ * O selo fecha isso registrando, no fechamento da sessão, o sha256 e o tamanho
+ * de cada arquivo do bundle. Verificar é recomputar e comparar. Linha alterada,
+ * linhas reordenadas e arquivo truncado quebram o digest — os três casos que a
+ * checagem estrutural deixava passar.
+ *
+ * RESÍDUO DECLARADO, PORQUE OMITI-LO SERIA PIOR QUE NÃO TER SELO
+ * -------------------------------------------------------------
+ * É hash SEM CHAVE. Quem tem permissão de escrita no diretório da sessão pode
+ * adulterar o arquivo E reescrever o selo. Isto fecha corrupção acidental e
+ * adulteração oportunista; NÃO fecha adversário com acesso de escrita. Para
+ * isso seria preciso chave fora desta máquina — e prometer "à prova de
+ * adulteração" com um hash local seria exatamente o tipo de afirmação que este
+ * projeto não faz. Está escrito assim em `docs/SECURITY.md`.
+ */
+export interface SealedFile {
+  /** Caminho RELATIVO ao diretório da sessão. */
+  file: string;
+  bytes: number;
+  sha256: string;
+}
+
+export interface SessionSeal {
+  session_id: string;
+  sealed_at: string;
+  algo: "sha256";
+  /** Versão do formato do selo — para que um selo antigo seja reconhecido como antigo. */
+  version: 1;
+  files: SealedFile[];
+  counts: { actions: number; events: number; network: number; screenshots: number };
+}
+
+/** sha256 de um arquivo; `null` quando ele não existe. */
+async function digestDe(alvo: string): Promise<{ bytes: number; sha256: string } | null> {
+  try {
+    const buf = await readFile(alvo);
+    return { bytes: buf.length, sha256: createHash("sha256").update(buf).digest("hex") };
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw error;
+  }
+}
+
+/** Arquivos que entram no selo, na ORDEM canônica (a ordem faz parte do selo). */
+export async function arquivosDoBundle(dir: string): Promise<string[]> {
+  const fixos = [ACTIONS_FILE, EVENTS_FILE, NETWORK_FILE, RESULT_FILE, `${SCREENSHOTS_DIR}/${SCREENSHOT_INDEX}`];
+  const shots: string[] = [];
+  try {
+    for (const nome of (await readdir(path.join(dir, SCREENSHOTS_DIR))).sort()) {
+      if (nome === SCREENSHOT_INDEX) continue;
+      shots.push(`${SCREENSHOTS_DIR}/${nome}`);
+    }
+  } catch {
+    // Sessão sem screenshot: lista vazia, não erro.
+  }
+  return [...fixos, ...shots];
+}
+
+/**
+ * Calcula (sem gravar) o selo do que está no disco AGORA.
+ * É a mesma função usada para selar e para verificar — duas implementações
+ * divergiriam e o selo passaria a acusar diferença que não existe.
+ */
+export async function calcularSelo(session_id: string, options: ReplayOptions = {}): Promise<SessionSeal> {
+  const root = options.root ?? SESSIONS_ROOT;
+  const dir = sessionDir(session_id, root);
+  const files: SealedFile[] = [];
+  for (const rel of await arquivosDoBundle(dir)) {
+    const d = await digestDe(path.join(dir, rel));
+    // Arquivo ausente NÃO entra no selo. Selar a ausência transformaria
+    // "a sessão não teve tráfego de rede" em divergência na primeira verificação.
+    if (d !== null) files.push({ file: rel, bytes: d.bytes, sha256: d.sha256 });
+  }
+  const contar = async (rel: string): Promise<number> => {
+    try {
+      const t = await readFile(path.join(dir, rel), "utf8");
+      return t.split("\n").filter((l) => l.trim() !== "").length;
+    } catch {
+      return 0;
+    }
+  };
+  return {
+    session_id,
+    sealed_at: nowIso(),
+    algo: "sha256",
+    version: 1,
+    files,
+    counts: {
+      actions: await contar(ACTIONS_FILE),
+      events: await contar(EVENTS_FILE),
+      network: await contar(NETWORK_FILE),
+      screenshots: await contar(`${SCREENSHOTS_DIR}/${SCREENSHOT_INDEX}`),
+    },
+  };
+}
+
+/** Calcula e GRAVA o selo. Chamado no fechamento da sessão. */
+export async function selarSessao(session_id: string, options: ReplayOptions = {}): Promise<SessionSeal> {
+  const root = options.root ?? SESSIONS_ROOT;
+  const dir = sessionDir(session_id, root);
+  const selo = await calcularSelo(session_id, { root });
+  await mkdir(dir, { recursive: true });
+  await writeFile(path.join(dir, SEAL_FILE), `${JSON.stringify(selo, null, 2)}\n`, "utf8");
+  return selo;
+}
+
+/** Lê o selo gravado. `null` = sessão nunca selada (bundle legado ou aberto). */
+export async function lerSelo(session_id: string, options: ReplayOptions = {}): Promise<SessionSeal | null> {
+  const root = options.root ?? SESSIONS_ROOT;
+  try {
+    const cru = await readFile(path.join(sessionDir(session_id, root), SEAL_FILE), "utf8");
+    return JSON.parse(cru) as SessionSeal;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+    // Selo ilegível é DIFERENTE de selo ausente: quem verifica precisa saber.
+    throw error;
+  }
+}
 
 /**
  * Registro de rede. O contrato v1 não define este tipo (a API v1 devolve
@@ -157,6 +290,14 @@ export class SessionRecorder {
     return this.dir;
   }
 
+  /**
+   * FASE 12 — sela o bundle. Idempotente: reselar recalcula sobre o disco atual.
+   * Chamado no fechamento da sessão; o `verifyReplay` é quem confere depois.
+   */
+  async seal(): Promise<SessionSeal> {
+    return selarSessao(this.session_id, { root: this.root });
+  }
+
   /** Grava em `actions.jsonl` (mesma trilha do AuditLog). Devolve o redigido. */
   async recordAction(entry: AuditEntry): Promise<AuditEntry> {
     const safe = await this.#audit.append(entry, this.session_id);
@@ -264,6 +405,13 @@ export class SessionRecorder {
     };
     await mkdir(this.dir, { recursive: true });
     await writeFile(this.path(RESULT_FILE), `${JSON.stringify(payload, null, 2)}\n`, "utf8");
+    // FASE 12 — SELA DEPOIS DE ESCREVER O ÚLTIMO ARQUIVO, e não antes.
+    //
+    // `finish()` é o ponto em que a sessão para de escrever; um selo tirado um
+    // instante antes já nasceria obsoleto por causa do próprio `result.json`.
+    // Selar aqui torna a integridade uma propriedade do bundle FECHADO, que é a
+    // única sobre a qual dá para afirmar alguma coisa.
+    await selarSessao(this.session_id, { root: this.root });
     return payload;
   }
 }

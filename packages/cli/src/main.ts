@@ -40,6 +40,7 @@ import {
   type ReplayOptions,
   type TimelineItem,
 } from "../../observability/src/replay.ts";
+import { verifyReplay } from "../../observability/src/replay-verify.ts";
 import { readControlToken } from "../../api/src/auth.ts";
 
 export const CLI_NAME = "nomos-web";
@@ -107,7 +108,10 @@ export interface Outcome {
 // Parser de argumentos — próprio, sem dependência
 // ─────────────────────────────────────────────────────────────────────────────
 
-const BOOLEAN_FLAGS: ReadonlySet<string> = new Set(["json", "help", "version", "headless"]);
+// `pixels` e `strict` entram aqui (FASE 12) porque são flags SEM valor; fora
+// desta lista o parser consumiria o próximo argumento como se fosse o valor
+// delas, e `replay verify --strict ses_x` perderia o session_id.
+const BOOLEAN_FLAGS: ReadonlySet<string> = new Set(["json", "help", "version", "headless", "pixels", "strict"]);
 
 const STRING_FLAGS: ReadonlySet<string> = new Set([
   "url",
@@ -266,10 +270,13 @@ export const COMMANDS: Readonly<Record<string, CommandSpec>> = Object.freeze({
   task: { flags: ["session"], minArgs: 1, maxArgs: 1, syntax: 'task --session <ID> "<objetivo>"' },
   events: { flags: ["session", "events", "max"], minArgs: 0, maxArgs: 0, syntax: "events [--session ID]" },
   replay: {
-    flags: ["sessions-root", "limit"],
+    flags: ["sessions-root", "limit", "pixels", "strict"],
     minArgs: 1,
-    maxArgs: 1,
-    syntax: "replay <SESSION_ID>",
+    // 2 por causa de `replay verify <ID>`. O subcomando é POSICIONAL e não uma
+    // flag porque verificar não é um modo de exibir a linha do tempo: é outra
+    // operação, com outra saída e outro código de saída.
+    maxArgs: 2,
+    syntax: "replay <SESSION_ID> | replay verify <SESSION_ID>",
   },
   close: { flags: [], minArgs: 1, maxArgs: 1, syntax: "close <SESSION_ID>" },
 });
@@ -286,6 +293,7 @@ comandos:
   task --session <ID> "<objetivo>"  entrega um objetivo ao agente
   events                            segue o WebSocket de eventos até Ctrl-C
   replay <SESSION_ID>               linha do tempo gravada da sessão
+  replay verify <SESSION_ID>        verifica a INTEGRIDADE do replay gravado
   close <SESSION_ID>                fecha a sessão
 
 opções globais:
@@ -301,6 +309,7 @@ opções por comando:
   task         --session <ID>  (obrigatória)
   events       --session <ID>  --events <a,b,c>  --max <N>
   replay       --sessions-root <dir>  --limit <N>
+  replay verify --sessions-root <dir>  --pixels (decodifica os PNG)  --strict (aviso também reprova)
 
 códigos de saída:
   0 sucesso   1 falha de negócio   2 erro de uso   3 runtime inalcançável
@@ -828,7 +837,89 @@ async function cmdClose(ctx: Ctx): Promise<Outcome> {
 // replay — leitura de disco, não de navegador
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * FASE 12 — `replay verify <SESSION_ID>`
+ *
+ * POR QUE CLI **E** ROTA, E NÃO UMA SÓ
+ * -----------------------------------
+ * A rota `GET /api/v1/sessions/:id/replay/verify` serve quem já fala HTTP com o
+ * runtime e quer o veredito sobre a raiz de sessões QUE O DAEMON usa — é o
+ * caminho de um painel ou de outro serviço.
+ *
+ * Esta CLI serve o caso em que a rota não existe: o daemon CAIU. Verificar um
+ * replay é exatamente o que se quer fazer depois de uma queda, e um verificador
+ * que exige o processo derrubado de pé estaria indisponível na única hora em que
+ * importa. Por isso ela lê o disco direto, aceita `--sessions-root` e não abre
+ * socket nenhum.
+ *
+ * Código de saída: 0 íntegro, 1 reprovado. É o que permite usá-la em script.
+ */
+async function cmdReplayVerify(ctx: Ctx): Promise<Outcome> {
+  const session = ctx.parsed.args[1]!;
+  const options = replayOptions(ctx.parsed);
+  const estrito = ctx.parsed.flags.get("strict") === true;
+  const report = await guardSessionId(() =>
+    verifyReplay(session, {
+      ...options,
+      ...(ctx.parsed.flags.get("pixels") === true ? { decodificar_pixels: true } : {}),
+    }),
+  );
+
+  const erros = report.problemas.filter((p) => p.severidade === "erro");
+  const avisos = report.problemas.filter((p) => p.severidade === "aviso");
+  const reprovado = estrito ? report.problemas.length > 0 : !report.integro;
+
+  const lines: string[] = [];
+  if (report.problemas.length > 0) {
+    lines.push(...table(["SEVERIDADE", "CÓDIGO", "ARQUIVO", "MENSAGEM"], report.problemas.map((p) => [
+      p.severidade,
+      p.codigo,
+      p.arquivo ?? "—",
+      short(p.mensagem, 78),
+    ])));
+    lines.push("");
+  }
+  lines.push(
+    ...pairs([
+      ["sessão", report.session_id],
+      ["diretório", report.dir],
+      ["checagens executadas", String(report.cobertura.checagens.length)],
+      ["itens na linha do tempo", String(report.contagens.linha_do_tempo)],
+      ["erros", String(erros.length)],
+      ["avisos", String(avisos.length)],
+      ["veredito", reprovado ? "RECUSADO" : "ÍNTEGRO"],
+    ]),
+  );
+  // A lista de checagens é impressa porque, sem ela, "nenhum problema" e "não
+  // rodou nada" seriam indistinguíveis na saída.
+  lines.push("", `checagens: ${report.cobertura.checagens.join(", ")}`);
+
+  return {
+    json: { ...report, veredito: reprovado ? "RECUSADO" : "INTEGRO", estrito },
+    lines,
+    error: reprovado
+      ? {
+          code: "REPLAY_INTEGRITY_FAILED",
+          message: `replay da sessão ${session} recusado: ${erros.length} erro(s)${estrito ? ` e ${avisos.length} aviso(s)` : ""}`,
+          detail: { codigos: [...new Set(report.problemas.map((p) => p.codigo))] },
+        }
+      : null,
+  };
+}
+
 async function cmdReplay(ctx: Ctx): Promise<Outcome> {
+  // `replay verify <ID>` desvia aqui: o parser é posicional e não tem
+  // subcomandos de verdade, e inventar um só para isto custaria mais do que
+  // vale.
+  if (ctx.parsed.args[0] === "verify") {
+    if (ctx.parsed.args.length !== 2) {
+      throw new UsageError(`uso: ${CLI_NAME} replay verify <SESSION_ID>`);
+    }
+    return cmdReplayVerify(ctx);
+  }
+  if (ctx.parsed.args.length !== 1) {
+    throw new UsageError(`uso: ${CLI_NAME} replay <SESSION_ID>`);
+  }
   const session = ctx.parsed.args[0]!;
   const options = replayOptions(ctx.parsed);
   const bundle = await guardSessionId(() => loadReplay(session, options));

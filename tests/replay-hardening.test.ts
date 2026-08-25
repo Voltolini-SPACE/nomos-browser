@@ -22,12 +22,14 @@ import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promis
 import { tmpdir } from "node:os";
 import path from "node:path";
 
-import { SessionRecorder } from "../packages/observability/src/replay.ts";
+import { SessionRecorder, selarSessao, SEAL_FILE, calcularSelo } from "../packages/observability/src/replay.ts";
 import {
   LACUNA_PADRAO_MS,
   UNKNOWN_OUTCOME,
   errosDe,
   verifyReplay,
+  loadReplayVerificado,
+  ReplayIntegrityError,
   type ReplayProblemCode,
   type ReplayVerifyReport,
 } from "../packages/observability/src/replay-verify.ts";
@@ -70,6 +72,8 @@ interface Molde {
   recorded?: Record<string, number>;
   semNewline?: Fonte[];
   omitir?: (Fonte | "result")[];
+  /** FASE 12 — não gravar `seal.json` (simula bundle legado, anterior ao selo). */
+  naoSelar?: boolean;
 }
 
 const evtIniciada = (t: string, id: string) => ({
@@ -131,6 +135,16 @@ async function escreverJsonl(file: string, linhas: Linha[], semNewline: boolean)
 }
 
 /** Monta um bundle no disco. Sem molde, monta o bundle íntegro de referência. */
+/**
+ * FASE 12 — o molde SELA no fim, como a produção sela no fechamento da sessão.
+ *
+ * A ordem importa e não é detalhe: o selo é tirado DEPOIS de o molde escrever
+ * tudo, inclusive os defeitos injetados. Isso mantém os casos anteriores
+ * intactos (o selo confere com o que está no disco, defeituoso ou não, e nenhum
+ * `SELO_DIVERGENTE` aparece onde não é o assunto) e deixa o selo medindo
+ * exatamente o que ele existe para medir: adulteração APÓS o fechamento.
+ * `naoSelar` existe para o caso do bundle legado, que nunca foi selado.
+ */
 async function montar(sid: string, m: Molde = {}): Promise<string> {
   const dir = path.join(ROOT, sid);
   await mkdir(path.join(dir, "screenshots"), { recursive: true });
@@ -181,6 +195,7 @@ async function montar(sid: string, m: Molde = {}): Promise<string> {
       );
     }
   }
+  if (m.naoSelar !== true) await selarSessao(sid, { root: ROOT });
   return dir;
 }
 
@@ -266,11 +281,13 @@ describe("replay-verify · controle negativo (bundle íntegro precisa passar)", 
       empates: 0,
       lacunas: 0,
     });
-    // 16 checagens rodaram — a ausência de problema é resultado, não pulo.
-    assert.equal(r.cobertura.checagens.length, 16);
+    // 17 checagens rodaram — a ausência de problema é resultado, não pulo.
+    // Eram 16 até a FASE 12; `C18_selo_integridade` é a que passou a existir.
+    assert.equal(r.cobertura.checagens.length, 17);
     assert.equal(r.cobertura.checagens[0], "C01_sessao_existe");
     assert.equal(r.cobertura.checagens.includes("C15_contagens"), true);
-    assert.equal(new Set(r.cobertura.checagens).size, 16, "sem checagem repetida");
+    assert.equal(r.cobertura.checagens.includes("C18_selo_integridade"), true);
+    assert.equal(new Set(r.cobertura.checagens).size, 17, "sem checagem repetida");
     // A decodificação de pixels é opcional: se NÃO rodou, a lista não a menciona.
     assert.equal(r.cobertura.checagens.includes("C17_pixels_do_screenshot"), false);
     const fundo = await verifyReplay(sid, { root: ROOT, decodificar_pixels: true });
@@ -851,5 +868,244 @@ describe("replay-verify · conduta do verificador", () => {
 
     const denovo = await verifyReplay(sid, { root: ROOT });
     assert.deepEqual(denovo, r, "duas execuções sobre o mesmo disco dão o mesmo relatório");
+  });
+});
+
+// ═════════════════════════════════════════════════════════════════════════════
+// FASE 12 — SELO DE INTEGRIDADE E RECUSA DE BUNDLE ADULTERADO
+//
+// O que estas checagens acrescentam às anteriores: as de cima são ESTRUTURAIS e
+// pegam corrupção, truncamento, ordem e referência quebrada. Nenhuma delas pega
+// a adulteração mais simples de todas — abrir o JSONL e trocar um valor,
+// deixando o JSON válido, o timestamp no lugar e a contagem de linhas igual.
+// Foi medido: era invisível. O selo pega, porque o digest do arquivo muda.
+//
+// Portões: REPLAY_RECORD, REPLAY_LOAD, REPLAY_VERIFY, REPLAY_TAMPER_DETECTION.
+// ═════════════════════════════════════════════════════════════════════════════
+
+const GATE_REPLAY: Record<string, string> = {
+  REPLAY_RECORD: "FAIL",
+  REPLAY_LOAD: "FAIL",
+  REPLAY_VERIFY: "FAIL",
+  REPLAY_TAMPER_DETECTION: "FAIL",
+};
+
+describe("FASE 12 · selo de integridade do replay", () => {
+  it("F12-1. gravar → carregar → verificar: bundle real sai ÍNTEGRO e SELADO", async () => {
+    const sid = "sess_f12_intacto";
+    const rec = new SessionRecorder(sid, { root: ROOT });
+    await rec.init();
+    await rec.recordEvent(evtIniciada(T(0), "act_1") as never);
+    await rec.recordEvent(evtConcluida(T(1), "act_1") as never);
+    await rec.recordAction(auditoria(T(2), "act_1") as never);
+    await rec.recordNetwork({ timestamp: T(3), url: "https://exemplo.test/a", method: "get", status: 200 });
+    await rec.saveScreenshot(PNG_1X1, "shot_f12");
+    await rec.finish({ ok: true });
+    GATE_REPLAY.REPLAY_RECORD = "PASS";
+
+    // O selo existe e cobre TODOS os arquivos do bundle — inclusive o binário
+    // do screenshot, que é onde um índice forjado esconderia a troca.
+    const selo = await calcularSelo(sid, { root: ROOT });
+    const nomes = selo.files.map((f) => f.file).sort();
+    assert.ok(nomes.includes("actions.jsonl"), `selo sem actions.jsonl: ${nomes.join(",")}`);
+    assert.ok(nomes.includes("events.jsonl"));
+    assert.ok(nomes.includes("network.jsonl"));
+    assert.ok(nomes.includes("result.json"));
+    assert.ok(nomes.includes("screenshots/index.jsonl"));
+    assert.ok(nomes.some((n) => n.startsWith("screenshots/shot_f12")), "o binário do screenshot ficou fora do selo");
+    for (const f of selo.files) assert.match(f.sha256, /^[0-9a-f]{64}$/);
+
+    // Carregar COM verificação devolve o bundle. É o caminho que a produção usa.
+    const { bundle, report } = await loadReplayVerificado(sid, { root: ROOT });
+    assert.equal(report.integro, true, JSON.stringify(report.problemas));
+    assert.equal(bundle.actions.length, 1);
+    assert.equal(bundle.events.length, 2);
+    assert.equal(bundle.screenshots.length, 1);
+    GATE_REPLAY.REPLAY_LOAD = "PASS";
+
+    // Verificação sem NENHUM problema — nem aviso. Selo ausente seria aviso, e
+    // é justamente o que não pode acontecer num bundle escrito pela produção.
+    const r = await verifyReplay(sid, { root: ROOT });
+    assert.deepEqual(r.problemas, [], "bundle selado pela produção gerou problema");
+    assert.equal(r.cobertura.checagens.includes("C18_selo_integridade"), true);
+    GATE_REPLAY.REPLAY_VERIFY = "PASS";
+  });
+
+  it("F12-2. ADULTERAR UMA LINHA (JSON válido, ordem intacta) é RECUSADO", async () => {
+    const sid = "sess_f12_linha_trocada";
+    await montar(sid);
+    const antes = await verifyReplay(sid, { root: ROOT });
+    assert.equal(antes.integro, true, "o bundle já nasceu reprovado — o caso não mediria nada");
+
+    // A adulteração: trocar um valor DENTRO de uma linha legítima. O arquivo
+    // continua sendo JSONL válido, o timestamp continua no lugar, a contagem de
+    // linhas não muda. É o caso que toda checagem estrutural deixava passar.
+    const alvo = path.join(ROOT, sid, "actions.jsonl");
+    const original = await readFile(alvo, "utf8");
+    const linhas = original.split("\n").filter((l) => l.trim() !== "");
+    const primeira = JSON.parse(linhas[0]!) as Record<string, unknown>;
+    primeira.actor = "ATOR-FORJADO";
+    linhas[0] = JSON.stringify(primeira);
+    await writeFile(alvo, `${linhas.join("\n")}\n`, "utf8");
+
+    const r = await verifyReplay(sid, { root: ROOT });
+    assert.equal(r.integro, false, "linha adulterada passou pela verificação");
+    const div = porCodigo(r, "SELO_DIVERGENTE");
+    assert.equal(div.length, 1, `esperava um SELO_DIVERGENTE, veio ${codigos(r).join(",")}`);
+    assert.equal(div[0]!.arquivo, "actions.jsonl");
+    assert.match(div[0]!.mensagem, /ALTERADO/);
+
+    // E o carregamento RECUSA — não devolve o bundle adulterado com um aviso.
+    await assert.rejects(
+      () => loadReplayVerificado(sid, { root: ROOT }),
+      (e: unknown) => {
+        assert.ok(e instanceof ReplayIntegrityError, `erro errado: ${String(e)}`);
+        assert.equal(e.report.integro, false);
+        assert.match(e.message, /SELO_DIVERGENTE/);
+        return true;
+      },
+    );
+  });
+
+  it("F12-3. REORDENAR as linhas (mesmos bytes, outra ordem) é RECUSADO", async () => {
+    const sid = "sess_f12_reordenado";
+    // Duas ações com timestamps que, TROCADOS de lugar, ainda formam um arquivo
+    // JSONL perfeitamente válido. A ordem é o fato adulterado.
+    await montar(sid, {
+      events: [evtIniciada(T(0), "act_a"), evtConcluida(T(1), "act_a"), evtIniciada(T(2), "act_b"), evtConcluida(T(3), "act_b")],
+      actions: [auditoria(T(4), "act_a"), auditoria(T(5), "act_b")],
+    });
+    assert.equal((await verifyReplay(sid, { root: ROOT })).integro, true);
+
+    const alvo = path.join(ROOT, sid, "actions.jsonl");
+    const linhas = (await readFile(alvo, "utf8")).split("\n").filter((l) => l.trim() !== "");
+    assert.equal(linhas.length, 2, "o caso precisa de duas linhas para poder trocá-las");
+    await writeFile(alvo, `${[linhas[1], linhas[0]].join("\n")}\n`, "utf8");
+
+    const r = await verifyReplay(sid, { root: ROOT });
+    assert.equal(r.integro, false, "reordenação passou pela verificação");
+    const div = porCodigo(r, "SELO_DIVERGENTE");
+    assert.equal(div.length, 1, `esperava SELO_DIVERGENTE, veio ${codigos(r).join(",")}`);
+    // Reordenar preserva o TAMANHO do arquivo: é a assinatura da edição no
+    // lugar, e o relatório diz isso em vez de chamar de truncamento.
+    assert.equal((div[0]!.detalhe as Record<string, unknown>).mesmo_tamanho, true);
+  });
+
+  it("F12-4. TRUNCAR o arquivo é RECUSADO, e o relatório diz que foi truncamento", async () => {
+    const sid = "sess_f12_truncado";
+    await montar(sid);
+    assert.equal((await verifyReplay(sid, { root: ROOT })).integro, true);
+
+    const alvo = path.join(ROOT, sid, "events.jsonl");
+    const conteudo = await readFile(alvo, "utf8");
+    await writeFile(alvo, conteudo.slice(0, Math.floor(conteudo.length / 2)), "utf8");
+
+    const r = await verifyReplay(sid, { root: ROOT });
+    assert.equal(r.integro, false);
+    const div = porCodigo(r, "SELO_DIVERGENTE");
+    assert.equal(div.length, 1, `esperava SELO_DIVERGENTE, veio ${codigos(r).join(",")}`);
+    assert.match(div[0]!.mensagem, /TRUNCADO/);
+    assert.equal((div[0]!.detalhe as Record<string, unknown>).mesmo_tamanho, false);
+  });
+
+  it("F12-5. APAGAR um arquivo do bundle é RECUSADO", async () => {
+    const sid = "sess_f12_apagado";
+    await montar(sid);
+    await rm(path.join(ROOT, sid, "network.jsonl"));
+
+    const r = await verifyReplay(sid, { root: ROOT });
+    assert.equal(r.integro, false, "apagar arquivo selado passou");
+    const some = porCodigo(r, "SELO_ARQUIVO_AUSENTE");
+    assert.equal(some.length, 1, `esperava SELO_ARQUIVO_AUSENTE, veio ${codigos(r).join(",")}`);
+    assert.equal(some[0]!.arquivo, "network.jsonl");
+  });
+
+  it("F12-6. ACRESCENTAR arquivo depois do selo é RECUSADO", async () => {
+    const sid = "sess_f12_extra";
+    await montar(sid);
+    await writeFile(path.join(ROOT, sid, "screenshots", "plantado.png"), PNG_1X1);
+
+    const r = await verifyReplay(sid, { root: ROOT });
+    assert.equal(r.integro, false, "screenshot plantado depois do fechamento passou");
+    assert.ok(codigos(r).includes("SELO_ARQUIVO_EXTRA"), codigos(r).join(","));
+  });
+
+  it("F12-7. ADULTERAR o BINÁRIO do screenshot é RECUSADO", async () => {
+    const sid = "sess_f12_shot";
+    const rec = new SessionRecorder(sid, { root: ROOT });
+    await rec.init();
+    await rec.recordEvent(evtIniciada(T(0), "act_s") as never);
+    await rec.recordEvent(evtConcluida(T(1), "act_s") as never);
+    await rec.recordAction(auditoria(T(2), "act_s") as never);
+    const ref = await rec.saveScreenshot(PNG_1X1, "shot_trocado");
+    await rec.finish({ ok: true });
+    assert.equal((await verifyReplay(sid, { root: ROOT })).integro, true);
+
+    // Troca o PNG por OUTRO PNG do mesmo tamanho: o índice continua batendo em
+    // bytes, e sem selo isso passaria como imagem legítima.
+    const arquivo = path.join(ROOT, sid, "screenshots", `${ref}.png`);
+    const bytes = Buffer.from(await readFile(arquivo));
+    bytes[bytes.length - 1] = bytes[bytes.length - 1]! ^ 0xff;
+    await writeFile(arquivo, bytes);
+
+    const r = await verifyReplay(sid, { root: ROOT });
+    assert.equal(r.integro, false, "screenshot trocado passou pela verificação");
+    assert.ok(codigos(r).includes("SELO_DIVERGENTE"), codigos(r).join(","));
+    GATE_REPLAY.REPLAY_TAMPER_DETECTION = "PASS";
+  });
+
+  it("F12-8. CONTROLE NEGATIVO: bundle íntegro atravessa tudo sem uma recusa", async () => {
+    // Sem este caso, "recusa tudo" seria indistinguível de "detecta adulteração".
+    const sid = "sess_f12_controle";
+    await montar(sid);
+    const r = await verifyReplay(sid, { root: ROOT });
+    assert.deepEqual(r.problemas, [], `bundle intacto foi acusado: ${JSON.stringify(r.problemas)}`);
+    assert.equal(r.integro, true);
+    const { report } = await loadReplayVerificado(sid, { root: ROOT, permitir_avisos: false });
+    assert.equal(report.integro, true);
+
+    // O selo trava ADULTERAÇÃO, não a evolução legítima do bundle: uma escrita
+    // seguida de RESSELO volta a aprovar. É o que torna o selo utilizável — um
+    // mecanismo que congelasse o diretório para sempre seria abandonado no
+    // primeiro reprocessamento legítimo.
+    //
+    // (Este é também o RESÍDUO declarado em docs/SECURITY.md: hash sem chave
+    // detecta adulteração, mas quem tem escrita no diretório pode resselar. A
+    // linha abaixo é a demonstração honesta disso, não um contorno.)
+    const alvo12 = path.join(ROOT, sid, "actions.jsonl");
+    const linhas12 = (await readFile(alvo12, "utf8")).split("\n").filter((l) => l.trim() !== "");
+    const reg12 = JSON.parse(linhas12[0]!) as Record<string, unknown>;
+    reg12.actor = "outro-ator";
+    await writeFile(alvo12, `${[JSON.stringify(reg12), ...linhas12.slice(1)].join("\n")}\n`, "utf8");
+    const depoisDaEscrita = await verifyReplay(sid, { root: ROOT });
+    assert.equal(depoisDaEscrita.integro, false, "escrita sem resselo deveria reprovar");
+    assert.deepEqual(codigos(depoisDaEscrita), ["SELO_DIVERGENTE"]);
+    await selarSessao(sid, { root: ROOT });
+    assert.equal((await verifyReplay(sid, { root: ROOT })).integro, true, "resselo nao reabilitou o bundle");
+  });
+
+  it("F12-9. bundle LEGADO (nunca selado) é AVISO, não erro", async () => {
+    // Reprovar todo bundle anterior à FASE 12 transformaria o verificador em
+    // ruído, e um verificador que reprova o normal ensina a ignorá-lo. Mas a
+    // ausência do selo é DITA — não é silêncio.
+    const sid = "sess_f12_legado";
+    await montar(sid, { naoSelar: true });
+    const r = await verifyReplay(sid, { root: ROOT });
+    assert.equal(r.integro, true, "bundle legado foi reprovado");
+    const av = porCodigo(r, "SELO_AUSENTE");
+    assert.equal(av.length, 1, codigos(r).join(","));
+    assert.equal(av[0]!.severidade, "aviso");
+    assert.equal(await import("node:fs").then((fs) => fs.existsSync(path.join(ROOT, sid, SEAL_FILE))), false);
+
+    // No modo ESTRITO (pipeline forense), o aviso também reprova.
+    await assert.rejects(
+      () => loadReplayVerificado(sid, { root: ROOT, permitir_avisos: false }),
+      ReplayIntegrityError,
+    );
+  });
+
+  it("F12-99. portões da FASE 12", () => {
+    for (const [k, v] of Object.entries(GATE_REPLAY)) process.stderr.write(`${k}=${v}\n`);
+    assert.deepEqual(Object.entries(GATE_REPLAY).filter(([, v]) => v !== "PASS"), []);
   });
 });

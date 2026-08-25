@@ -98,6 +98,20 @@ export const ROUTE_SCOPE: Readonly<Record<string, Scope>> = Object.freeze({
   "tasks.get": "OBSERVE",
   "tasks.cancel": "CONTROL",
   "tasks.resume": "CONTROL",
+  // FASE 10 — lease. Consultar quem manda é OBSERVAR; adquirir, soltar,
+  // renovar e transferir são ATOS DE CONTROLE. `takeover` é ADMIN porque
+  // arranca o lease de quem o detém sem o consentimento dele — é o mesmo
+  // privilégio de `sessions.takeover`, e não pode cair no escopo de agente.
+  "lease.get": "OBSERVE",
+  "lease.acquire": "CONTROL",
+  "lease.release": "CONTROL",
+  "lease.renew": "CONTROL",
+  "lease.transfer": "CONTROL",
+  "lease.takeover": "ADMIN",
+  // FASE 12 — verificar integridade de replay é leitura da trilha da sessão.
+  "replay.verify": "OBSERVE",
+  // Ler a PRÓPRIA credencial é o mínimo que qualquer portador pode fazer.
+  "whoami": "OBSERVE",
   "events": "OBSERVE",
 });
 
@@ -347,6 +361,52 @@ export class AuthManager {
     }
     return { tokens: this.#tokens.size, revogados, expirados };
   }
+}
+
+/**
+ * FASE 10 — DELEGAÇÃO DE IDENTIDADE.
+ *
+ * O executor de passo de `browser.task` mora DENTRO do daemon e fala com a
+ * própria API por loopback com o token raiz. Sob `allow_unleased: false` isso o
+ * faria agir como `daemon-root`, e não como o agente cujo plano ele executa —
+ * e aí ou a task seria barrada (o dono é outro), ou passaria por um caminho
+ * privilegiado que nenhum cliente tem. As duas saídas são erradas.
+ *
+ * Este header resolve dizendo a verdade: "sou o daemon, agindo POR fulano".
+ * Só um token ADMIN pode usá-lo — do contrário qualquer portador de token de
+ * agente escolheria de quem ser, e a arbitragem de lease viraria decoração.
+ */
+export const DELEGATION_HEADER = "x-nomos-on-behalf-of" as const;
+
+export type PrincipalResult =
+  | { ok: true; holder: string; delegated: boolean }
+  | { ok: false; reason: string; failure: AuthFailure };
+
+/**
+ * Quem, para efeito de LEASE, está pedindo isto.
+ *
+ * NÃO é `x-nomos-client`. Aquele header é auto-declarado e não passa por
+ * verificação alguma: usá-lo como identidade de arbitragem deixaria qualquer
+ * processo local dizer "eu sou o agente-A" e herdar o controle da sessão dele.
+ * A identidade de controle é o SUJEITO DO TOKEN, que é a única coisa aqui que
+ * alguém precisou provar. `x-nomos-client` continua valendo como rótulo de
+ * auditoria — dizer quem agiu é diferente de decidir quem pode.
+ */
+export function principalFor(
+  token: TokenRecord,
+  headers: Record<string, string | string[] | undefined>,
+): PrincipalResult {
+  const cru = headers[DELEGATION_HEADER];
+  const pedido = typeof cru === "string" ? cru.trim() : "";
+  if (pedido === "") return { ok: true, holder: token.subject, delegated: false };
+  if (!token.scopes.includes("ADMIN")) {
+    return {
+      ok: false,
+      failure: "SCOPE_DENIED",
+      reason: `delegação via ${DELEGATION_HEADER} exige escopo ADMIN; ${token.subject} não o tem`,
+    };
+  }
+  return { ok: true, holder: pedido, delegated: true };
 }
 
 /** Escopo exigido por uma ferramenta. Desconhecida ⇒ ADMIN (fail closed). */

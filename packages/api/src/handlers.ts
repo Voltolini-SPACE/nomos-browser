@@ -2049,6 +2049,22 @@ export async function handleTaskRoute(
   body: Body,
   search: URLSearchParams,
   actor: string,
+  /**
+   * FASE 10 — quem PODE, para efeito de lease. Diferente de `actor`, que é quem
+   * APARECE na trilha: `x-nomos-client` é auto-declarado e não decide controle.
+   */
+  principal: string = actor,
+  /**
+   * FASE 9b — registra (ou solta) a delegação da task para uma sessão.
+   *
+   * O executor de passo fala com a própria API por loopback e precisa se
+   * apresentar como o dono da task, não como o daemon. Em `browser.task` o
+   * daemon já fazia isso; no `resume` NÃO fazia, e sob `allow_unleased: false`
+   * todo passo retomado bateria em CONTROL_NOT_OWNED — o lease é do agente, o
+   * token do loopback é o do runtime. O mapa vive no daemon (é dele o
+   * `taskHolders`), então ele entra por injeção em vez de vazar para cá.
+   */
+  delegar: (session_id: string, quem: string | null) => void = () => undefined,
 ): Promise<unknown> {
   const engine = svc.taskEngine;
   // Sem hidratar, a listagem mostraria só as tasks criadas DESDE o arranque — e
@@ -2105,8 +2121,15 @@ export async function handleTaskRoute(
     provider: agent.name,
   };
   const io = tarefaIO(svc, reqSintetico, agent, rec.goal);
-  const final = await engine.resume(task_id, io, { session_id: novaSessao });
-  return final;
+  // A delegação dura EXATAMENTE a retomada. Deixá-la registrada depois seria um
+  // token de controle pendurado: qualquer passo posterior nesta sessão passaria
+  // a agir em nome de quem pediu o resume, muito depois de ele ter ido embora.
+  delegar(sessaoAlvo, principal);
+  try {
+    return await engine.resume(task_id, io, { session_id: novaSessao });
+  } finally {
+    delegar(sessaoAlvo, null);
+  }
 }
 
 /** Planejador/executor inertes: usados só no ramo que NÃO reexecuta nada. */

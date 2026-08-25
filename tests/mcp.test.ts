@@ -64,6 +64,8 @@ interface Recebida {
   url: string;
   body: unknown;
   contentType: string | undefined;
+  /** FASE 11 — sem gravar isto não há como PROVAR que a credencial viajou. */
+  authorization: string | undefined;
 }
 
 interface Fake {
@@ -107,6 +109,7 @@ async function startFake(): Promise<Fake> {
         url: req.url ?? "?",
         body,
         contentType: req.headers["content-type"],
+        authorization: req.headers["authorization"],
       });
 
       const rota = (req.url ?? "").replace(`${API_PREFIX}/`, "");
@@ -169,8 +172,15 @@ after(async () => {
   await fake.close();
 });
 
+/**
+ * FASE 11 — o servidor MCP passou a EXIGIR credencial do runtime. Isto não
+ * afrouxa nada: acrescenta uma exigência que antes não existia. O caso que prova
+ * a recusa sem credencial é o `1f`, mais abaixo.
+ */
+const TOKEN_DE_TESTE = "tok-de-teste-mcp";
+
 function novoServidor() {
-  return createMcpServer({ runtimeUrl: fake.url, owner: "teste", timeoutMs: 5_000 });
+  return createMcpServer({ runtimeUrl: fake.url, owner: "teste", timeoutMs: 5_000, token: TOKEN_DE_TESTE });
 }
 
 function textoDe(r: McpToolResult): string {
@@ -387,7 +397,7 @@ test("3b. CONTROLE: o mesmo caminho com success=true NÃO marca isError", async 
 
 test("3c. runtime inalcançável vira isError explícito, não sucesso vazio", async () => {
   // Porta fechada de propósito: falha de transporte tem de aparecer no resultado.
-  const srv = createMcpServer({ runtimeUrl: "http://127.0.0.1:1", timeoutMs: 2_000 });
+  const srv = createMcpServer({ runtimeUrl: "http://127.0.0.1:1", timeoutMs: 2_000, token: TOKEN_DE_TESTE });
   const out = await srv.callTool("browser_observe", { session_id: "S" });
   assert.equal(out.isError, true, "runtime morto produziu resultado de sucesso");
   assert.match(textoDe(out), /MCP_TRANSPORT_ERROR/);
@@ -413,7 +423,7 @@ test("3e. resposta não-JSON do runtime não vira sucesso", async () => {
   await new Promise<void>((r) => server.listen(0, "127.0.0.1", () => r()));
   const addr = server.address() as { port: number };
   try {
-    const s2 = createMcpServer({ runtimeUrl: `http://127.0.0.1:${addr.port}`, timeoutMs: 5_000 });
+    const s2 = createMcpServer({ runtimeUrl: `http://127.0.0.1:${addr.port}`, timeoutMs: 5_000, token: TOKEN_DE_TESTE });
     const out = await s2.callTool("browser_observe", { session_id: "S" });
     assert.equal(out.isError, true);
     assert.match(textoDe(out), /não é JSON/);
@@ -584,7 +594,7 @@ function subirProcesso(env: Record<string, string>): Sessao {
 
 test("5a. processo real: initialize + tools/list + tools/call por stdio", async () => {
   fake.reset();
-  const s = subirProcesso({ NOMOS_BROWSER_URL: fake.url, NOMOS_BROWSER_OWNER: "teste-stdio" });
+  const s = subirProcesso({ NOMOS_BROWSER_URL: fake.url, NOMOS_BROWSER_OWNER: "teste-stdio", NOMOS_BROWSER_TOKEN: TOKEN_DE_TESTE });
   try {
     s.enviar({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "t", version: "0" } } });
     const init = await s.esperar(1);
@@ -643,7 +653,7 @@ test("5c. processo real: JSON quebrado na linha devolve -32700", async () => {
   fake.reset();
   const filho = spawn(process.execPath, [SERVER_TS], {
     cwd: RAIZ,
-    env: { ...process.env, NOMOS_BROWSER_URL: fake.url },
+    env: { ...process.env, NOMOS_BROWSER_URL: fake.url, NOMOS_BROWSER_TOKEN: TOKEN_DE_TESTE },
     stdio: ["pipe", "pipe", "pipe"],
   });
   try {
@@ -676,7 +686,7 @@ test("5d. stdin fechado logo após o pedido não trunca a resposta", async () =>
   fake.reset();
   const filho = spawn(process.execPath, [SERVER_TS], {
     cwd: RAIZ,
-    env: { ...process.env, NOMOS_BROWSER_URL: fake.url },
+    env: { ...process.env, NOMOS_BROWSER_URL: fake.url, NOMOS_BROWSER_TOKEN: TOKEN_DE_TESTE },
     stdio: ["pipe", "pipe", "pipe"],
   });
   let out = "";
@@ -744,4 +754,81 @@ test("6b. ToolInputError carrega um ActionErrorCode do contrato", () => {
 test("6c. RuntimeClient recusa esquema não-HTTP", () => {
   assert.throws(() => new RuntimeClient({ runtimeUrl: "file:///etc/passwd" }), /deve ser http/);
   assert.equal(new RuntimeClient({ runtimeUrl: "http://127.0.0.1:7777/" }).baseUrl, "http://127.0.0.1:7777");
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FASE 11 — AUTORIZAÇÃO MCP
+//
+// O `docs/SECURITY.md` declarava, verbatim, que "autorização MCP ainda não está
+// implementada" e que, enquanto isso, "qualquer processo local fala com o
+// runtime". Estes três casos são o que fecha essa frase.
+// ─────────────────────────────────────────────────────────────────────────────
+
+test("6a. sem credencial o servidor MCP recusa ANTES de abrir socket", async () => {
+  fake.reset();
+  // `token: null` é explícito: nem o ambiente do operador vale aqui.
+  const srv = createMcpServer({ runtimeUrl: fake.url, owner: "teste", timeoutMs: 5_000, token: null });
+  const out = await srv.callTool("browser_observe", { session_id: "S" });
+  assert.equal(out.isError, true, "chamada sem credencial não foi recusada");
+  assert.match(textoDe(out), /MCP_NO_CREDENTIAL/);
+  assert.match(textoDe(out), /NOMOS_BROWSER_TOKEN/);
+  // A recusa é LOCAL: nada chegou ao runtime. Mandar e deixar o daemon negar
+  // significaria que o servidor MCP acha aceitável tentar — e num dia em que
+  // alguém suba o daemon com NOMOS_BROWSER_AUTH=off, "tentar" vira "conseguir".
+  assert.deepEqual(fake.recebidas, [], `abriu socket sem credencial: ${JSON.stringify(fake.recebidas)}`);
+});
+
+test("6b. a credencial é PROPAGADA em toda chamada ao runtime", async () => {
+  fake.reset();
+  const srv = novoServidor();
+  await srv.callTool("browser_observe", { session_id: "S" });
+  assert.ok(fake.recebidas.length > 0, "nenhuma chamada chegou ao runtime");
+  for (const r of fake.recebidas) {
+    assert.equal(r.authorization, `Bearer ${TOKEN_DE_TESTE}`, `chamada a ${r.url} saiu sem credencial`);
+  }
+});
+
+test("6c. recusa por ESCOPO do runtime vira erro MCP com nome próprio", async () => {
+  fake.reset();
+  const srv = novoServidor();
+  // O runtime recusa por escopo — é a resposta REAL de `auth.authorize`.
+  fake.responder("browser.click", {
+    status: 403,
+    payload: envelope(null, {
+      success: false,
+      error: {
+        code: "CAPABILITY_DENIED",
+        message: "escopo INPUT não concedido a observador",
+        detail: { auth: "SCOPE_DENIED", required_scope: "INPUT", subject: "observador" },
+      },
+    }),
+  });
+  const out = await srv.callTool("browser_click", { target: { selector: "#b" }, session_id: "S" });
+  assert.equal(out.isError, true);
+  // Nome próprio: "seu token não tem INPUT" e "outra IA está com o volante"
+  // saem ambos como CAPABILITY_DENIED no contrato e pedem ações opostas.
+  assert.match(textoDe(out), /MCP_SCOPE_DENIED/);
+  assert.match(textoDe(out), /required_scope=INPUT/);
+  // O código do contrato não é perdido no caminho.
+  assert.match(textoDe(out), /contract_code=CAPABILITY_DENIED/);
+});
+
+test("6d. recusa por ARBITRAGEM de lease também tem nome próprio", async () => {
+  fake.reset();
+  const srv = novoServidor();
+  fake.responder("browser.click", {
+    status: 409,
+    payload: envelope(null, {
+      success: false,
+      error: {
+        code: "CAPABILITY_DENIED",
+        message: "IA-B não detém o lease da sessão",
+        detail: { lease: "CONTROL_NOT_OWNED", current_holder: "IA-A" },
+      },
+    }),
+  });
+  const out = await srv.callTool("browser_click", { target: { selector: "#b" }, session_id: "S" });
+  assert.equal(out.isError, true);
+  assert.match(textoDe(out), /MCP_CONTROL_NOT_OWNED/);
+  assert.match(textoDe(out), /IA-A/);
 });

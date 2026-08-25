@@ -31,6 +31,17 @@ export type RouteName =
   | "tasks.get"
   | "tasks.cancel"
   | "tasks.resume"
+  // FASE 10 — ciclo de vida do lease. Sem estas rotas, `allow_unleased: false`
+  // seria uma porta trancada sem chave: o segundo agente não teria como pedir
+  // controle, e "fail closed" viraria "fail sempre".
+  | "lease.get"
+  | "lease.acquire"
+  | "lease.release"
+  | "lease.renew"
+  | "lease.transfer"
+  | "lease.takeover"
+  | "replay.verify"
+  | "whoami"
   | "action"
   | "events";
 
@@ -84,6 +95,24 @@ export const ROUTES: readonly RouteSpec[] = Object.freeze([
   spec("GET", `${P}/tasks/:task_id`, "tasks.get", false),
   spec("POST", `${P}/tasks/:task_id/cancel`, "tasks.cancel", false),
   spec("POST", `${P}/tasks/:task_id/resume`, "tasks.resume", false),
+  // FASE 10 — lease. `GET` consulta, `POST` adquire (reentrante para quem já
+  // detém), `DELETE` solta. `renew`/`transfer`/`takeover` são sub-rotas porque
+  // são ATOS distintos sobre o mesmo recurso, e colapsá-los num único POST com
+  // um campo `op` esconderia no corpo a diferença entre renovar e tomar.
+  spec("GET", `${P}/sessions/:id/lease`, "lease.get", false),
+  spec("POST", `${P}/sessions/:id/lease`, "lease.acquire", false),
+  spec("DELETE", `${P}/sessions/:id/lease`, "lease.release", false),
+  spec("POST", `${P}/sessions/:id/lease/renew`, "lease.renew", false),
+  spec("POST", `${P}/sessions/:id/lease/transfer`, "lease.transfer", false),
+  spec("POST", `${P}/sessions/:id/lease/takeover`, "lease.takeover", false),
+  // FASE 12 — verificação de integridade do replay pela API. A CLI é o caminho
+  // do operador; esta rota é o caminho de quem já fala HTTP com o runtime.
+  spec("GET", `${P}/sessions/:id/replay/verify`, "replay.verify", false),
+  // FASE 11 — "que credencial é esta?". Existe para que um cliente (o servidor
+  // MCP, sobretudo) saiba ANTES de agir quais escopos ele carrega, e recuse a
+  // chamada com uma mensagem útil em vez de arrancar um 403 do runtime depois
+  // de já ter aberto sessão. Nunca devolve o segredo — só o que ele PODE.
+  spec("GET", `${P}/whoami`, "whoami", false),
   spec("GET", "/events", "events", false),
 ]);
 

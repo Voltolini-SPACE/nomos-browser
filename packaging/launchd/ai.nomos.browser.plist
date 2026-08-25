@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  FASE 14 — LaunchAgent do NOMOS Browser Runtime.
+
+  TEMPLATE. Os campos entre @CHAVES@ são substituídos por `scripts/service.sh
+  install`; este arquivo NUNCA é carregado como está.
+
+  DECISÕES QUE ESTE ARQUIVO CARREGA, E POR QUÊ
+  --------------------------------------------
+  · Label PRÓPRIA `ai.nomos.browser`. Esta máquina roda outros serviços NOMOS
+    (`br.com.se7enpay.nomos.servico`, `com.nomos.panel`, `ai.sovereign.omniroute`,
+    `com.gijarvis.backend`). Colidir com uma label existente faria o `bootout` do
+    nosso desinstalador derrubar o serviço do vizinho. O `install` recusa se a
+    label já existir e não for nossa.
+
+  · `KeepAlive` com `SuccessfulExit=false`, e NÃO `KeepAlive=true`. Saída 0 é
+    encerramento pedido pelo dono (`service.sh stop` manda SIGTERM e o daemon sai
+    limpo); ressuscitar isso seria impedir o dono de parar o próprio serviço.
+    Só a saída MALSUCEDIDA — crash — merece reinício.
+
+  · `ThrottleInterval` de 10 s é a defesa contra laço de crash: sem ele, um
+    binário que morre no arranque é respawnado várias vezes por segundo e o
+    launchd vira o problema. Com ele, o mesmo defeito custa 6 tentativas por
+    minuto e aparece no log em vez de derreter a máquina.
+
+  · `RunAtLoad` liga no login. É o requisito de "sobreviver ao reboot": o
+    LaunchAgent é recarregado quando o dono entra na sessão.
+
+  · `ProcessType=Interactive` e `Nice` alto: o runtime abre Chromium e não pode
+    ser tratado como lote pelo escalonador; ao mesmo tempo, num M2 de 16 GB ele
+    não pode competir com os serviços de produção. `LowPriorityIO` protege o
+    disco dos vizinhos.
+
+  · `StandardOutPath`/`StandardErrorPath` em ~/Library/Logs/nomos-browser/.
+    O daemon nunca imprime o token (só o CAMINHO do arquivo 0600), então estes
+    logs não carregam credencial — ver `docs/SECURITY.md` T4.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>@LABEL@</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>@NODE@</string>
+    <string>@DAEMON@</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>@REPO@</string>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>NOMOS_RUNTIME_DIR</key>
+    <string>@RUNTIME_DIR@</string>
+    <key>NOMOS_BROWSER_HOST</key>
+    <string>127.0.0.1</string>
+    <key>NOMOS_BROWSER_PORT</key>
+    <string>@PORT@</string>
+    <key>NOMOS_BROWSER_HEADLESS</key>
+    <string>@HEADLESS@</string>
+    <key>NOMOS_SESSIONS_ROOT</key>
+    <string>@SESSIONS_ROOT@</string>
+    <key>PATH</key>
+    <string>@PATH@</string>
+    <key>HOME</key>
+    <string>@HOME@</string>
+  </dict>
+
+  <key>RunAtLoad</key>
+  <true/>
+
+  <!-- Só reinicia o que MORREU mal. Saída 0 é o dono mandando parar. -->
+  <key>KeepAlive</key>
+  <dict>
+    <key>SuccessfulExit</key>
+    <false/>
+  </dict>
+
+  <!-- Backoff do launchd: teto de 6 arranques por minuto. -->
+  <key>ThrottleInterval</key>
+  <integer>10</integer>
+
+  <!-- SIGTERM primeiro; o daemon fecha sessões e navegadores no handler. -->
+  <key>ExitTimeOut</key>
+  <integer>30</integer>
+
+  <key>StandardOutPath</key>
+  <string>@LOG_DIR@/stdout.log</string>
+  <key>StandardErrorPath</key>
+  <string>@LOG_DIR@/stderr.log</string>
+
+  <key>ProcessType</key>
+  <string>Interactive</string>
+  <key>Nice</key>
+  <integer>5</integer>
+  <key>LowPriorityIO</key>
+  <true/>
+</dict>
+</plist>

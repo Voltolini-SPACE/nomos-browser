@@ -780,6 +780,72 @@ export class SessionManager {
     };
   }
 
+  /**
+   * FASE 13 — SONDA DE VIDA DO NAVEGADOR.
+   *
+   * `poolStats().contexts` conta o que o MAPA tem, não o que está VIVO. Depois
+   * de o Chromium morrer por baixo (crash, OOM, `kill -9` no processo do
+   * browser), a entrada continua no mapa e a contagem segue dizendo que está
+   * tudo bem. Esta sonda pergunta ao Playwright — `browser.isConnected()` e um
+   * toque no contexto — em vez de consultar a nossa própria contabilidade.
+   *
+   * Não fecha nem recria nada: quem decide o que fazer com um contexto morto é o
+   * watchdog, e uma sonda que tem efeito colateral não pode ser chamada em laço.
+   */
+  async probeContexts(): Promise<{ vivos: number; mortos: { context_id: string; sessions: string[]; motivo: string }[] }> {
+    let vivos = 0;
+    const mortos: { context_id: string; sessions: string[]; motivo: string }[] = [];
+    for (const entry of [...this.#contexts.values()]) {
+      if (entry.closing) continue;
+      let motivo: string | null = null;
+      try {
+        const navegador = entry.context.browser();
+        if (navegador !== null && !navegador.isConnected()) {
+          motivo = "browser desconectado";
+        } else {
+          // TOQUE REAL, e não `pages()`.
+          //
+          // Medido: depois de o contexto morrer, `pages()` devolve `[]` sem
+          // lançar — a sonda ficaria verde sobre um navegador morto, que é
+          // exatamente o defeito que ela existe para pegar. `cookies()` vai até
+          // o alvo e lança "Target page, context or browser has been closed".
+          await entry.context.cookies();
+        }
+      } catch (e) {
+        motivo = (e as Error).message;
+      }
+      if (motivo === null) vivos += 1;
+      else mortos.push({ context_id: entry.context_id, sessions: [...entry.sessions], motivo });
+    }
+    return { vivos, mortos };
+  }
+
+  /**
+   * FASE 13 — marca como FAILED as sessões cujo contexto morreu.
+   *
+   * É a AÇÃO que o watchdog toma sobre o que a sonda achou. Não tenta ressuscitar
+   * o Chromium: a sessão do dono (cookies, abas, formulário meio preenchido)
+   * morreu com ele, e recriar um contexto vazio com o mesmo `session_id`
+   * entregaria ao agente uma sessão que PARECE a dele e não é. Marcar FAILED faz
+   * o cliente saber que precisa recomeçar — que é a verdade.
+   */
+  async reapDeadContexts(): Promise<string[]> {
+    const { mortos } = await this.probeContexts();
+    const afetadas: string[] = [];
+    for (const morto of mortos) {
+      for (const sid of morto.sessions) {
+        const rec = this.#sessions.get(sid);
+        if (rec === undefined || rec.status === "CLOSED" || rec.status === "FAILED") continue;
+        this.#setState(rec, "FAILED");
+        afetadas.push(sid);
+        this.#emit("browser.closed", sid, { reason: "watchdog: contexto morto", motivo: morto.motivo });
+      }
+      const entry = this.#contexts.get(morto.context_id) ?? [...this.#contexts.values()].find((c) => c.context_id === morto.context_id);
+      if (entry !== undefined) this.#contexts.delete(entry.key);
+    }
+    return afetadas;
+  }
+
   // ── Attach / detach — o coração da FASE 3 ─────────────────────────────────
 
   /**

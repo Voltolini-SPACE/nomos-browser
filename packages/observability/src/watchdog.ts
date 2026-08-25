@@ -555,3 +555,341 @@ export class Watchdog {
     }
   }
 }
+
+// ═════════════════════════════════════════════════════════════════════════════
+// FASE 13 — WATCHDOG DENTRO DO RUNTIME
+//
+// POR QUE UMA SEGUNDA CLASSE, E NÃO A `Watchdog` ACIMA
+// ---------------------------------------------------
+// A `Watchdog` acima supervisiona um PROCESSO FILHO: ela dá spawn, observa a
+// saída, reinicia com backoff e trava em `crash_loop`. É a peça certa para o
+// supervisor de fora (FASE 14) e a peça errada para dentro do daemon: um
+// processo não se dá spawn a si mesmo, e fingir que sim produziria um watchdog
+// decorativo — que era exatamente o problema desta fase (557 linhas escritas,
+// zero instanciações no runtime).
+//
+// O que o daemon precisa é de um SUPERVISOR DE SUBSISTEMAS: bater o próprio
+// pulso, sondar navegador, worker e task, agir sobre o que consegue consertar, e
+// PARAR de agir quando insistir vira dano. A política de backoff, janela
+// deslizante e trava de crash-loop é a MESMA — e por isso mora neste arquivo,
+// junto da outra, em vez de virar uma segunda implementação divergente.
+//
+// A REGRA QUE ESTA CLASSE EXISTE PARA NÃO QUEBRAR (T10 do SECURITY.md)
+// -------------------------------------------------------------------
+// "Um watchdog que reinicia sem teto transforma falha em negação de serviço
+// local." Depois de `max_restarts` recuperações da MESMA falha dentro da janela,
+// ele vai para `degraded` e PARA. Degradado é um estado terminal declarado, com
+// linha na trilha — não um watchdog que desistiu em silêncio.
+// ═════════════════════════════════════════════════════════════════════════════
+
+export type FalhaKind =
+  | "daemon_frozen"
+  | "browser_dead"
+  | "worker_stuck"
+  | "heartbeat_expired"
+  | "task_stalled";
+
+export type HealthState = "idle" | "running" | "degraded" | "stopped";
+
+export interface HealthEvent {
+  name: "tick" | "detected" | "recovered" | "recover_failed" | "degraded" | "started" | "stopped";
+  at: string;
+  state: HealthState;
+  kind: FalhaKind | null;
+  detail: Record<string, unknown>;
+}
+
+/**
+ * Uma sonda. `check` NUNCA tem efeito colateral — é chamada em laço. `recover`
+ * tem, e por isso passa pelo contador de tentativas e pelo backoff.
+ */
+export interface HealthProbe {
+  kind: FalhaKind;
+  check: () => Promise<{ ok: boolean; detail?: Record<string, unknown> }>;
+  /** Ausente ⇒ a falha é REPORTADA e não há o que reiniciar (ex.: congelamento já passou). */
+  recover?: (detail: Record<string, unknown>) => Promise<void>;
+}
+
+export interface HealthWatchdogOptions {
+  interval_ms: number;
+  /** Recuperações da MESMA falha dentro de `window_ms` antes de degradar. */
+  max_restarts: number;
+  window_ms?: number;
+  backoff_ms?: number;
+  backoff_max_ms?: number;
+  /**
+   * Atraso do laço a partir do qual o daemon é declarado CONGELADO.
+   *
+   * Detecção por DERIVA, e não por um timer que "deveria" ter disparado: quando
+   * o event loop está travado, nenhum timer dispara — inclusive o que fiscalizaria
+   * o travamento. O que dá para observar é que o tique seguinte chegou muito
+   * depois do que devia, e isso prova que o loop ESTEVE bloqueado.
+   */
+  heartbeat_timeout_ms?: number;
+  probes?: HealthProbe[];
+  now?: () => number;
+  onEvent?: (e: HealthEvent) => void;
+}
+
+export interface HealthStats {
+  state: HealthState;
+  ticks: number;
+  last_tick_at: string | null;
+  /** Maior atraso já observado entre dois tiques, em ms. */
+  max_drift_ms: number;
+  /**
+   * Quantas vezes o laço ficou travado além do limite, e por quanto na última.
+   *
+   * Existe porque `frozen` medido no instante da leitura é inútil na prática:
+   * enquanto o event loop está travado, o servidor HTTP também está, e ninguém
+   * consegue perguntar. Quando a resposta finalmente sai, o tique atrasado já
+   * correu e o relógio já parece normal. O CONTADOR sobrevive ao episódio — é
+   * ele que responde "este daemon travou hoje?".
+   */
+  freezes: number;
+  last_freeze_ms: number | null;
+  last_freeze_at: string | null;
+  detected: Record<string, number>;
+  recovered: Record<string, number>;
+  failed_recoveries: Record<string, number>;
+  degraded_by: FalhaKind | null;
+  degraded_since: string | null;
+}
+
+export class HealthWatchdog {
+  readonly interval_ms: number;
+  readonly max_restarts: number;
+  readonly window_ms: number;
+  readonly backoff_ms: number;
+  readonly backoff_max_ms: number;
+  readonly heartbeat_timeout_ms: number;
+
+  #probes: HealthProbe[];
+  #now: () => number;
+  #onEvent: ((e: HealthEvent) => void) | null;
+  #state: HealthState = "idle";
+  #timer: ReturnType<typeof setTimeout> | null = null;
+  #ticks = 0;
+  #lastTick: number | null = null;
+  #maxDrift = 0;
+  /** Instantes das recuperações tentadas, por tipo de falha (janela deslizante). */
+  #tentativas = new Map<FalhaKind, number[]>();
+  /** Até quando esta falha está em backoff. */
+  #esperaAte = new Map<FalhaKind, number>();
+  #detected = new Map<FalhaKind, number>();
+  #recovered = new Map<FalhaKind, number>();
+  #falhasDeRecuperacao = new Map<FalhaKind, number>();
+  #freezes = 0;
+  #lastFreezeMs: number | null = null;
+  #lastFreezeAt: string | null = null;
+  #degradedBy: FalhaKind | null = null;
+  #degradedSince: string | null = null;
+  #emVoo = false;
+
+  constructor(opts: HealthWatchdogOptions) {
+    if (!Number.isInteger(opts.interval_ms) || opts.interval_ms < 10) {
+      throw new Error(`health watchdog: interval_ms inválido ${String(opts.interval_ms)}`);
+    }
+    if (!Number.isInteger(opts.max_restarts) || opts.max_restarts < 0) {
+      throw new Error(`health watchdog: max_restarts inválido ${String(opts.max_restarts)}`);
+    }
+    this.interval_ms = opts.interval_ms;
+    this.max_restarts = opts.max_restarts;
+    this.window_ms = opts.window_ms ?? Math.max(60_000, opts.interval_ms * 20);
+    this.backoff_ms = opts.backoff_ms ?? Math.max(100, Math.floor(opts.interval_ms / 2));
+    this.backoff_max_ms = opts.backoff_max_ms ?? Math.max(this.backoff_ms, opts.interval_ms * 8);
+    if (this.backoff_max_ms < this.backoff_ms) {
+      throw new Error("health watchdog: backoff_max_ms menor que backoff_ms — teto abaixo da base");
+    }
+    // 3x o intervalo: um tique atrasado por escalonamento normal do SO não pode
+    // ser confundido com daemon travado, ou o alarme vira ruído e é desligado.
+    this.heartbeat_timeout_ms = opts.heartbeat_timeout_ms ?? opts.interval_ms * 3;
+    this.#probes = [...(opts.probes ?? [])];
+    this.#now = opts.now ?? (() => Date.now());
+    this.#onEvent = opts.onEvent ?? null;
+  }
+
+  get state(): HealthState {
+    return this.#state;
+  }
+
+  addProbe(p: HealthProbe): void {
+    this.#probes.push(p);
+  }
+
+  stats(): HealthStats {
+    const mapa = (m: Map<FalhaKind, number>): Record<string, number> => Object.fromEntries(m);
+    return {
+      state: this.#state,
+      ticks: this.#ticks,
+      last_tick_at: this.#lastTick === null ? null : new Date(this.#lastTick).toISOString(),
+      max_drift_ms: this.#maxDrift,
+      freezes: this.#freezes,
+      last_freeze_ms: this.#lastFreezeMs,
+      last_freeze_at: this.#lastFreezeAt,
+      detected: mapa(this.#detected),
+      recovered: mapa(this.#recovered),
+      failed_recoveries: mapa(this.#falhasDeRecuperacao),
+      degraded_by: this.#degradedBy,
+      degraded_since: this.#degradedSince,
+    };
+  }
+
+  start(): void {
+    if (this.#state === "running" || this.#state === "degraded") return;
+    this.#state = "running";
+    this.#lastTick = this.#now();
+    this.#emit("started", null, { interval_ms: this.interval_ms, probes: this.#probes.map((p) => p.kind) });
+    this.#agendar();
+  }
+
+  stop(): void {
+    if (this.#timer !== null) {
+      clearTimeout(this.#timer);
+      this.#timer = null;
+    }
+    if (this.#state !== "stopped") {
+      this.#state = this.#state === "degraded" ? "degraded" : "stopped";
+      this.#emit("stopped", null, {});
+    }
+  }
+
+  #agendar(): void {
+    if (this.#state !== "running") return;
+    this.#timer = setTimeout(() => {
+      void this.tick().finally(() => this.#agendar());
+    }, this.interval_ms);
+    // `unref` para que o watchdog não segure o processo vivo sozinho: um daemon
+    // que não morre porque o vigia dele está de plantão é o vigia virando defeito.
+    this.#timer.unref?.();
+  }
+
+  /**
+   * Um ciclo. Exposto porque teste de watchdog que depende de `setTimeout` real
+   * é teste lento e instável — e porque provocar a falha e mandar olhar AGORA é
+   * mais honesto do que dormir e torcer.
+   */
+  async tick(): Promise<HealthStats> {
+    if (this.#emVoo) return this.stats();
+    if (this.#state === "stopped") return this.stats();
+    this.#emVoo = true;
+    try {
+      const agora = this.#now();
+      // ── pulso ──────────────────────────────────────────────────────────────
+      if (this.#lastTick !== null) {
+        const decorrido = agora - this.#lastTick;
+        const deriva = decorrido - this.interval_ms;
+        if (deriva > this.#maxDrift) this.#maxDrift = deriva;
+        if (decorrido > this.heartbeat_timeout_ms) {
+          // O loop ESTEVE travado. Não há o que reiniciar — o congelamento já
+          // passou —, mas ficar calado esconderia o único sintoma disponível.
+          this.#freezes += 1;
+          this.#lastFreezeMs = decorrido;
+          this.#lastFreezeAt = new Date(agora).toISOString();
+          this.#contar(this.#detected, "heartbeat_expired");
+          this.#emit("detected", "heartbeat_expired", {
+            decorrido_ms: decorrido,
+            esperado_ms: this.interval_ms,
+            limite_ms: this.heartbeat_timeout_ms,
+            diagnostico: "o event loop ficou bloqueado entre dois tiques",
+          });
+        }
+      }
+      this.#lastTick = agora;
+      this.#ticks += 1;
+
+      // ── sondas ─────────────────────────────────────────────────────────────
+      for (const probe of this.#probes) {
+        if (this.#state === "degraded") break;
+        let r: { ok: boolean; detail?: Record<string, unknown> };
+        try {
+          r = await probe.check();
+        } catch (e) {
+          // Sonda que lança é sonda quebrada: reportar como falha do subsistema
+          // seria acusar o inocente.
+          this.#emit("recover_failed", probe.kind, { fase: "check", erro: (e as Error).message });
+          continue;
+        }
+        if (r.ok) continue;
+
+        const detalhe = r.detail ?? {};
+        this.#contar(this.#detected, probe.kind);
+        this.#emit("detected", probe.kind, detalhe);
+
+        if (probe.recover === undefined) continue;
+
+        // Backoff: enquanto está esperando, não tenta de novo.
+        const espera = this.#esperaAte.get(probe.kind) ?? 0;
+        if (agora < espera) continue;
+
+        const janela = this.#janela(probe.kind, agora);
+        if (janela.length >= this.max_restarts) {
+          this.#degradar(probe.kind, { tentativas: janela.length, janela_ms: this.window_ms, ...detalhe });
+          break;
+        }
+        janela.push(agora);
+        this.#tentativas.set(probe.kind, janela);
+        // Backoff exponencial COM TETO. Sem teto, a enésima espera vira "nunca",
+        // e "nunca" com cara de "em breve" é pior que degradar explicitamente.
+        const atraso = Math.min(this.backoff_max_ms, this.backoff_ms * 2 ** (janela.length - 1));
+        this.#esperaAte.set(probe.kind, agora + atraso);
+
+        try {
+          await probe.recover(detalhe);
+          this.#contar(this.#recovered, probe.kind);
+          this.#emit("recovered", probe.kind, { tentativa: janela.length, proximo_backoff_ms: atraso, ...detalhe });
+        } catch (e) {
+          this.#contar(this.#falhasDeRecuperacao, probe.kind);
+          this.#emit("recover_failed", probe.kind, {
+            fase: "recover",
+            tentativa: janela.length,
+            erro: (e as Error).message,
+          });
+        }
+      }
+      this.#emit("tick", null, { ticks: this.#ticks });
+      return this.stats();
+    } finally {
+      this.#emVoo = false;
+    }
+  }
+
+  #janela(kind: FalhaKind, agora: number): number[] {
+    const todas = this.#tentativas.get(kind) ?? [];
+    const vivas = todas.filter((t) => agora - t <= this.window_ms);
+    this.#tentativas.set(kind, vivas);
+    return vivas;
+  }
+
+  #degradar(kind: FalhaKind, detalhe: Record<string, unknown>): void {
+    if (this.#state === "degraded") return;
+    this.#state = "degraded";
+    this.#degradedBy = kind;
+    this.#degradedSince = new Date(this.#now()).toISOString();
+    if (this.#timer !== null) {
+      clearTimeout(this.#timer);
+      this.#timer = null;
+    }
+    this.#emit("degraded", kind, {
+      ...detalhe,
+      max_restarts: this.max_restarts,
+      // A frase é para quem lê a trilha às 3 da manhã.
+      decisao: "parei de tentar recuperar: insistir além do teto vira negação de serviço local",
+    });
+  }
+
+  #contar(m: Map<FalhaKind, number>, k: FalhaKind): void {
+    m.set(k, (m.get(k) ?? 0) + 1);
+  }
+
+  #emit(name: HealthEvent["name"], kind: FalhaKind | null, detail: Record<string, unknown>): void {
+    const hook = this.#onEvent;
+    if (hook === null) return;
+    try {
+      hook({ name, at: nowIso(), state: this.#state, kind, detail });
+    } catch (err) {
+      // Hook que lança não pode derrubar o vigia.
+      console.error(`[health-watchdog] hook lançou em ${name}:`, err instanceof Error ? err.message : String(err));
+    }
+  }
+}

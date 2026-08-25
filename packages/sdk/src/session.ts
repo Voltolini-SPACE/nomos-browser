@@ -114,6 +114,33 @@ export interface CreateSessionOptions {
   headless?: boolean;
 }
 
+/** FASE 10 — retrato da arbitragem de uma sessão. */
+export interface LeaseSnapshot {
+  session_id: string;
+  current_holder: string | null;
+  leases: { lease_id: string; holder: string; mode: string; expires_at: string }[];
+}
+
+/** FASE 10 — concessão de lease devolvida por acquire/renew/transfer. */
+export interface LeaseGrant {
+  granted: true;
+  lease_id: string;
+  session_id: string;
+  holder: string;
+  mode: "exclusive" | "shared";
+  expires_at: string;
+  reentrant: boolean;
+  fencing_token: number;
+}
+
+/** FASE 12 — veredito de `verifyReplay`. Só o essencial; o relatório completo é maior. */
+export interface ReplayVerdict {
+  session_id: string;
+  integro: boolean;
+  problemas: { codigo: string; severidade: "erro" | "aviso"; mensagem: string; arquivo?: string }[];
+  contagens: Record<string, number>;
+}
+
 export interface GotoOptions {
   /** `load` | `domcontentloaded` | `networkidle` | `commit` — repassado ao runtime. */
   wait_until?: string;
@@ -393,8 +420,73 @@ export class Session {
     return this.#manage("POST", "/detach");
   }
 
-  handoff(to_owner: string): Promise<SessionInfo> {
-    return this.#manage("POST", "/handoff", { to_owner });
+  /**
+   * Troca o DONO da sessão. A partir da FASE 10, `to_holder` é opcional e
+   * separado: `owner` é o rótulo de a quem a sessão pertence (o que o capability
+   * engine consulta), `holder` é o principal AUTENTICADO que tem o volante. Sem
+   * `to_holder`, o volante NÃO se move — porque `to_owner` costuma ser um nome
+   * livre ("time-de-vendas") e mover o lease para um nome que nenhuma credencial
+   * carrega trancaria a sessão para todo mundo, para sempre.
+   */
+  handoff(to_owner: string, to_holder?: string): Promise<SessionInfo> {
+    return this.#manage("POST", "/handoff", {
+      to_owner,
+      ...(to_holder !== undefined ? { to_holder } : {}),
+    });
+  }
+
+  // ── FASE 10 — arbitragem de controle ───────────────────────────────────────
+  //
+  // A sessão criada por este SDK já NASCE com lease exclusivo do sujeito do
+  // token usado para criá-la — não é preciso adquirir nada para operar o que se
+  // criou. Estes métodos existem para o resto: consultar quem manda, soltar o
+  // volante para outro agente, renovar antes de expirar, e passar adiante.
+
+  #leaseRota(suffix = ""): string {
+    return `${API_PREFIX}/sessions/${encodeURIComponent(this.session_id)}/lease${suffix}`;
+  }
+
+  /** Quem detém o controle desta sessão agora. */
+  lease(): Promise<LeaseSnapshot> {
+    return this.#transport.management<LeaseSnapshot>("GET", this.#leaseRota());
+  }
+
+  /** Adquire (ou reafirma, se já for seu) o lease. Reentrante. */
+  acquireLease(opts: { ttl_ms?: number; mode?: "exclusive" | "shared" } = {}): Promise<LeaseGrant> {
+    return this.#transport.management<LeaseGrant>("POST", this.#leaseRota(), { ...opts });
+  }
+
+  /** Renova o prazo. Exige o `lease_id`: renovar por nome deixaria qualquer um esticar o lease alheio. */
+  renewLease(lease_id: string, ttl_ms?: number): Promise<LeaseGrant> {
+    return this.#transport.management<LeaseGrant>("POST", this.#leaseRota("/renew"), {
+      lease_id,
+      ...(ttl_ms !== undefined ? { ttl_ms } : {}),
+    });
+  }
+
+  /** Solta o volante. `lease_id` é a prova de que quem solta é quem detém. */
+  releaseLease(lease_id: string): Promise<{ released: boolean }> {
+    return this.#transport.management<{ released: boolean }>("DELETE", this.#leaseRota(), { lease_id });
+  }
+
+  /** Passa o volante a outro principal, sem instante intermediário sem dono. */
+  transferLease(to: string, lease_id?: string): Promise<LeaseGrant> {
+    return this.#transport.management<LeaseGrant>("POST", this.#leaseRota("/transfer"), {
+      to,
+      ...(lease_id !== undefined ? { lease_id } : {}),
+    });
+  }
+
+  /**
+   * FASE 12 — veredito de integridade do replay gravado desta sessão.
+   * `integro:false` significa bundle adulterado, truncado ou corrompido; o
+   * relatório diz qual arquivo e qual checagem reprovou.
+   */
+  verifyReplay(): Promise<ReplayVerdict> {
+    return this.#transport.management<ReplayVerdict>(
+      "GET",
+      `${API_PREFIX}/sessions/${encodeURIComponent(this.session_id)}/replay/verify`,
+    );
   }
 
   /** Humano assume; o agente congela. */

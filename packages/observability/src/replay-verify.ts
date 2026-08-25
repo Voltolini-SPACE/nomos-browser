@@ -39,6 +39,10 @@ import {
   SCREENSHOT_INDEX,
   loadReplay,
   timelineOf,
+  calcularSelo,
+  lerSelo,
+  SEAL_FILE,
+  type SessionSeal,
   type ReplayBundle,
   type ReplayOptions,
   type ReplaySource,
@@ -73,7 +77,13 @@ export type ReplayProblemCode =
   | "ACAO_SEM_DESFECHO"
   | "RESULT_AUSENTE"
   | "RESULT_ILEGIVEL"
-  | "CONTAGEM_DIVERGENTE";
+  | "CONTAGEM_DIVERGENTE"
+  // FASE 12 — selo de integridade (ver `replay.ts#selarSessao`).
+  | "SELO_AUSENTE"
+  | "SELO_ILEGIVEL"
+  | "SELO_DIVERGENTE"
+  | "SELO_ARQUIVO_AUSENTE"
+  | "SELO_ARQUIVO_EXTRA";
 
 /** Severidade padrão por código. Instâncias podem rebaixar (ver CONTAGEM_DIVERGENTE). */
 export const SEVERIDADE_PADRAO: Readonly<Record<ReplayProblemCode, Severidade>> = Object.freeze({
@@ -99,6 +109,16 @@ export const SEVERIDADE_PADRAO: Readonly<Record<ReplayProblemCode, Severidade>> 
   RESULT_AUSENTE: "erro",
   RESULT_ILEGIVEL: "erro",
   CONTAGEM_DIVERGENTE: "erro",
+  // Bundle nunca selado é o caso do LEGADO e o da sessão ainda ABERTA. Tratar
+  // como erro reprovaria toda sessão em curso e todo bundle gravado antes da
+  // FASE 12 — um verificador que reprova o normal ensina a ignorá-lo.
+  SELO_AUSENTE: "aviso",
+  SELO_ILEGIVEL: "erro",
+  // Estes três são o coração da fase: conteúdo alterado, arquivo sumido ou
+  // arquivo acrescentado depois do fechamento. Nenhum é aceitável.
+  SELO_DIVERGENTE: "erro",
+  SELO_ARQUIVO_AUSENTE: "erro",
+  SELO_ARQUIVO_EXTRA: "erro",
 });
 
 export interface ReplayProblem {
@@ -695,6 +715,72 @@ export async function verifyReplay(
     }
   }
 
+  // ── C18 · SELO DE INTEGRIDADE ─────────────────────────────────────────────
+  //
+  // As checagens acima são ESTRUTURAIS: pegam corrupção, truncamento, ordem e
+  // referência quebrada. Nenhuma delas pega a adulteração mais simples — abrir
+  // o JSONL e trocar um valor mantendo o JSON válido e o timestamp no lugar.
+  // O selo pega, porque o digest do arquivo muda.
+  checagens.push("C18_selo_integridade");
+  {
+    let selo: SessionSeal | null = null;
+    let seloIlegivel: string | null = null;
+    try {
+      selo = await lerSelo(session_id, { root });
+    } catch (e) {
+      seloIlegivel = e instanceof Error ? e.message : String(e);
+    }
+
+    if (seloIlegivel !== null) {
+      anotar("SELO_ILEGIVEL", `selo presente mas ilegível: ${seloIlegivel}`, { arquivo: SEAL_FILE });
+    } else if (selo === null) {
+      anotar("SELO_AUSENTE", `sessão ${session_id} não foi selada — integridade de conteúdo não pôde ser verificada`, {
+        arquivo: SEAL_FILE,
+        detalhe: { consequencia: "adulteração de linha que preserve JSON válido e ordem não é detectável sem selo" },
+      });
+    } else {
+      const agora = await calcularSelo(session_id, { root });
+      const atuais = new Map(agora.files.map((f) => [f.file, f]));
+      const selados = new Map(selo.files.map((f) => [f.file, f]));
+
+      for (const [rel, esperado] of selados) {
+        const tem = atuais.get(rel);
+        if (tem === undefined) {
+          anotar("SELO_ARQUIVO_AUSENTE", `${rel} estava no selo e não está mais no disco`, {
+            arquivo: rel,
+            detalhe: { bytes_selados: esperado.bytes, sha256_selado: esperado.sha256 },
+          });
+          continue;
+        }
+        if (tem.sha256 !== esperado.sha256) {
+          anotar(
+            "SELO_DIVERGENTE",
+            tem.bytes < esperado.bytes
+              ? `${rel} foi TRUNCADO depois do selo (${esperado.bytes} → ${tem.bytes} bytes)`
+              : `${rel} foi ALTERADO depois do selo`,
+            {
+              arquivo: rel,
+              detalhe: {
+                bytes_selados: esperado.bytes,
+                bytes_agora: tem.bytes,
+                sha256_selado: esperado.sha256,
+                sha256_agora: tem.sha256,
+                // Mesmo tamanho e digest diferente é a assinatura de EDIÇÃO no
+                // lugar (troca de valor), não de truncamento nem de append.
+                mesmo_tamanho: tem.bytes === esperado.bytes,
+              },
+            },
+          );
+        }
+      }
+      for (const rel of atuais.keys()) {
+        if (!selados.has(rel)) {
+          anotar("SELO_ARQUIVO_EXTRA", `${rel} apareceu no disco depois do selo`, { arquivo: rel });
+        }
+      }
+    }
+  }
+
   return montarRelatorio(session_id, dir, problemas, checagens, bundle, linhaDoTempo, {
     acoes_iniciadas: iniciadas,
     acoes_com_desfecho: comDesfecho,
@@ -788,4 +874,53 @@ function montarRelatorio(
 /** Só os problemas que derrubam a integridade. Açúcar para quem só quer o veredito. */
 export function errosDe(report: ReplayVerifyReport): ReplayProblem[] {
   return report.problemas.filter((p) => p.severidade === "erro");
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FASE 12 — CARREGAMENTO QUE RECUSA BUNDLE ADULTERADO
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Bundle reprovado na verificação. Carrega o relatório inteiro: quem recusa tem
+ * de conseguir dizer POR QUÊ, e "arquivo corrompido" sem apontar qual arquivo e
+ * qual linha é uma recusa que ninguém consegue investigar.
+ */
+export class ReplayIntegrityError extends Error {
+  readonly report: ReplayVerifyReport;
+  constructor(report: ReplayVerifyReport) {
+    const erros = report.problemas.filter((p) => p.severidade === "erro");
+    super(
+      `replay da sessão ${report.session_id} recusado: ${erros.length} problema(s) de integridade — ` +
+        erros.slice(0, 4).map((e) => `${e.codigo}${e.arquivo === undefined ? "" : ` em ${e.arquivo}`}`).join("; "),
+    );
+    this.name = "ReplayIntegrityError";
+    this.report = report;
+  }
+}
+
+/**
+ * Carrega o bundle DEPOIS de verificá-lo, e RECUSA o que não está íntegro.
+ *
+ * É este o ponto que a FASE 12 acrescentou ao fluxo real. `verifyReplay` existia
+ * havia 791 linhas e não tinha um único uso fora do próprio teste: um
+ * verificador que ninguém chama é documentação executável, não defesa. Quem
+ * exporta, exibe ou reprocessa um replay passa por aqui — e um bundle
+ * adulterado para no carregamento, em vez de virar "prova" de um fato que não
+ * aconteceu daquele jeito.
+ *
+ * `permitir_avisos` é `true` por default de propósito: aviso é aviso (sessão
+ * ainda não selada, `network.jsonl` inexistente porque não houve tráfego). Só
+ * ERRO recusa. Passar `false` exige um bundle impecável, e é o que um pipeline
+ * forense deve usar.
+ */
+export async function loadReplayVerificado(
+  session_id: string,
+  options: VerifyReplayOptions & { permitir_avisos?: boolean } = {},
+): Promise<{ bundle: ReplayBundle; report: ReplayVerifyReport }> {
+  const report = await verifyReplay(session_id, options);
+  const permitirAvisos = options.permitir_avisos !== false;
+  const reprova = permitirAvisos ? !report.integro : report.problemas.length > 0;
+  if (reprova) throw new ReplayIntegrityError(report);
+  return { bundle: await loadReplay(session_id, { ...(options.root !== undefined ? { root: options.root } : {}) }), report };
 }
