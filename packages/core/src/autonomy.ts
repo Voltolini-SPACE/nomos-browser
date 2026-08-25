@@ -307,3 +307,60 @@ export function rotasQueSempreAprovam(): string[] {
     .filter((r) => classificar(PERFIL_DA_ROTA[r]).classe === "SEMPRE_APROVAR")
     .sort();
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GOVERNO — quem guarda o modo de cada sessão
+//
+// Mora aqui, e não dentro de `SessionInfo`, de propósito: acrescentar campo à
+// sessão mudaria o formato persistido de TODAS as sessões que já existem,
+// inclusive as que os 735 testes criam. Uma camada nova não deveria exigir
+// migração de dados de quem nunca vai usá-la.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export class GovernoDeAutonomia {
+  private padrao: AutonomySetting | null = null;
+  private readonly porSessao = new Map<string, AutonomySetting>();
+
+  /**
+   * Modo em vigor para uma sessão.
+   *
+   * A ordem é `SESSION` > `DEFAULT` > `null`, e ela importa: a escolha feita no
+   * calor de uma tarefa vence a preferência geral, mas morre com a sessão.
+   */
+  modoDe(session_id: string): AutonomyMode | null {
+    return (this.porSessao.get(session_id) ?? this.padrao)?.mode ?? null;
+  }
+
+  ajusteDe(session_id: string): AutonomySetting | null {
+    return this.porSessao.get(session_id) ?? this.padrao ?? null;
+  }
+
+  /** `scope: "SESSION"` exige `session_id`; `"DEFAULT"` o ignora. */
+  definir(
+    scope: AutonomyScope,
+    mode: AutonomyMode,
+    by: string,
+    session_id: string | null,
+    agora: () => number = Date.now,
+  ): AutonomySetting {
+    const s: AutonomySetting = { mode, scope, by, at: new Date(agora()).toISOString() };
+    if (scope === "DEFAULT") {
+      this.padrao = s;
+      return s;
+    }
+    if (session_id === null || session_id === "") {
+      throw new Error("escopo SESSION exige session_id");
+    }
+    this.porSessao.set(session_id, s);
+    return s;
+  }
+
+  /** A escolha de sessão morre com a sessão. É o que `SESSION` promete. */
+  esquecer(session_id: string): void {
+    this.porSessao.delete(session_id);
+  }
+
+  padraoAtual(): AutonomySetting | null {
+    return this.padrao;
+  }
+}

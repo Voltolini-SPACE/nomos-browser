@@ -120,6 +120,7 @@ export interface OpcoesRegistro {
 
 export class RegistroDeAprovacoes {
   private readonly pedidos = new Map<string, PedidoDeAprovacao>();
+  private readonly esperando = new Map<string, ((p: PedidoDeAprovacao) => void)[]>();
   private readonly ttl: number;
   private readonly agora: () => number;
   private readonly maxPendentes: number;
@@ -176,6 +177,7 @@ export class RegistroDeAprovacoes {
     p.estado = decisao;
     p.decidido_por = por;
     p.decidido_em = new Date(this.agora()).toISOString();
+    this.acordar(approval_id);
     return { ...p };
   }
 
@@ -205,6 +207,43 @@ export class RegistroDeAprovacoes {
     }
     p.estado = "CONSUMIDA";
     return { ok: true, pedido: { ...p } };
+  }
+
+  /**
+   * Espera a decisão humana. Resolve quando o pedido sair de `PENDENTE` — por
+   * decisão ou por prazo.
+   *
+   * O `unref()` no timer não é detalhe: sem ele, uma pendência aberta segura o
+   * processo do daemon vivo por até 5 minutos depois de tudo o mais ter
+   * terminado, e o `PROCESS_RESIDUAL=0` que custou tanto para conquistar
+   * passaria a falhar de vez em quando, por um motivo que ninguém acharia.
+   */
+  aguardar(approval_id: string): Promise<PedidoDeAprovacao> {
+    const p = this.pedidos.get(approval_id);
+    if (p === undefined) return Promise.reject(new Error(`aprovação desconhecida: ${approval_id}`));
+    if (p.estado !== "PENDENTE") return Promise.resolve({ ...p });
+
+    return new Promise((resolve) => {
+      const fila = this.esperando.get(approval_id) ?? [];
+      fila.push(resolve);
+      this.esperando.set(approval_id, fila);
+
+      const restante = Math.max(0, Date.parse(p.expira_em) - this.agora());
+      const timer = setTimeout(() => {
+        this.expirarVencidas();
+        this.acordar(approval_id);
+      }, restante + 5);
+      if (typeof timer.unref === "function") timer.unref();
+    });
+  }
+
+  private acordar(approval_id: string): void {
+    const fila = this.esperando.get(approval_id);
+    if (fila === undefined) return;
+    const p = this.pedidos.get(approval_id);
+    if (p === undefined || p.estado === "PENDENTE") return;
+    this.esperando.delete(approval_id);
+    for (const r of fila) r({ ...p });
   }
 
   obter(approval_id: string): PedidoDeAprovacao | null {
@@ -242,6 +281,7 @@ export class RegistroDeAprovacoes {
         p.estado = "EXPIRADA";
         p.decidido_por = "runtime:prazo";
         p.decidido_em = new Date(t).toISOString();
+        this.acordar(p.approval_id);
       }
     }
   }

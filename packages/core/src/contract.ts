@@ -705,7 +705,17 @@ type AuditEventCobertura = [AuditEventFaltando] extends [never]
 const _auditEventCobertura: AuditEventCobertura = true;
 void _auditEventCobertura;
 
-export type PolicyDecisionLabel = "allow" | "deny" | "not_applicable";
+/**
+ * Veredito de política numa linha de auditoria.
+ *
+ * `require_approval` entrou com o Live Agent, e a lacuna que ele preenche era
+ * real: a trilha não tinha como dizer "parou para um humano decidir". As três
+ * opções antigas obrigavam a mentir — `deny` afirmaria que a ação foi recusada
+ * (não foi; ficou pendente) e `not_applicable` afirmaria que nenhuma política
+ * opinou (opinou, e foi justamente ela que segurou). Reconstruir uma sessão
+ * governada por autonomia exige distinguir os três desfechos.
+ */
+export type PolicyDecisionLabel = "allow" | "deny" | "not_applicable" | "require_approval";
 
 export interface AuditErrorRef {
   code: string;

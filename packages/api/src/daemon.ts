@@ -81,6 +81,13 @@ import {
 import { verifyReplay } from "../../observability/src/replay-verify.ts";
 import { selarSessao } from "../../observability/src/replay.ts";
 import { RecoveryManager } from "../../core/src/recovery.ts";
+import {
+  decidir as decidirAutonomia,
+  GovernoDeAutonomia,
+  PERFIL_DA_ROTA,
+} from "../../core/src/autonomy.ts";
+import { RegistroDeAprovacoes } from "../../core/src/approvals.ts";
+import { redactObject } from "../../observability/src/redact.ts";
 import { HealthWatchdog, type HealthEvent, type HealthStats } from "../../observability/src/watchdog.ts";
 
 /** Raiz do pacote de UI, resolvida a partir deste arquivo (não do cwd do processo). */
@@ -643,6 +650,14 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
       },
     });
   }
+
+  // ── LIVE AGENT ────────────────────────────────────────────────────────────
+  // Governo de autonomia e fila de aprovações vivem no processo, ao lado do
+  // resto do estado do runtime. Não são persistidos: uma aprovação pendente que
+  // sobrevivesse a um restart seria uma aprovação que ninguém está olhando, e
+  // executá-la depois seria pior do que pedir de novo.
+  const autonomia = new GovernoDeAutonomia();
+  const aprovacoes = new RegistroDeAprovacoes();
 
   const services = new RuntimeServices({
     config,
@@ -1694,6 +1709,130 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
         fail(action_id, info.status, "CONTROL_HELD_BY_HUMAN", message, t.done(), { session_id }),
       );
       return;
+    }
+
+    // 3. AUTONOMIA E APROVAÇÃO — o último portão antes do Chromium.
+    //
+    // Repare ONDE isto está: depois de `capability` e depois de `controle
+    // humano`. A ordem é a garantia. Quando este código roda, tudo que a
+    // política do dono nega já devolveu 403 e morreu; o que sobra é o conjunto
+    // de ações que ele JÁ autorizou. Autonomia só escolhe se elas passam
+    // direto ou se param para perguntar — nunca se são permitidas.
+    //
+    // Não existe, em nenhum ramo abaixo, caminho que transforme um `deny` em
+    // `allow`. É por isso que `AUTO` não é `BYPASS`: não por promessa, por
+    // topologia.
+    const modo = autonomia.modoDe(session_id);
+    const veredito = decidirAutonomia(tool, modo);
+    if (veredito.efeito === "PEDIR_APROVACAO") {
+      const perfil = PERFIL_DA_ROTA[tool];
+      let pedido;
+      try {
+        pedido = aprovacoes.propor({
+          session_id,
+          action_id,
+          rota: tool,
+          args: body,
+          // A tela mostra os argumentos REDIGIDOS. `redact` já é o que a
+          // observabilidade usa na trilha; a tela de aprovação não pode ser a
+          // única superfície do produto que exibe segredo em claro.
+          args_visiveis: redactObject(body) as Record<string, unknown>,
+          nivel: veredito.nivel,
+          motivo: veredito.motivo,
+          consequencia: perfil?.consequencia ?? "consequência não declarada para esta rota",
+          recurso: perfil?.recurso ?? "desconhecido",
+          autonomy_mode: modo,
+        });
+      } catch (e) {
+        // Fila cheia. Recusar é mais honesto que enfileirar o que ninguém verá.
+        const message = e instanceof Error ? e.message : String(e);
+        jsonResponse(
+          res,
+          httpStatusFor("APPROVAL_DENIED"),
+          fail(action_id, info.status, "APPROVAL_DENIED", message, t.done(), { tool }),
+        );
+        return;
+      }
+
+      await services.record(
+        auditEntryFor(req, "denied", false, { code: "APPROVAL_PENDING", approval_id: pedido.approval_id }, {
+          event: "policy",
+          action: "action.proposed",
+          capability,
+          policy_decision: "require_approval",
+          policy_reason: `${veredito.classe}: ${veredito.motivo}`,
+        }),
+      );
+      services.emit("action.proposed", session_id, action_id, {
+        approval_id: pedido.approval_id,
+        tool,
+        nivel: veredito.nivel,
+        classe: veredito.classe,
+        motivo: veredito.motivo,
+        consequencia: pedido.consequencia,
+        recurso: pedido.recurso,
+        args: pedido.args_visiveis,
+        autonomy_mode: modo,
+        expira_em: pedido.expira_em,
+      }, client ?? "agent");
+
+      const decidido = await aprovacoes.aguardar(pedido.approval_id);
+
+      if (decidido.estado !== "APROVADA") {
+        const expirou = decidido.estado === "EXPIRADA";
+        const code = expirou ? "APPROVAL_TIMEOUT" : "APPROVAL_DENIED";
+        const message = expirou
+          ? `ninguém respondeu ao pedido de aprovação em ${Math.round((Date.parse(pedido.expira_em) - Date.parse(pedido.criado_em)) / 1000)}s — fail-closed`
+          : `um humano negou esta ação (${decidido.decidido_por ?? "?"})`;
+        await services.record(
+          auditEntryFor(req, "denied", false, { code, approval_id: pedido.approval_id }, {
+            event: "policy",
+            action: "action.denied",
+            capability,
+            policy_decision: "deny",
+            policy_reason: `${code}: ${message}`,
+            error: { code, message },
+          }),
+        );
+        services.emit("action.denied", session_id, action_id, {
+          approval_id: pedido.approval_id, tool, code, por: decidido.decidido_por,
+        }, "human");
+        jsonResponse(res, httpStatusFor(code), fail(action_id, info.status, code, message, t.done(), { tool, approval_id: pedido.approval_id }));
+        return;
+      }
+
+      // APROVADA. Consumir é obrigatório e pode falhar — e se falhar, NÃO
+      // executa. Uma aprovação que não consegue ser consumida é uma aprovação
+      // que não vale para esta ação.
+      const uso = aprovacoes.consumir(pedido.approval_id, { session_id, action_id, rota: tool, args: body });
+      if (!uso.ok) {
+        const message = `aprovação não pôde ser usada: ${uso.motivo}`;
+        await services.record(
+          auditEntryFor(req, "denied", false, { code: "APPROVAL_DENIED", approval_id: pedido.approval_id, motivo: uso.motivo }, {
+            event: "policy",
+            action: "action.denied",
+            capability,
+            policy_decision: "deny",
+            policy_reason: `APPROVAL_DENIED: ${message}`,
+            error: { code: "APPROVAL_DENIED", message },
+          }),
+        );
+        jsonResponse(res, httpStatusFor("APPROVAL_DENIED"), fail(action_id, info.status, "APPROVAL_DENIED", message, t.done(), { tool }));
+        return;
+      }
+
+      await services.record(
+        auditEntryFor(req, "ok", true, { approval_id: pedido.approval_id, por: decidido.decidido_por }, {
+          event: "policy",
+          action: "action.approved",
+          capability,
+          policy_decision: "allow",
+          policy_reason: `aprovada por ${decidido.decidido_por ?? "?"}`,
+        }),
+      );
+      services.emit("action.approved", session_id, action_id, {
+        approval_id: pedido.approval_id, tool, por: decidido.decidido_por,
+      }, "human");
     }
 
     const handler = handlerFor(tool);

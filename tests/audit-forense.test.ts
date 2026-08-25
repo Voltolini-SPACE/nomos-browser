@@ -485,7 +485,7 @@ test("9. toda linha de toda sessão tem TODAS as chaves do schema", async () => 
       // `AUDIT_EVENTS` é a projeção do union, e o compilador reprova a projeção
       // quando ela fica para trás (`AuditEventCobertura` em contract.ts).
       assert.ok(AUDIT_EVENTS.includes(l.event), `event não declarado em AUDIT_EVENTS: ${l.event}`);
-      assert.ok(["allow", "deny", "not_applicable"].includes(l.policy_decision), `policy_decision inválida: ${l.policy_decision}`);
+      assert.ok(["allow", "deny", "not_applicable", "require_approval"].includes(l.policy_decision), `policy_decision inválida: ${l.policy_decision}`);
       assert.ok(["ok", "error", "denied"].includes(l.result), `result inválido: ${l.result}`);
       assert.ok(l.detail !== null && typeof l.detail === "object", "detail tem de ser objeto");
     }
