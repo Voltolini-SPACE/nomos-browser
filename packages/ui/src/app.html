@@ -135,6 +135,46 @@
     font-size: 10px; opacity: .65; border: 1px dashed var(--nomos-aviso);
     color: var(--nomos-aviso); padding: 2px 6px; border-radius: 3px;
   }
+
+  /* ── LIVE AGENT ─────────────────────────────────────────────────────────
+     A faixa e o controle de autonomia sao SEMPRE visiveis. Esconder o modo
+     atual em configuracao profunda seria o pior desenho possivel aqui: o
+     usuario precisa saber, a qualquer instante e sem procurar, se o agente
+     esta pedindo licenca ou agindo sozinho. */
+  #faixa { display:flex; gap:14px; align-items:center; flex-wrap:wrap;
+           padding:6px 12px; font-size:12px; border-bottom:1px solid var(--linha); }
+  #faixa .campo { display:flex; gap:5px; align-items:center; }
+  #faixa .rotulo { opacity:.55; text-transform:uppercase; letter-spacing:.04em; font-size:10px; }
+  #faixa .valor { font-weight:600; }
+  #faixa .valor[data-estado="WAITING_APPROVAL"] { color:var(--nomos-aviso); }
+  #faixa .valor[data-estado="USER_CONTROL"] { color:var(--nomos-ciano); }
+  #faixa .valor[data-estado="DISCONNECTED"], #faixa .valor[data-estado="ERROR"] { color:var(--nomos-erro); }
+  #faixa .valor[data-estado="ACTING"] { color:var(--nomos-marca); }
+  #faixa .modo[data-modo="AUTO"] { color:var(--nomos-marca); }
+  #faixa .modo[data-modo="ASK"] { color:var(--nomos-aviso); }
+  #faixa .modo[data-modo="?"] { color:var(--nomos-erro); }
+
+  #autonomia { display:flex; gap:12px; align-items:center; font-size:12px; }
+  #autonomia label { display:flex; gap:5px; align-items:center; cursor:pointer; }
+  #autonomia .aviso { opacity:.6; font-size:11px; }
+
+  /* O centro de aprovacao cobre a tela DE PROPOSITO. Uma pergunta que o
+     usuario pode ignorar sem ver e' uma pergunta que vai ser respondida pelo
+     prazo — e o prazo, aqui, nega. */
+  #aprovacao { position:fixed; inset:0; background:rgba(0,0,0,.72); display:none;
+               align-items:center; justify-content:center; z-index:50; }
+  #aprovacao[data-aberto="1"] { display:flex; }
+  #aprovacao .caixa { background:var(--nomos-caixas); border:1px solid var(--linha);
+                      border-radius:10px; padding:20px 22px; max-width:560px; width:92%; }
+  #aprovacao h2 { margin:0 0 14px; font-size:14px; letter-spacing:.06em; text-transform:uppercase; color:var(--nomos-aviso); }
+  #aprovacao dl { display:grid; grid-template-columns:auto 1fr; gap:6px 14px; margin:0 0 16px; font-size:13px; }
+  #aprovacao dt { opacity:.55; }
+  #aprovacao dd { margin:0; word-break:break-word; }
+  #aprovacao .args { font-family:ui-monospace,monospace; font-size:11px; opacity:.8;
+                     max-height:120px; overflow:auto; background:rgba(255,255,255,.04);
+                     padding:6px 8px; border-radius:6px; }
+  #aprovacao .botoes { display:flex; gap:10px; justify-content:flex-end; }
+  #aprovacao .fila { font-size:11px; opacity:.6; margin-bottom:10px; }
 </style>
 </head>
 <body data-controle="agent">
@@ -148,6 +188,15 @@
   <input id="url" placeholder="https://…  (Enter para navegar)" spellcheck="false" autocomplete="off">
   <div class="marca" title="__NOMOS_TAGLINE__"><span class="dot" id="vivo" data-live="?"></span> NOMOS</div>
 </header>
+
+<div id="faixa">
+  <div class="campo"><span class="rotulo">Agente</span><span class="valor" id="f-agente">—</span></div>
+  <div class="campo"><span class="rotulo">Sessão</span><span class="valor" id="f-sessao">—</span></div>
+  <div class="campo"><span class="rotulo">Status</span><span class="valor" id="f-status" data-estado="DISCONNECTED">DESCONECTADO</span></div>
+  <div class="campo"><span class="rotulo">Autonomia</span><span class="valor modo" id="f-modo" data-modo="?">DESCONHECIDA</span></div>
+  <div class="campo"><span class="rotulo">Owner</span><span class="valor" id="f-owner">—</span></div>
+  <div class="campo"><span class="rotulo">Ação atual</span><span class="valor" id="f-acao">—</span></div>
+</div>
 
 <main>
   <nav>
@@ -191,10 +240,35 @@
   <span class="status" id="status">aguardando runtime…</span>
   <span class="conf" id="conf"></span>
   <span class="selo">__NOMOS_SELO__ · __NOMOS_INTEGRIDADE__</span>
+  <span id="autonomia">
+    <span class="rotulo">Autonomia:</span>
+    <label><input type="radio" name="modo" value="ASK"> Perguntar antes de agir</label>
+    <label><input type="radio" name="modo" value="AUTO"> Agir automaticamente</label>
+    <span class="aviso" id="autoAviso"></span>
+  </span>
   <button id="btPausar">Pausar</button>
   <button id="btControle">Assumir controle</button>
   <button id="btParar" class="perigo">Parar</button>
 </footer>
+
+<div id="aprovacao" data-aberto="0" role="dialog" aria-modal="true" aria-labelledby="aprTitulo">
+  <div class="caixa">
+    <h2 id="aprTitulo">Aprovação necessária</h2>
+    <div class="fila" id="aprFila"></div>
+    <dl>
+      <dt>Ação</dt><dd id="aprAcao">—</dd>
+      <dt>Onde</dt><dd id="aprOnde">—</dd>
+      <dt>Nível</dt><dd id="aprNivel">—</dd>
+      <dt>Consequência</dt><dd id="aprConsequencia">—</dd>
+      <dt>Por que pergunto</dt><dd id="aprMotivo">—</dd>
+      <dt>Parâmetros</dt><dd><div class="args" id="aprArgs">—</div></dd>
+    </dl>
+    <div class="botoes">
+      <button id="aprNegar" class="perigo">NEGAR</button>
+      <button id="aprAprovar">APROVAR</button>
+    </div>
+  </div>
+</div>
 
 <script>
 "use strict";
@@ -208,7 +282,20 @@ const RUNTIME_PADRAO = "http://127.0.0.1:7777";
 const BASE = (function () {
   const q = new URLSearchParams(location.search).get("runtime");
   if (q !== null && /^https?:\/\//.test(q)) { return q.replace(/\/$/, ""); }
-  return location.port === "7777" ? location.origin : RUNTIME_PADRAO;
+  // A ORIGEM DA PÁGINA GANHA, e não só na porta 7777.
+  //
+  // A regra antiga era `location.port === "7777" ? origin : RUNTIME_PADRAO`, e
+  // ela quebrava o caso mais comum de todos: o daemon serve esta própria página
+  // e escuta noutra porta. Aí o console falava com :7777 — um runtime que pode
+  // nem existir — enquanto o que o serviu estava do outro lado. Pior: a CSP do
+  // daemon é `connect-src 'self'`, então o navegador bloqueava a chamada e o
+  // console ficava eternamente "SEM SESSÃO", sem dizer por quê.
+  //
+  // Se esta página veio de um HTTP, quem a serviu é o runtime. `RUNTIME_PADRAO`
+  // fica só para o caso de abrir o arquivo direto do disco (`file://`), onde
+  // não há origem para herdar.
+  if (location.protocol === "http:" || location.protocol === "https:") { return location.origin; }
+  return RUNTIME_PADRAO;
 })();
 const $ = (id) => document.getElementById(id);
 
@@ -440,6 +527,128 @@ for (const [id, tool] of [["voltar", "browser.back"], ["avancar", "browser.forwa
   });
 }
 
+
+// ── LIVE AGENT ────────────────────────────────────────────────────────
+//
+// REGRA DESTA SECAO: a tela nao INFERE estado. Tudo que ela pinta vem de
+// `GET /api/v1/sessions/<id>/live`, nomeado pelo runtime. Se a tela e o
+// runtime discordarem, quem esta errado e' a tela — e o usuario nao teria
+// como saber. Por isso nao ha aqui nenhuma heuristica de "deve estar
+// pensando" ou "parece parado".
+const LA = { modo: null, pendente: null, ultimoEstado: null, decidindo: false };
+
+function faixa(campo, valor, atributo, chave) {
+  const el = $(campo);
+  if (el === null) { return; }
+  el.textContent = valor;
+  if (atributo !== undefined) { el.dataset[atributo] = chave; }
+}
+
+// FAIL-SAFE. Sem estado comprovado, a tela NUNCA mostra AUTO. Um console que
+// chuta "automatico" durante uma reconexao esta dizendo ao usuario que o
+// agente pode agir sozinho quando ele nao sabe disso — e' a unica direcao de
+// erro que nao se pode correr aqui.
+function desconectado(motivo) {
+  faixa("f-status", motivo || "DESCONECTADO", "estado", "DISCONNECTED");
+  faixa("f-modo", "DESCONHECIDA", "modo", "?");
+  faixa("f-acao", "—");
+  LA.modo = null;
+  for (const r of document.querySelectorAll('#autonomia input[name=modo]')) { r.checked = false; }
+  $("autoAviso").textContent = "estado desconhecido — tratando como PERGUNTAR";
+}
+
+const NOME_DO_ESTADO = {
+  IDLE: "OCIOSO", OBSERVING: "OBSERVANDO", THINKING: "PENSANDO", ACTING: "CONTROLANDO",
+  WAITING_APPROVAL: "AGUARDANDO APROVAÇÃO", PAUSED: "PAUSADO", USER_CONTROL: "VOCÊ ESTÁ NO CONTROLE",
+  CANCELLING: "CANCELANDO", CANCELLED: "CANCELADO", COMPLETED: "CONCLUÍDO",
+  ERROR: "ERRO", DISCONNECTED: "DESCONECTADO",
+};
+
+async function estadoVivo() {
+  if (S.sessionId === null) { desconectado("SEM SESSÃO"); return; }
+  let e;
+  try {
+    e = await gestao("/api/v1/sessions/" + S.sessionId + "/live");
+  } catch {
+    desconectado();
+    return;
+  }
+  LA.ultimoEstado = e;
+  faixa("f-agente", e.agent_id || "—");
+  faixa("f-sessao", "#" + String(e.session_id || "").slice(-4).toUpperCase());
+  faixa("f-status", NOME_DO_ESTADO[e.runtime_state] || e.runtime_state, "estado", e.runtime_state);
+  faixa("f-owner", e.owner || "—");
+  faixa("f-acao", e.current_action ? (e.current_action + (e.action_level ? " · " + e.action_level : "")) : "—");
+
+  const modo = e.autonomy_mode;
+  LA.modo = modo;
+  faixa("f-modo", modo === "AUTO" ? "AGIR AUTOMATICAMENTE" : modo === "ASK" ? "PERGUNTAR" : "DESCONHECIDA",
+        "modo", modo || "?");
+  for (const r of document.querySelectorAll('#autonomia input[name=modo]')) { r.checked = (r.value === modo); }
+  // Prometer "nao pergunto mais" e perguntar e' pior do que perguntar sempre.
+  $("autoAviso").textContent = (modo === "AUTO" && Array.isArray(e.sempre_aprovam) && e.sempre_aprovam.length > 0)
+    ? "mesmo em automático, ainda pergunto: " + e.sempre_aprovam.join(", ")
+    : "";
+
+  aplicarControle(e.control);
+  pintarAprovacao(e.approvals_pending || []);
+}
+
+function pintarAprovacao(pendentes) {
+  const caixa = $("aprovacao");
+  if (pendentes.length === 0) {
+    caixa.dataset.aberto = "0";
+    LA.pendente = null;
+    return;
+  }
+  const a = pendentes[0];
+  LA.pendente = a;
+  $("aprFila").textContent = pendentes.length > 1
+    ? pendentes.length + " pedidos na fila; decidindo o mais antigo"
+    : "";
+  $("aprAcao").textContent = a.rota;
+  $("aprOnde").textContent = a.recurso || "—";
+  $("aprNivel").textContent = a.nivel || "—";
+  $("aprConsequencia").textContent = a.consequencia || "—";
+  $("aprMotivo").textContent = a.motivo || "—";
+  // `args_visiveis` ja vem REDIGIDO do runtime. A tela de aprovacao nao pode
+  // ser a unica superficie do produto que mostra segredo em claro.
+  $("aprArgs").textContent = JSON.stringify(a.args_visiveis || {}, null, 1);
+  caixa.dataset.aberto = "1";
+}
+
+async function decidirAprovacao(qual) {
+  if (LA.pendente === null || LA.decidindo) { return; }
+  LA.decidindo = true;
+  const id = LA.pendente.approval_id;
+  try {
+    await gestao("/api/v1/approvals/" + id + "/" + qual, "POST", { by: "console" });
+    feed("aprovacao." + qual, id + " · " + LA.pendente.rota);
+  } catch (e) {
+    feed("aprovacao.falhou", String(e && e.message ? e.message : e), true);
+  } finally {
+    LA.decidindo = false;
+    await estadoVivo();
+  }
+}
+
+$("aprAprovar").addEventListener("click", () => decidirAprovacao("approve"));
+$("aprNegar").addEventListener("click", () => decidirAprovacao("deny"));
+
+for (const r of document.querySelectorAll('#autonomia input[name=modo]')) {
+  r.addEventListener("change", async () => {
+    if (S.sessionId === null) { return; }
+    try {
+      const d = await gestao("/api/v1/sessions/" + S.sessionId + "/autonomy", "POST",
+        { mode: r.value, by: "console" });
+      feed("autonomy.changed", "modo agora: " + d.autonomy_mode + " (escopo " + d.scope + ")");
+    } catch (e) {
+      feed("autonomy.falhou", String(e && e.message ? e.message : e), true);
+    }
+    await estadoVivo();
+  });
+}
+
 // ── arranque ──────────────────────────────────────────────────────────
 (async function iniciar() {
   const vivo = await saude();
@@ -447,6 +656,11 @@ for (const [id, tool] of [["voltar", "browser.back"], ["avancar", "browser.forwa
   setInterval(saude, 5000);
   setInterval(sessoes, 4000);
   S.timerTela = setInterval(() => { if (!S.pausado) { espelhar(); } }, 1200);
+  // O estado canonico e' consultado mais rapido que o espelho: e' ele que
+  // decide se ha uma pergunta na tela, e uma pergunta que demora a aparecer e'
+  // uma pergunta que o prazo pode responder no lugar do usuario.
+  await estadoVivo();
+  setInterval(estadoVivo, 700);
 })();
 </script>
 </body>
