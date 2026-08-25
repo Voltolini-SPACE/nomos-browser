@@ -32,47 +32,32 @@ done
 # sob pressão de memória.
 LENTOS="e2e-gate api session perception pointer-keyboard target-verifier vision bench recovery-watchdog security-net-injection security-files-secrets"
 
-# ── residência de LLM e memória livre ───────────────────────────────────────
+# ── residência de LLM e memória ─────────────────────────────────────────────
 #
-# Um arquivo MORTO por timeout não roda o `after()` dele. Quando esse arquivo
-# carregou um modelo local, o modelo fica RESIDENTE — e o Ollama grava o
-# `keep_alive` pedido, que nos testes é longo: um `expires_at` no ano 2318 foi
-# encontrado numa execução real. Cinco gigabytes presos assim não voltam
-# sozinhos, e o vizinho seguinte falha por falta de memória, não por defeito.
+# As funções vêm de `lib-memoria.sh`, que JÁ existia — eu havia reescrito
+# `descarregar_residentes`/`mem_livre` aqui antes de encontrá-la, e a biblioteca
+# ainda documenta a MESMA medição que eu refiz do zero (5,13 GB presos depois de
+# matar a suíte). Duas cópias divergem no dia em que uma for corrigida.
 #
-# Essa é a falha de instrumento mais cara desta suíte porque ela MENTE bem: o
+# O que esta suíte acrescenta é QUANDO chamar: um arquivo MORTO por timeout não
+# roda o `after()` dele, então o modelo que ele carregou fica residente com o
+# `keep_alive` longo dos testes — um `expires_at` no ano 2318 foi encontrado numa
+# execução real. Cinco gigabytes presos assim não voltam sozinhos, e quem paga é
+# o arquivo SEGUINTE. A versão anterior só descarregava ANTES dos três arquivos
+# que carregam modelo; o estrago é sempre para quem vem DEPOIS.
+#
+# Essa é a falha de instrumento mais cara desta suíte porque ela MENTE BEM: o
 # sintoma é asserção de latência estourando, lease expirando e Chromium morrendo
-# — tudo com cara de regressão de produto. Numa execução real ela produziu seis
+# — tudo com cara de regressão de produto. Numa execução real produziu SEIS
 # arquivos vermelhos que estavam verdes minutos antes e voltaram a ficar verdes
-# depois, sem que uma linha de produto mudasse.
-#
-# Duas correções, e nenhuma delas é "aumentar o timeout":
-#   · descarrega o que estiver residente DEPOIS de cada arquivo, não só antes
-#     dos três que carregam modelo (o estrago é para quem vem DEPOIS);
-#   · lê a lista do próprio `/api/ps` em vez de uma lista fixa de nomes, que
-#     silenciosamente não cobre um modelo novo.
-descarregar_residentes() {
-  local ps_json
-  ps_json="$(curl -s --max-time 8 http://127.0.0.1:11434/api/ps 2>/dev/null)" || return 0
-  [ -z "$ps_json" ] && return 0
-  printf '%s' "$ps_json" \
-    | /usr/bin/python3 -c 'import sys,json;d=json.load(sys.stdin);print("\n".join(m["name"] for m in d.get("models",[])))' 2>/dev/null \
-    | while IFS= read -r m; do
-        [ -z "$m" ] && continue
-        curl -s --max-time 20 -X POST http://127.0.0.1:11434/api/generate \
-          -d "{\"model\":\"${m}\",\"keep_alive\":0}" -o /dev/null 2>/dev/null || true
-      done
-  return 0
-}
+# depois, sem uma linha de produto ter mudado.
+# shellcheck source=lib-memoria.sh
+. "${RAIZ}/scripts/lib-memoria.sh"
 
-# Percentual de memória livre do sistema. Vazio quando indisponível — nunca
-# inventa um número, porque este valor entra no relatório como MEDIDA.
-mem_livre() {
-  memory_pressure 2>/dev/null \
-    | /usr/bin/awk -F': *' '/free percentage/{gsub(/%/,"",$2); print $2; exit}'
-}
+descarregar_residentes() { descarregar_todos > /dev/null 2>&1 || true; return 0; }
 
-# Gigabytes de modelo presos agora. Mesma regra: vazio quando não deu para ler.
+# Gigabytes de modelo presos agora. Vazio quando não deu para ler — nunca um
+# zero fingido, porque este valor entra no relatório como MEDIDA.
 residente_gb() {
   curl -s --max-time 8 http://127.0.0.1:11434/api/ps 2>/dev/null \
     | /usr/bin/python3 -c 'import sys,json;d=json.load(sys.stdin);print(round(sum(m["size"] for m in d.get("models",[]))/1e9,2))' 2>/dev/null
@@ -86,7 +71,7 @@ total_fail=0
 arquivos_ok=0
 arquivos_ruins=0
 
-printf 'arquivo\tstatus\tpass\tfail\tsegundos\tmem_livre_pct\tllm_gb\n' > "$OUT/resumo.tsv"
+printf 'arquivo\tstatus\tpass\tfail\tsegundos\tmem_disp_gb\tllm_gb\n' > "$OUT/resumo.tsv"
 
 for f in "$RAIZ"/tests/*.test.ts; do
   nome="$(basename "$f" .test.ts)"
@@ -99,7 +84,7 @@ for f in "$RAIZ"/tests/*.test.ts; do
   # antes de cada um evita que o vizinho anterior estoure o timeout deste — o
   # gate de visão falhava por 121s de carregamento, não por erro de código.
   descarregar_residentes
-  mem_ini="$(mem_livre)"
+  mem_ini="$(mem_disponivel_gb)"
   gb_ini="$(residente_gb)"
 
   log="$OUT/$nome.log"
@@ -158,12 +143,15 @@ for f in "$RAIZ"/tests/*.test.ts; do
   total_fail=$((total_fail + fa))
   printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
     "$nome" "$status" "$p" "$fa" "$seg" "${mem_ini:-?}" "${gb_ini:-?}" >> "$OUT/resumo.tsv"
-  printf '%-28s %-7s pass=%-4s fail=%-3s %ss  mem=%s%% llm=%sGB\n' \
+  printf '%-28s %-7s pass=%-4s fail=%-3s %ss  mem=%sGB llm=%sGB\n' \
     "$nome" "$status" "$p" "$fa" "$seg" "${mem_ini:-?}" "${gb_ini:-?}"
   # MORTO com memória apertada quase nunca é defeito de produto. Dizer isso na
   # hora evita que o leitor do relatório abra uma caça a um bug que não existe.
-  if [ "$status" = "MORTO" ] && [ -n "${mem_ini:-}" ] && [ "${mem_ini%%.*}" -lt 35 ] 2>/dev/null; then
-    printf '    ^ atencao: memoria livre em %s%% e %sGB de LLM residente ao iniciar este arquivo.\n' \
+  # A lib mede DISPONIVEL (free+inactive+purgeable), nao swap: swap no macOS nao
+  # encolhe quando a pressao passa, entao ele nao preve nada. Abaixo de ~3 GB um
+  # modelo de 5 GB nao carrega a tempo.
+  if [ "$status" = "MORTO" ] && [ -n "${mem_ini:-}" ] && [ "${mem_ini%%.*}" -lt 3 ] 2>/dev/null; then
+    printf '    ^ atencao: memoria DISPONIVEL em %sGB e %sGB de LLM residente ao iniciar este arquivo.\n' \
       "$mem_ini" "${gb_ini:-?}"
     printf '      MORTO sob starvation NAO e evidencia de regressao. Reexecute o arquivo isolado.\n'
   fi

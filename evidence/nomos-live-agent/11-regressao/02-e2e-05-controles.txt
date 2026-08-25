@@ -1,0 +1,18 @@
+# daemon :7797 · sessão ses_4e5954158f2d49cc
+[PASS] 0. linha de base — o agente age — CLICADO
+[PASS] 1. PAUSAR responde e marca a sessão — http=200 paused=true
+[PASS] 2. o runtime declara PAUSED — PAUSED
+[PASS] 3. nenhuma AÇÃO nova começa — http=409 code=AGENT_PAUSED
+[PASS] 4. e o navegador não se moveu — INTOCADO
+[PASS] 5. mas OBSERVAR continua — a tela precisa seguir viva para você decidir — http=200
+[PASS] 6. RETOMAR exige ação explícita e devolve o agente — http=200
+[PASS] 7. há uma aprovação pendente antes do PARAR — 1 pendente
+[PASS] 7b. o navegador nao se moveu enquanto a aprovacao esperava — INTOCADO
+[PASS] 8. o kill switch termina no BACKEND mesmo sem ninguém ler a resposta — pendentes=0 control=human
+[PASS] 9. e a ação que estava pendurada foi NEGADA, não liberada — http=403 code=APPROVAL_DENIED
+[PASS] 10. depois do PARAR nem LEITURA passa — o volante e' do humano — http=409 code=CONTROL_HELD_BY_HUMAN
+[PASS] 11. e depois do PARAR nenhuma ação passa — http=409 code=CONTROL_HELD_BY_HUMAN
+
+FALHAS=0
+PAUSE=PASS
+EMERGENCY_STOP=PASS

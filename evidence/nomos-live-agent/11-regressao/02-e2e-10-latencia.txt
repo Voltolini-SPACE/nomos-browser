@@ -1,0 +1,47 @@
+[PASS] 0. controle: a UI tem WebSocket vivo para medir — socket aberto, sonda instalada
+[PASS] A0. controle: chegaram eventos suficientes para medir — 62 amostras de 62 eventos
+
+── A. evento do runtime → UI (WebSocket)
+   fronteira: do `timestamp` que o runtime carimba no evento até o `onmessage` da página. Inclui serialização, socket e loop de eventos do navegador.
+   n=62  min=0.0ms  p50=1.0ms  p95=2.0ms  p99=—  max=2.0ms
+   percentil que a amostra NÃO sustenta: p99 (precisa de 100, tem 62)
+[PASS] B0. controle: quadros suficientes medidos — 30/30 amostras
+
+── B. quadro do navegador → UI (espelho)
+   fronteira: do pedido do quadro (`browser.screenshot`) até o `onload` da imagem na página. Inclui captura no Chromium, gravação, transporte e decodificação — os dois passos que a UI de fato percorre.
+   n=30  min=16.0ms  p50=18.0ms  p95=33.0ms  p99=—  max=38.0ms
+   percentil que a amostra NÃO sustenta: p99 (precisa de 100, tem 30)
+[PASS] C0. controle: aprovações suficientes medidas — 30/30 amostras
+
+── C. clique de APROVAR na tela → runtime
+   fronteira: do `Date.now()` do clique dentro da página até o `decidido_em` carimbado pelo runtime. Inclui fetch, fila e registro.
+   n=30  min=0.0ms  p50=1.0ms  p95=1.0ms  p99=—  max=1.0ms
+   percentil que a amostra NÃO sustenta: p99 (precisa de 100, tem 30)
+[PASS] D0. controle: pausas suficientes medidas — 30/30 amostras
+
+── D. freio pedido pela tela → runtime PAUSADO
+   fronteira: do clique na página até o runtime declarar PAUSED numa leitura seguinte. INCLUI a ida ao runtime para confirmar, então é um teto, não o tempo interno do freio.
+   n=30  min=2.0ms  p50=3.0ms  p95=4.0ms  p99=—  max=5.0ms
+   percentil que a amostra NÃO sustenta: p99 (precisa de 100, tem 30)
+[PASS] E0. controle: transferências suficientes medidas — 30/30 amostras
+
+── E. tomada de controle → runtime com o volante no humano
+   fronteira: do pedido de takeover até uma leitura confirmar `control=human`. Inclui as duas idas ao runtime.
+   n=30  min=0.0ms  p50=1.0ms  p95=2.0ms  p99=—  max=2.0ms
+   percentil que a amostra NÃO sustenta: p99 (precisa de 100, tem 30)
+
+── nota obrigatória sobre o painel de estado
+   A faixa de estado da UI (`/live`) é lida por POLLING de 700 ms, não por evento.
+   Uma mudança de estado aparece na tela em até 700 ms POR PROJETO, e nenhum
+   número acima descreve esse caminho. Reportar a latência do WebSocket como se
+   fosse a da faixa faria o console parecer ~10x mais rápido do que ele mostra.
+
+AMOSTRAS_POR_CAMINHO=30
+EVENTO_RUNTIME_UI_P50_MS=1.0ms
+QUADRO_NAVEGADOR_UI_P50_MS=18.0ms
+APROVACAO_CLIQUE_RUNTIME_P50_MS=1.0ms
+FREIO_CLIQUE_RUNTIME_P50_MS=3.0ms
+POSSE_TRANSFERENCIA_P50_MS=1.0ms
+FAIXA_DE_ESTADO_E_POLLING_MS=700
+LATENCY_MEASURED=PASS
+FALHAS=0

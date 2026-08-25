@@ -1,0 +1,23 @@
+# daemon :7795 · sessão ses_64e34a5710ce4865
+[PASS] 1. a faixa mostra AGENTE, SESSÃO, STATUS, AUTONOMIA, OWNER e AÇÃO — agente=gi sessao=#4865 status=CONTROLANDO owner=gi
+[PASS] 2. o controle de autonomia é SEMPRE visível — não vive em configuração — visivel=true
+[PASS] 3. marcar 'Perguntar' na tela muda o modo NO RUNTIME — runtime: modo=ASK escopo=SESSION
+[PASS] 4. e a faixa reflete — PERGUNTAR
+[PASS] 5. a ação pendente ABRE o centro de aprovação sozinha — modal aberto
+[PASS] 6. e mostra ação, onde, nível, consequência e motivo — acao=browser.click nivel=A2 consequencia="clica num elemento da página"
+[PASS] 7. a faixa entra em AGUARDANDO APROVAÇÃO — AGUARDANDO APROVAÇÃO
+[PASS] 8. com aprovação aberta, o modal BLOQUEIA os controles atrás dele — clique interceptado pelo modal
+[PASS] 8b. e trocar para AUTO por fora não libera a pendência — modal=true status=AGUARDANDO APROVAÇÃO
+[PASS] 9. controle: a página está INTOCADA enquanto o modal está aberto — INTOCADO
+[PASS] 10. clicar APROVAR executa a ação de verdade — http=200 dom=CLICADO
+[PASS] 11. e o modal fecha — fechado
+[PASS] 12. em AUTO a tela avisa o que continua perguntando — "mesmo em automático, ainda pergunto: browser.task, browser.upload"
+[PASS] 13. daemon morto: a tela diz DESCONECTADO, e não segue dizendo CONTROLANDO — DESCONECTADO
+[PASS] 14. FAIL-SAFE — a autonomia vira DESCONHECIDA, jamais AUTO — DESCONHECIDA
+[PASS] 15. e a tela diz que está tratando como PERGUNTAR — "estado desconhecido — tratando como PERGUNTAR"
+[PASS] 16. o console não lançou erro de JavaScript durante a operação normal — nenhum
+[PASS] 17. e depois do SIGKILL só houve erro de REDE — a página não quebrou — 1 erros, todos de rede=true
+
+FALHAS=0
+LIVE_AGENT_CONSOLE=PASS
+APPROVAL_CENTER=PASS

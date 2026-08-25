@@ -1,0 +1,5 @@
+── candidatos: processos de daemon do runtime
+── portas de teste (apenas RELATADAS, jamais limpas por porta)
+
+ORFAOS_MORTOS=0
+PRESERVADOS_POR_FALTA_DE_PROVA=0

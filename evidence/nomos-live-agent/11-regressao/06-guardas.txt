@@ -1,0 +1,2 @@
+SHELL_EXPANSION_SAFE=YES (21 scripts .sh varridos)
+VERSION_COHERENT=YES (0.2.0 em 13 declarantes)

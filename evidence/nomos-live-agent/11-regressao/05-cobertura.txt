@@ -1,0 +1,16 @@
+── cobertura da matriz de CI ─────────────────────────────
+  adversarial     5 arquivo(s)
+  cleanroom       9 arquivo(s)
+  core            4 arquivo(s)
+  e2e             2 arquivo(s)
+  fast            8 arquivo(s)
+  integration     8 arquivo(s)
+  providers       4 arquivo(s)
+  recovery        2 arquivo(s)
+  security        8 arquivo(s)
+  arquivos em tests/: 37   declarados na matriz: 37
+
+VISION_IN_CI=YES
+AIPROVIDER_IN_CI=YES
+ALL_TEST_FILES_IN_CI=YES
+CI_COBERTURA=PASS

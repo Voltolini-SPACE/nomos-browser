@@ -1,0 +1,27 @@
+# fixture em http://127.0.0.1:8907/
+# daemon em :7794
+# sessão ses_d364c7b45b1c49ea
+[PASS] 0. preparo — a fixture abriu — http=200
+[PASS] 0b. controle — a saída começa INTOCADO — INTOCADO
+[PASS] 1. ASK ligado — http=200 modo=ASK scope=SESSION
+[PASS] 2. o runtime declara WAITING_APPROVAL — runtime_state=WAITING_APPROVAL approval_required=true
+[PASS] 3. e diz QUAL ação e QUAL nível — current_action=browser.click action_level=A2
+[PASS] 4. há exatamente uma pendência, com consequência legível — n=1 consequencia="clica num elemento da página"
+[PASS] 5. o NAVEGADOR não se moveu enquanto espera — INTOCADO
+[PASS] 6. TROCA ASK→AUTO não libera a pendência que já existia — modo=AUTO runtime_state=WAITING_APPROVAL pendentes=1
+[PASS] 7. e o navegador continua intocado depois da troca — INTOCADO
+[PASS] 8. aprovada: a ação acontece — aprovacao=200 acao=200
+[PASS] 9. e o EFEITO está na página — CLICADO
+[PASS] 10. controle — a página voltou a INTOCADO — INTOCADO
+[PASS] 11. AUTO: clique passa direto, sem pendência — http=200 pendentes=0 132ms
+[PASS] 12. e o efeito está lá — CLICADO
+[PASS] 13. AUTO + ação protegida = WAITING_APPROVAL (o gate crítico) — modo=AUTO runtime_state=WAITING_APPROVAL rota=browser.upload
+[PASS] 14. e o motivo declarado é o fator de risco, não o nível — motivo="a ação envia dado seu para fora, e isso não se retira"
+[PASS] 15. negada: a ação é recusada com APPROVAL_DENIED — negacao=200 acao=403 code=APPROVAL_DENIED
+[PASS] 16. e a fila volta a zero — pendentes=0 runtime_state=ACTING
+[PASS] 17. PARAR TUDO congela o agente e tira o volante — http=200 control=human
+[PASS] 18. e depois do PARAR, ação nenhuma passa — http=409 code=CONTROL_HELD_BY_HUMAN
+
+CASOS=20
+FALHAS=0
+ASK_MODE_E2E=PASS

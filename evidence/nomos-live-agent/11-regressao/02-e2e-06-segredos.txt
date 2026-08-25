@@ -1,0 +1,10 @@
+# daemon :7798 · sessão ses_9072a8b0bc614469 · canário CANARIO-SEGREDO-DD58C5NX
+[PASS] 1. o pedido de aprovação não mostra o segredo em claro — args_visiveis.text = "[oculto: 24 caractere(s), C…X]"
+[PASS] 2. a lista de aprovações também não — limpo
+[PASS] 3. a trilha de auditoria em disco não guarda o segredo — nenhum arquivo
+[PASS] 4. nem o diretório de runtime — nenhum arquivo
+
+CANARIO=CANARIO-SEGREDO-DD58C5NX
+SECRET_LEAK_IN_UI=0
+SECRET_LEAK_IN_AUDIT=0
+VAZAMENTOS=0

@@ -1,0 +1,18 @@
+[PASS] 0. controle: o segredo REALMENTE foi digitado na página — o campo #senha contém o canário
+[PASS] 1. o histórico é da sessão REAL (open + type + click gravados) — 16 ações · session.created → ok | lease.acquired → ok | task.started → ok | autonomy.changed → ok | p…
+[PASS] 2. o runtime DECLARA o modo somente leitura — read_only=true mode=REPLAY selado=true
+[PASS] 3. o canário digitado NÃO aparece no replay inteiro — 11154 bytes varridos, limpo
+[PASS] 4. nem os arquivos gravados da sessão — nenhum arquivo
+[PASS] 5. nenhum verbo de escrita existe em /replay — POST=405 PUT=405 PATCH=405 DELETE=405
+[PASS] 6. o painel de histórico desenha a linha do tempo real — 17 itens · ses_181db74bd7d24043 · 17 ações · 0 eventos · 0 req · 0 imagens · sela
+[PASS] 7. o selo SOMENTE LEITURA acende pelo runtime — data-ro=1
+[PASS] 8. o painel não contém NENHUM controle que aja — só o botão de recarregar (leitura)
+[PASS] 9. o canário não aparece na tela renderizada — DOM limpo
+[PASS] 10. sessão inexistente é 404, não um replay vazio de 200 — HTTP 404 · SESSION_NOT_FOUND
+[PASS] 10b. a tela DIZ que não conseguiu ler, e não acende o selo — itens=0 selo=0 · "não foi possível ler o histórico desta sessão"
+[PASS] 11. nenhum erro de JS na operação do painel — console limpo
+
+CANARIO=CANARIO-REPLAY-0SSJIK6F
+REPLAY_MODE=READ_ONLY
+SECRET_LEAK_IN_REPLAY=0
+FALHAS=0
