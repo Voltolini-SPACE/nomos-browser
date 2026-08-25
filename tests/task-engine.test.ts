@@ -1311,3 +1311,105 @@ test("15. controle negativo: a task que deve falhar falha, e o instrumento repro
   assert.equal(fixture.vezes("/passo/caminho-que-ninguem-pediu"), 0);
   assert.equal(fixture.vezes("/passo/n1"), 1);
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FASES 20/21 — os PASSOS de uma task passam pelo mesmo portão que uma ação
+// pedida à mão.
+//
+// Esta é a pergunta que decide se o modo de autonomia vale alguma coisa numa
+// tarefa multipasso. `browser.task` é `SEMPRE_APROVAR` (A5, irreversibilidade
+// alta): o dono aprova UMA vez, "faça isso". Se essa aprovação valesse como
+// autorização geral para tudo que o plano resolvesse fazer, ela seria um
+// cheque em branco — e `AUTO != BYPASS` estaria protegendo a porta da frente
+// enquanto a dos fundos ficou aberta.
+//
+// O executor de passo fala com a PRÓPRIA API por loopback justamente para não
+// abrir esse caminho privilegiado. Aqui isso deixa de ser um comentário no
+// código e vira medida.
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface PendenciaDeAprovacao {
+  approval_id: string;
+  rota: string;
+  estado: string;
+  nivel: string;
+}
+
+async function pendentes(session_id: string): Promise<PendenciaDeAprovacao[]> {
+  const r = await chamar<PendenciaDeAprovacao[] | { pendentes?: PendenciaDeAprovacao[] }>(
+    "GET",
+    `/api/v1/sessions/${session_id}/approvals`,
+  );
+  const lista = Array.isArray(r.body) ? r.body : (r.body.pendentes ?? []);
+  return lista.filter((p) => p.estado === "PENDENTE");
+}
+
+/**
+ * Aprova tudo o que aparecer, até a promessa terminar, anotando CADA rota que
+ * perguntou. É o "dono atento" — o que interessa não é ele aprovar, é a LISTA
+ * do que lhe foi perguntado.
+ */
+async function aprovandoTudo<T>(
+  session_id: string,
+  emCurso: Promise<T>,
+): Promise<{ valor: T; perguntou: string[] }> {
+  const perguntou: string[] = [];
+  let vivo = true;
+  const acabou = emCurso.then((v) => { vivo = false; return v; });
+
+  while (vivo) {
+    const corrida = await Promise.race([
+      acabou.then(() => "fim" as const),
+      new Promise<"segue">((r) => setTimeout(() => r("segue"), 60)),
+    ]);
+    if (corrida === "fim") break;
+    for (const p of await pendentes(session_id)) {
+      perguntou.push(p.rota);
+      await chamar("POST", `/api/v1/approvals/${p.approval_id}/approve`, { by: "dono-do-teste" });
+    }
+  }
+  return { valor: await acabou, perguntou };
+}
+
+test("FASES 20/21 — em AUTO, o dono aprova a TASK e os passos correm sozinhos", async () => {
+  const s = await novaSessao("dono-auto");
+  await chamar("POST", `/api/v1/sessions/${s}/autonomy`, { mode: "AUTO", by: "dono-do-teste" });
+  roteiro = { steps: [passoGoto("p1", "/a"), passoGoto("p2", "/b")] };
+
+  // Sem await: `browser.task` fica pendurada esperando a decisão do dono, que é
+  // exatamente o comportamento sob teste.
+  const { valor: r, perguntou } = await aprovandoTudo(s, abrirTask(s, "visitar duas páginas"));
+
+  assert.equal(r.body.success, true, JSON.stringify(r.body.error));
+  assert.deepEqual(
+    perguntou,
+    ["browser.task"],
+    `em AUTO só a própria task deveria perguntar; perguntou: ${perguntou.join(", ")}`,
+  );
+
+  // Controle: os passos ACONTECERAM. Sem isto, "nenhuma pergunta" seria
+  // verdade trivial sobre um plano que não rodou.
+  const feitos = (await trilha(s)).filter((l) => l.action === "browser.goto");
+  assert.ok(feitos.length >= 2, `os passos não rodaram: ${feitos.length} goto na trilha`);
+});
+
+test("FASES 20/21 — em ASK, aprovar a task NÃO é cheque em branco para os passos", async () => {
+  const s = await novaSessao("dono-ask");
+  await chamar("POST", `/api/v1/sessions/${s}/autonomy`, { mode: "ASK", by: "dono-do-teste" });
+  roteiro = { steps: [passoGoto("p1", "/a"), passoGoto("p2", "/b")] };
+
+  const { valor: r, perguntou } = await aprovandoTudo(s, abrirTask(s, "visitar duas páginas"));
+
+  assert.equal(r.body.success, true, JSON.stringify(r.body.error));
+  assert.equal(perguntou[0], "browser.task", "a primeira pergunta tem que ser a própria task");
+
+  // O ponto: DEPOIS de a task ser aprovada, cada passo que muda estado ainda
+  // passou pelo portão. Se os passos herdassem a aprovação da task, esta lista
+  // teria um item só.
+  const passosQuePerguntaram = perguntou.filter((rota) => rota === "browser.goto");
+  assert.equal(
+    passosQuePerguntaram.length,
+    2,
+    `os passos do plano não reentraram no portão — perguntou: ${perguntou.join(", ")}`,
+  );
+});

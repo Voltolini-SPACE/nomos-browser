@@ -1,0 +1,18 @@
+[PASS] 1. ASK: a jornada inteira completa depois das aprovações — fim=EXPORTADO erros=[]
+[PASS] 2. ASK: TODA ação que muda a página perguntou — 5/5 perguntaram
+[PASS] 3. ASK: NENHUMA leitura perguntou — 3 leituras passaram diretas
+[PASS] 4. AUTO: a jornada inteira completa sozinha — fim=EXPORTADO erros=[]
+[PASS] 5. AUTO: nenhuma pergunta na jornada que o dono já autorizou — 0 perguntas em 8 passos
+[PASS] 6. o RESULTADO é idêntico nos dois modos — ASK=EXPORTADO AUTO=EXPORTADO
+[PASS] 7. AUTO != BYPASS: a ação protegida perguntou mesmo em AUTO — perguntou · nível A2 · "a ação envia dado seu para fora, e isso não se retira"
+[PASS] 8. e negada, ela é recusada — http=403 code=APPROVAL_DENIED
+
+PASSOS_DA_JORNADA=8 (mudam=5 leem=3)
+ASK_PROMPTS=5
+AUTO_PROMPTS=0
+UNEXPECTED_APPROVAL_PROMPTS=0
+RESULTADO_IDENTICO=SIM
+AUTO_NAO_E_BYPASS=SIM
+ASK_MODE_E2E=PASS
+AUTO_MODE_E2E=PASS
+FALHAS=0
