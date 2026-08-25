@@ -53,6 +53,15 @@ export type RouteName =
   // limitado a uma unica sessao), e a fila por sessao e mapa de ATIVIDADE alheia.
   // Ver o comentario de `queues.get` em `ROUTE_SCOPE` e em `HealthResponse`.
   | "queues.get"
+  | "autonomy.get"
+  | "autonomy.set"
+  | "autonomy.default.get"
+  | "autonomy.default.set"
+  | "approvals.list"
+  | "approvals.approve"
+  | "approvals.deny"
+  | "live.state"
+  | "emergency.stop"
   | "whoami"
   | "action"
   | "events";
@@ -127,6 +136,16 @@ export const ROUTES: readonly RouteSpec[] = Object.freeze([
   spec("GET", `${P}/config/schema`, "config.schema", false),
   spec("GET", `${P}/config`, "config.get", false),
   spec("GET", `${P}/queues`, "queues.get", false),
+  // ── Live Agent Console ────────────────────────────────────────────────────
+  spec("GET", `${P}/sessions/:id/autonomy`, "autonomy.get", false),
+  spec("POST", `${P}/sessions/:id/autonomy`, "autonomy.set", false),
+  spec("GET", `${P}/autonomy/default`, "autonomy.default.get", false),
+  spec("POST", `${P}/autonomy/default`, "autonomy.default.set", false),
+  spec("GET", `${P}/sessions/:id/approvals`, "approvals.list", false),
+  spec("POST", `${P}/approvals/:approval_id/approve`, "approvals.approve", false),
+  spec("POST", `${P}/approvals/:approval_id/deny`, "approvals.deny", false),
+  spec("GET", `${P}/sessions/:id/live`, "live.state", false),
+  spec("POST", `${P}/sessions/:id/emergency-stop`, "emergency.stop", false),
   spec("GET", `${P}/whoami`, "whoami", false),
   spec("GET", "/events", "events", false),
 ]);

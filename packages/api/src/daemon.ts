@@ -85,6 +85,7 @@ import {
   decidir as decidirAutonomia,
   GovernoDeAutonomia,
   PERFIL_DA_ROTA,
+  rotasQueSempreAprovam,
 } from "../../core/src/autonomy.ts";
 import { RegistroDeAprovacoes } from "../../core/src/approvals.ts";
 import { redactObject } from "../../observability/src/redact.ts";
@@ -1131,6 +1132,14 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
       case "sessions.delete": {
         const id = params.id!;
         const motivo = typeof body.reason === "string" ? body.reason : "requested";
+        // `SESSION` promete que a escolha morre com a sessão. Sem esta linha, o
+        // modo sobreviveria ao `session_id` e uma sessão NOVA que reusasse o id
+        // nasceria governada por uma decisão que ninguém tomou para ela — e
+        // pior, nasceria possivelmente em AUTO. As pendências também caem: uma
+        // aprovação de sessão fechada é uma aprovação que não pode mais
+        // executar coisa nenhuma.
+        autonomia.esquecer(id);
+        aprovacoes.negarPendentes(id, "session.closed");
         // O contexto é lido ANTES do fechamento: depois dele `sessions.get` já
         // não devolve dono nem context_id, e a linha sairia oca.
         const antes = (() => {
@@ -1375,6 +1384,155 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
           },
         });
         return passada;
+      }
+      // ── LIVE AGENT ────────────────────────────────────────────────────────
+      case "autonomy.get": {
+        const sid = params.id!;
+        sessions.get(sid);                       // 404 se não existir
+        const ajuste = autonomia.ajusteDe(sid);
+        return {
+          session_id: sid,
+          autonomy_mode: autonomia.modoDe(sid),
+          scope: ajuste?.scope ?? null,
+          by: ajuste?.by ?? null,
+          at: ajuste?.at ?? null,
+          // O que continua perguntando MESMO em AUTO. Prometer "não pergunto
+          // mais" e perguntar é pior do que perguntar sempre; a UI precisa
+          // conseguir avisar antes.
+          sempre_aprovam: rotasQueSempreAprovam(),
+        };
+      }
+      case "autonomy.set": {
+        const sid = params.id!;
+        const info0 = sessions.get(sid);
+        const modo = body.mode;
+        if (modo !== "ASK" && modo !== "AUTO") {
+          throw new ApiError("INVALID_REQUEST", 'mode deve ser "ASK" ou "AUTO"');
+        }
+        const quem = typeof body.by === "string" && body.by !== "" ? body.by : "human";
+        const anterior = autonomia.modoDe(sid);
+        const ajuste = autonomia.definir("SESSION", modo, quem, sid);
+        await services.note({
+          session: sid,
+          event: "policy",
+          action: "autonomy.changed",
+          actor: quem,
+          owner: info0.owner,
+          result: "ok",
+          verified: true,
+          policy_decision: "allow",
+          detail: { de: anterior, para: modo, scope: "SESSION", by: quem },
+        });
+        services.emit("autonomy.changed", sid, null, { de: anterior, para: modo, scope: "SESSION", by: quem }, "human");
+        return { session_id: sid, autonomy_mode: modo, scope: ajuste.scope, by: quem, at: ajuste.at };
+      }
+      case "autonomy.default.get": {
+        const padrao = autonomia.padraoAtual();
+        return { autonomy_mode: padrao?.mode ?? null, scope: "DEFAULT", by: padrao?.by ?? null, at: padrao?.at ?? null };
+      }
+      case "autonomy.default.set": {
+        const modo = body.mode;
+        if (modo !== "ASK" && modo !== "AUTO") {
+          throw new ApiError("INVALID_REQUEST", 'mode deve ser "ASK" ou "AUTO"');
+        }
+        const quem = typeof body.by === "string" && body.by !== "" ? body.by : "human";
+        const anterior = autonomia.padraoAtual()?.mode ?? null;
+        const ajuste = autonomia.definir("DEFAULT", modo, quem, null);
+        services.emit("autonomy.changed", null, null, { de: anterior, para: modo, scope: "DEFAULT", by: quem }, "human");
+        return { autonomy_mode: modo, scope: "DEFAULT", by: quem, at: ajuste.at };
+      }
+      case "approvals.list": {
+        const sid = params.id!;
+        sessions.get(sid);
+        return { session_id: sid, pendentes: aprovacoes.pendentesDe(sid), todas: aprovacoes.todasDe(sid) };
+      }
+      case "approvals.approve":
+      case "approvals.deny": {
+        const id = params.approval_id!;
+        const quem = typeof body.by === "string" && body.by !== "" ? body.by : "human";
+        const alvo = aprovacoes.obter(id);
+        if (alvo === null) throw new ApiError("INVALID_REQUEST", `aprovação desconhecida: ${id}`);
+        const decisao = name === "approvals.approve" ? "APROVADA" : "NEGADA";
+        let d;
+        try {
+          d = aprovacoes.decidir(id, decisao, quem);
+        } catch (e) {
+          throw new ApiError("INVALID_REQUEST", e instanceof Error ? e.message : String(e));
+        }
+        await services.note({
+          session: d.session_id,
+          event: "policy",
+          action: decisao === "APROVADA" ? "action.approved" : "action.denied",
+          actor: quem,
+          owner: quem,
+          result: "ok",
+          verified: true,
+          policy_decision: decisao === "APROVADA" ? "allow" : "deny",
+          detail: { approval_id: id, rota: d.rota, nivel: d.nivel, action_id: d.action_id, by: quem },
+        });
+        return d;
+      }
+      case "live.state": {
+        const sid = params.id!;
+        const info0 = sessions.get(sid);
+        const pend = aprovacoes.pendentesDe(sid);
+        const aba = info0.pages.find((pg) => pg.active) ?? info0.pages[0] ?? null;
+        // ESTADO CANÔNICO. A UI não infere nada disto: se ela e o runtime
+        // discordarem, quem está errado é a tela — e o usuário não teria como
+        // saber. Por isso o campo existe aqui e não é derivado lá.
+        const runtime_state =
+          info0.control === "human" ? "USER_CONTROL"
+            : pend.length > 0 ? "WAITING_APPROVAL"
+            : info0.status === "PAUSED" ? "PAUSED"
+            : info0.status === "ACTIVE" ? "ACTING"
+            : info0.status === "IDLE" ? "IDLE"
+            : info0.status === "CLOSED" ? "COMPLETED"
+            : "IDLE";
+        return {
+          session_id: sid,
+          agent_id: info0.owner,
+          owner: info0.owner,
+          active_tab: aba?.page_id ?? null,
+          active_url: aba?.url ?? null,
+          current_action: pend[0]?.rota ?? null,
+          action_level: pend[0]?.nivel ?? null,
+          autonomy_mode: autonomia.modoDe(sid),
+          approval_required: pend.length > 0,
+          approvals_pending: pend,
+          runtime_state,
+          session_status: info0.status,
+          control: info0.control,
+          sempre_aprovam: rotasQueSempreAprovam(),
+          last_event: null,
+        };
+      }
+      case "emergency.stop": {
+        // PARAR TUDO. Roda no BACKEND de ponta a ponta: se a UI cair no meio,
+        // a interrupção continua. Um kill switch que depende da tela viva não
+        // é um kill switch.
+        const sid = params.id!;
+        const quem = typeof body.by === "string" && body.by !== "" ? body.by : "human";
+        const negadas = aprovacoes.negarPendentes(sid, `emergency_stop:${quem}`);
+        const congelada = sessions.takeover(sid, quem);
+        await services.note({
+          session: sid,
+          event: "control",
+          action: "emergency_stop",
+          actor: quem,
+          owner: congelada.owner,
+          result: "ok",
+          verified: true,
+          policy_decision: "deny",
+          detail: { by: quem, aprovacoes_negadas: negadas.length, control: congelada.control },
+        });
+        services.emit("emergency_stop", sid, null, { by: quem, aprovacoes_negadas: negadas.length }, "human");
+        return {
+          session_id: sid,
+          parado: true,
+          control: congelada.control,
+          status: congelada.status,
+          aprovacoes_negadas: negadas.map((a) => a.approval_id),
+        };
       }
       case "sessions.takeover": {
         const quem = typeof body.actor === "string" ? body.actor : "human";
