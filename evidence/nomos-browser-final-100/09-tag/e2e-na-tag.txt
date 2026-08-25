@@ -1,0 +1,107 @@
+── FASE 19 · bateria E2E final, independente, 20 cenários ───────────────
+
+# fixture em http://127.0.0.1:59257
+# D1 em http://127.0.0.1:59258 (pid 71068) sessoes=/tmp/nomos-e2e19-1lKGTJ/d1-Mjf9ym/sessoes
+[PASS                          ]  1. abrir → localizar → clicar (verificado e entregue)     670ms  http://127.0.0.1:59257/app · INTOCADO · strategy=selector box={"x":8,"y":79.875,"width":64.15625,"height":21}
+[PASS                          ]  2. navegação: goto/back/forward/reload                514ms  "ok" · http://127.0.0.1:59257/pagina-a · PAGINA-A
+[PASS                          ]  3. formulário: preencher, validar de volta, cancelar    1011ms  true/true · Ana Ribeiro · ana@exemplo.test
+[PASS                          ]  4. SPA: conteúdo tardio com browser.wait             3391ms  VAZIO · false TARGET_NOT_FOUND · waited_ms=1303
+[PASS                          ]  5. abas: abrir, listar, trocar preservando estado, fechar    1709ms  ESTADO-DA-ABA-1 · n=2 ids=pg_5dd33bee3db046e6,pg_d09042048e4b4d9b · pg_d09042048e4b4d9b vs pg_0b9b6acbd16b406e
+[PASS                          ]  6. download real para dentro da raiz permitida        513ms  [] · "ok" · /tmp/nomos-e2e19-1lKGTJ/download-permitido/nomos-e2e-19.txt
+[PASS                          ]  7. upload com fixture + controle negativo fora da raiz    1173ms  SEM-ARQUIVO · "ok" · ARQUIVO:carta.txt:36
+[PASS                          ]  8. recuperação de erro: falha no meio, sessão segue utilizável    4023ms  false · TARGET_NOT_FOUND: alvo não resolvido após 1 estratégia(s): selector · ACTIVE
+[PASS (BLOQUEADO_POR_APROVACAO)]  9. NOMOS → Browser → NOMOS (A0 executa, A2 é barrada)    3155ms  nomos-browser tools=16 nivel_padrao=A5 · INTOCADO · A0 → A0_READ_LOCAL
+[FAIL (BLOQUEADO_POR_APROVACAO)] 10. Gi → NOMOS → Browser → Gi (A0 executa, A2 é barrada)    7683ms  o cenário terminou sem exceção ⇒ TypeError: fetch failed
+[PASS                          ] 11. visão como fallback: alvo em <canvas>, sem DOM interativo   42067ms  qwen2.5vl:3b,moondream:1.8b,qwen3.5:4b-q8_0,embeddinggemma:300m,qwen2.5-coder:7b,nomic-embed-text:latest · [] 
+[PASS                          ] 12. task longa: 14 passos, COMPLETED, checkpoint a cada passo    2014ms  "ok" · COMPLETED · 14/14
+[PASS                          ] 13. task com crash do daemon no meio + resume sem repetir passo    2305ms  signal=SIGKILL code=null · step_index=6 state_em_disco=RUNNING · RECOVERING last_error=RUNTIME_CRASH
+# D2 em http://127.0.0.1:59650 (pid 73008) — duas credenciais distintas emitidas
+[PASS                          ] 14. handoff entre dois donos com credenciais distintas     465ms  A=pJoy_m… B=RjSxdG… · "ok" · DONO-A
+[PASS                          ] 15. takeover humano congela ACT e OBSERVE; release devolve     446ms  200 · 200 control=human status=PAUSED · 409 CONTROL_HELD_BY_HUMAN
+[PASS                          ] 16. negação de política auditada: sem capability ⇒ 403 + policy.deny     534ms  403 · CAPABILITY_DENIED: capability "download" negada para browser.download (classe COMMIT) · success=false re
+[PASS                          ] 17. injeção: página hostil marcada, cru retido, instrução neutralizada     326ms  source=WEB trust=UNTRUSTED · true · alta
+[PASS                          ] 18. timeout de provider: porta morta, erro classificado, daemon vivo    5610ms  http://127.0.0.1:59730 provider=http://127.0.0.1:59729 · success=false · INTERNAL: raciocínio falhou: fetch fa
+[PASS                          ] 19. crash recovery do daemon: SIGKILL real → sobe de novo    1535ms  pid=73253 signal=SIGKILL · state=RUNNING step_index=4 · 73253 → 73276
+[PASS                          ] 20. supervisor: install → start → health → SIGKILL → restart → stop → uninstall   11247ms  br.com.se7enpay.nomos.servico=83005;com.nomos.panel=83034;ai.sovereign.omniroute=12728;com.gijarvis.backend=51
+
+── detalhe das falhas ──────────────────────────────────────────────────
+
+10. Gi → NOMOS → Browser → Gi (A0 executa, A2 é barrada)
+  comando : python3 (processo próprio) usando backend/gi_nomos/browser.py do pocket-assistant
+  esperado: A0 EXECUTADO com conteúdo real; A2 BLOQUEADO_POR_APROVACAO; e o próprio navegador prova que a Gi não executou nada
+  FALHOU  : o cenário terminou sem exceção ⇒ TypeError: fetch failed
+  exceção : TypeError: fetch failed
+
+── evidência por cenário ───────────────────────────────────────────────
+1. abrir → localizar → clicar (verificado e entregue)
+   /tmp/nomos-e2e19-1lKGTJ/d1-Mjf9ym/sessoes/ses_82dd4b36bb5f407d/actions.jsonl:11 action=browser.click verified=true
+   DOM #saida-btn-alvo: "INTOCADO" → "CLICADO-ALVO-1"
+2. navegação: goto/back/forward/reload
+   ledger do fixture: /pagina-b pedido 3× (reload comprovado fora do runtime)
+3. formulário: preencher, validar de volta, cancelar
+   ledger do fixture: POST /enviar continua em 0 — cancelar não enviou
+4. SPA: conteúdo tardio com browser.wait
+   wait real=1303ms · controle negativo TIMEOUT em 1216ms
+5. abas: abrir, listar, trocar preservando estado, fechar
+   abas: 2 → 3 (new_tab) → 2 (close_tab); ativa após switch=pg_d09042048e4b4d9b
+6. download real para dentro da raiz permitida
+   arquivo no disco: /tmp/nomos-e2e19-1lKGTJ/download-permitido/nomos-e2e-19.txt (44 bytes) conteúdo=NOMOS-E2E-19-DOWNLOAD-CONTEUDO-CANONICO-7Q4Z
+7. upload com fixture + controle negativo fora da raiz
+   negado: UPLOAD_DENIED — path fora da raiz permitida (traversal): upload negado
+8. recuperação de erro: falha no meio, sessão segue utilizável
+   /tmp/nomos-e2e19-1lKGTJ/d1-Mjf9ym/sessoes/ses_ee51928b7499470a/actions.jsonl:7 result=error · :9 result=ok
+9. NOMOS → Browser → NOMOS (A0 executa, A2 é barrada)
+   $ /Users/AI/.local/bin/nomos approvals testar A0_READ_LOCAL "mcp:nomos-browser:browser_extract"
+   A0 · ler arquivos locais · alvo=mcp:nomos-browser:browser_extract
+   veredito: ALLOW — permitido pela política
+   
+   $ /Users/AI/.local/bin/nomos approvals testar A2_NET_EGRESS "mcp:nomos-browser:browser_click"
+   A2 · sair para a rede · alvo=mcp:nomos-browser:browser_click
+   veredito: REQUIRE_APPROVAL — ação sensível: exige aprovação explícita
+   na prática: pediria a SUA aprovação; sem aprovador presente, o gate NEGA (fail-closed).
+   
+   controle: /tmp/nomos-e2e19-1lKGTJ/d1-Mjf9ym/sessoes/ses_c197747268c647c4/actions.jsonl sem linha browser.click; #saida-btn-alvo=INTOCADO
+11. visão como fallback: alvo em <canvas>, sem DOM interativo
+   clique observado pela PÁGINA: (476,171) isTrusted=true
+   ERRO_PX=4.1 MARGEM_ATE_A_BORDA=49px alvo={"x":400,"y":120,"w":160,"h":100}
+   /tmp/nomos-e2e19-1lKGTJ/visao-yz9ETW/sessoes/ses_dca985445e3a4ed3/actions.jsonl:9 action=target.cascade strategy=vision
+12. task longa: 14 passos, COMPLETED, checkpoint a cada passo
+   /tmp/nomos-e2e19-1lKGTJ/task12-1JNt7F/sessoes/ses_8e57a20df5c04fed/tasks/tsk_fb5a896db2024ccf.json state=COMPLETED step_index=14
+   /tmp/nomos-e2e19-1lKGTJ/task12-1JNt7F/sessoes/ses_8e57a20df5c04fed/actions.jsonl: 15 linhas task.checkpoint (nºs 7,11,15…)
+   DOM #marca=PASSO-C12-FINAL
+13. task com crash do daemon no meio + resume sem repetir passo
+   /tmp/nomos-e2e19-1lKGTJ/task13-Z9EbD3/sessoes/ses_bbe89b953e574ea3/tasks/tsk_927e29481c8448e5.json antes do reinício: state=RUNNING step_index=6
+   após reinício: state=RECOVERING last_error=RUNTIME_CRASH
+   ledger: /tarefa-c13-01×1 /tarefa-c13-07×1 /passo-c13-final×1
+14. handoff entre dois donos com credenciais distintas
+   /tmp/nomos-e2e19-1lKGTJ/d2-LnDmev/sessoes/ses_14a8bf4a14a14d89/actions.jsonl:10 action=session.handoff detail={"from_owner":"DONO-A","to_owner":"DONO-B","attached_client":"e2e-final-19","lease_holder":"DONO-B"}
+   /tmp/nomos-e2e19-1lKGTJ/d2-LnDmev/sessoes/ses_14a8bf4a14a14d89/actions.jsonl:9 action=lease.transferred detail={"from_holder":"DONO-A","to_holder":"DONO-B","moved":true,"reason":"handoff com to_holder","lease_id":"lease_6f87659a830a49d4"}
+15. takeover humano congela ACT e OBSERVE; release devolve
+   /tmp/nomos-e2e19-1lKGTJ/d2-LnDmev/sessoes/ses_0c9fcff54bbc4aeb/actions.jsonl: 3 linhas policy.deny com CONTROL_HELD_BY_HUMAN (nºs 9,10,11)
+   DOM #saida-congelado durante o congelamento: INTOCADO → depois do release: CLICADO-CONGELADO
+16. negação de política auditada: sem capability ⇒ 403 + policy.deny
+   /tmp/nomos-e2e19-1lKGTJ/d2-LnDmev/sessoes/ses_31d5764db5c24215/actions.jsonl:6 action=policy.deny capability=download policy_reason=CAPABILITY_DENIED: capability "download" negada para browser.download (classe COMMIT)
+17. injeção: página hostil marcada, cru retido, instrução neutralizada
+   provenance ataque: detected=true severity=alta raw=false findings=12
+   provenance benigna: severity=null raw=true
+   /tmp/nomos-e2e19-1lKGTJ/d2-LnDmev/sessoes/ses_91aaaf5c7c2d4e05/actions.jsonl sem trecho literal do payload
+18. timeout de provider: porta morta, erro classificado, daemon vivo
+   porta MORTA     : code=INTERNAL gasto=25ms — raciocínio falhou: fetch failed {"task_id":"tsk_a09ec0a74c834395","run_id":"run_badb666657be408a","state":"FAILED","task
+   porta PENDURADA : code=TIMEOUT gasto=4034ms — raciocínio falhou: timeout após 4000 ms {"task_id":"tsk_eed9b1c096594d34","run_id":"run_ba9be611ff3e426c","state":"FAILE
+   /health=200 · DOM pós-falha=CLICADO-ALVO-1
+19. crash recovery do daemon: SIGKILL real → sobe de novo
+   disco antes do reinício: state=RUNNING (/tmp/nomos-e2e19-1lKGTJ/crash19-4ZcZPi/sessoes/ses_9c77c667817d45cf/tasks/tsk_4ba1fa04596a4692.json)
+   depois do reinício: RECOVERING last_error=RUNTIME_CRASH; RUNNING=0
+   /tmp/nomos-e2e19-1lKGTJ/crash19-4ZcZPi/sessoes/ses_9c77c667817d45cf/actions.jsonl: 1 linhas de recuperação
+20. supervisor: install → start → health → SIGKILL → restart → stop → uninstall
+   producao antes : br.com.se7enpay.nomos.servico=83005;com.nomos.panel=83034;ai.sovereign.omniroute=12728;com.gijarvis.backend=51446;
+   producao depois: br.com.se7enpay.nomos.servico=83005;com.nomos.panel=83034;ai.sovereign.omniroute=12728;com.gijarvis.backend=51446;
+   ESTADO_DO_SERVICO=DESINSTALADO
+
+ESTADO_DO_SERVICO=DESINSTALADO
+RELATORIO=/private/tmp/nomos-tag-v0.2.0-rc.1/evidence/nomos-browser-final-loop/19-e2e/out/e2e-final.json
+
+E2E_TOTAL=20
+E2E_PASS=19
+E2E_FAIL=1
+BROWSER_E2E_SUITE=FAIL

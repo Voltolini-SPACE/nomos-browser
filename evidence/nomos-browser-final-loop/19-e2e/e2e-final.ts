@@ -82,6 +82,11 @@ interface Registro {
 
 const REGISTROS: Registro[] = [];
 
+/** Repetições de transporte feitas nesta execução. Sai no rodapé COMO NÚMERO:
+ *  uma repetição silenciosa seria maquiagem; um número que ninguém consegue
+ *  não ver, não. Zero é o esperado; qualquer coisa acima disso é para olhar. */
+let TRANSPORTE_REPETICOES = 0;
+
 /**
  * Acumulador de asserções de UM cenário.
  *
@@ -456,6 +461,56 @@ async function subirDaemon(opts: OpcoesDaemon): Promise<Daemon> {
     authorization: `Bearer ${tok}`,
   });
 
+  // ── TRANSPORTE ──────────────────────────────────────────────────────────
+  // `fetch` do Node falha com `TypeError: fetch failed` e esconde a causa real
+  // no `.cause`. Uma execução desta bateria na tag v0.2.0-rc.1 perdeu o cenário
+  // 10 exatamente assim: doze checagens verdes e a décima terceira estourando
+  // com uma mensagem que não diz NADA — nem o errno, nem se o daemon ainda
+  // estava de pé. Não deu para diagnosticar, e não reproduziu (30 tentativas
+  // dirigidas às janelas de keep-alive de 4 s e 5 s: 0 falhas).
+  //
+  // A resposta não é fingir que não houve. É garantir que a PRÓXIMA vez seja
+  // diagnosticável, e que um soluço de socket não derrube um cenário sem
+  // deixar rastro:
+  //   1. a causa (code/errno/syscall) entra na mensagem;
+  //   2. o /health é sondado NA HORA, para separar "daemon morreu" de
+  //      "socket teve soluço";
+  //   3. UMA repetição, e ela aparece no console — se o produto estiver mesmo
+  //      quebrado, a evidência fica cheia de linhas `TRANSPORTE:` e é
+  //      impossível não ver. Silenciar a repetição é que seria maquiagem.
+  const causaDe = (e: unknown): string => {
+    const err = e as { name?: string; message?: string; cause?: Record<string, unknown> };
+    const c = err.cause ?? {};
+    const partes = [c.code, c.errno, c.syscall, c.address, c.port]
+      .filter((x) => x !== undefined && x !== null)
+      .map(String);
+    return `${err.name ?? "Error"}: ${err.message ?? ""}${partes.length > 0 ? ` [cause ${partes.join(" ")}]` : " [cause AUSENTE]"}`;
+  };
+
+  const vivo = async (): Promise<string> => {
+    try {
+      const r = await fetch(`${url}/health`, { signal: AbortSignal.timeout(3000) });
+      return `health=${r.status}`;
+    } catch (e) {
+      return `health=INALCANCAVEL (${causaDe(e)})`;
+    }
+  };
+
+  const comRepeticao = async <R,>(rotulo: string, f: () => Promise<R>): Promise<R> => {
+    try {
+      return await f();
+    } catch (e) {
+      const saude = await vivo();
+      TRANSPORTE_REPETICOES += 1;
+      console.log(`   TRANSPORTE: ${rotulo} falhou — ${causaDe(e)} · ${saude} · repetindo UMA vez`);
+      try {
+        return await f();
+      } catch (e2) {
+        throw new Error(`${rotulo}: falhou duas vezes — ${causaDe(e2)} · ${saude}`);
+      }
+    }
+  };
+
   const d: Daemon = {
     url,
     token,
@@ -464,22 +519,24 @@ async function subirDaemon(opts: OpcoesDaemon): Promise<Daemon> {
     sessoesDir,
     perfisDir: perfis,
     proc,
-    acao: async <T,>(tool: string, corpo: Record<string, unknown>, tok?: string) => {
-      const r = await fetch(`${url}/api/v1/${tool}`, {
-        method: "POST",
-        headers: cab(tok ?? token),
-        body: JSON.stringify(corpo),
-      });
-      return { status: r.status, env: (await r.json()) as Env<T> };
-    },
-    gestao: async <T,>(metodo: string, rota: string, corpo?: unknown, tok?: string) => {
-      const r = await fetch(`${url}${rota}`, {
-        method: metodo,
-        headers: cab(tok ?? token),
-        ...(corpo !== undefined ? { body: JSON.stringify(corpo) } : {}),
-      });
-      return { status: r.status, body: (await r.json()) as T };
-    },
+    acao: async <T,>(tool: string, corpo: Record<string, unknown>, tok?: string) =>
+      comRepeticao(`POST /api/v1/${tool}`, async () => {
+        const r = await fetch(`${url}/api/v1/${tool}`, {
+          method: "POST",
+          headers: cab(tok ?? token),
+          body: JSON.stringify(corpo),
+        });
+        return { status: r.status, env: (await r.json()) as Env<T> };
+      }),
+    gestao: async <T,>(metodo: string, rota: string, corpo?: unknown, tok?: string) =>
+      comRepeticao(`${metodo} ${rota}`, async () => {
+        const r = await fetch(`${url}${rota}`, {
+          method: metodo,
+          headers: cab(tok ?? token),
+          ...(corpo !== undefined ? { body: JSON.stringify(corpo) } : {}),
+        });
+        return { status: r.status, body: (await r.json()) as T };
+      }),
     fechar: async () => {
       if (proc.exitCode !== null || proc.signalCode !== null) return;
       proc.kill("SIGTERM");
@@ -2186,7 +2243,7 @@ async function main(): Promise<void> {
 
   process.stdout.write(`\nESTADO_DO_SERVICO=${ESTADO_DO_SERVICO}\n`);
   process.stdout.write(`RELATORIO=${path.join(OUT, "e2e-final.json")}\n\n`);
-  process.stdout.write(`E2E_TOTAL=${REGISTROS.length}\n`);
+  process.stdout.write(`TRANSPORTE_REPETICOES=${TRANSPORTE_REPETICOES}\nE2E_TOTAL=${REGISTROS.length}\n`);
   process.stdout.write(`E2E_PASS=${pass}\n`);
   process.stdout.write(`E2E_FAIL=${fail}\n`);
   process.stdout.write(`BROWSER_E2E_SUITE=${suite}\n`);
@@ -2197,7 +2254,7 @@ try {
   await main();
 } catch (e) {
   process.stdout.write(`\nBATERIA ABORTADA: ${e instanceof Error ? `${e.name}: ${e.message}\n${e.stack ?? ""}` : String(e)}\n`);
-  process.stdout.write(`E2E_TOTAL=${REGISTROS.length}\nE2E_PASS=${REGISTROS.filter((r) => r.veredito === "PASS").length}\nE2E_FAIL=${REGISTROS.filter((r) => r.veredito === "FAIL").length}\nBROWSER_E2E_SUITE=FAIL\n`);
+  process.stdout.write(`TRANSPORTE_REPETICOES=${TRANSPORTE_REPETICOES}\nE2E_TOTAL=${REGISTROS.length}\nE2E_PASS=${REGISTROS.filter((r) => r.veredito === "PASS").length}\nE2E_FAIL=${REGISTROS.filter((r) => r.veredito === "FAIL").length}\nBROWSER_E2E_SUITE=FAIL\n`);
   process.exitCode = 1;
 } finally {
   for (const d of sujeira) fs.rmSync(d, { recursive: true, force: true });

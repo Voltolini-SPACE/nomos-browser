@@ -1,0 +1,15 @@
+=== daemon de sonda (codigo ATUAL, sem correcao) ===
+--- pausa 2s (abaixo do default de 5s) ---
+PRIMEIRA=ok status=200
+SOCKETS_OCIOSOS_GUARDADOS=1
+PAUSA_MS=2000
+SEGUNDA=ok status=200
+RESULTADO=SOBREVIVEU
+rc=0
+--- pausa 6s (acima do default de 5s) ---
+PRIMEIRA=ok status=200
+SOCKETS_OCIOSOS_GUARDADOS=1
+PAUSA_MS=6000
+SEGUNDA=ok status=200
+RESULTADO=SOBREVIVEU
+rc=0

@@ -1,0 +1,45 @@
+TAG=v0.2.0-rc.1
+SHA_APONTADO=4f6a432680fa9840ceafd086cb6367c7b2398d98
+CLONE=/tmp/nomos-tag-v0.2.0-rc.1
+
+══ 1. git clone --branch v0.2.0-rc.1              OK
+
+══ 2. o HEAD do clone é o commit da tag          OK
+
+══ 3. o clone não tem NADA fora do versionado    OK
+VERSAO_NA_TAG=0.2.0-rc.1
+
+══ 4. npm ci --include=dev                        OK
+
+══ 5. playwright install chromium                 OK
+
+══ 6. typecheck                                   OK
+
+══ 7. versao coerente em todo o produto           OK
+
+══ 8. guarda de versao nao e cego                 OK
+
+══ 9. expansao de shell segura                    OK
+
+══ 10. guarda de shell nao e cego                 OK
+
+══ 11. risco por tool coerente                    OK
+
+══ 12. cobertura da matriz de CI                  OK
+
+══ 13. ci.sh all (regressao) → PASS
+══ 14. suite Node: TS_PASS=735 TS_FAIL=0 ARQUIVOS_OK=35 → PASS
+══ 15. SDK Python: 31 testes → PASS
+══ 16. E2E na tag: 19/20 cenarios, 212 checagens → FAIL
+══ 17. residuo: daemons=0 chromium=0 servidor_mcp=0
+
+══════════════════════ RODAPE ══════════════════════
+TAG=v0.2.0-rc.1
+SHA=4f6a432680fa9840ceafd086cb6367c7b2398d98
+VERSAO_NA_TAG=0.2.0-rc.1
+PASSOS_FALHOS=1
+REGRESSION_ON_TAG=PASS
+SUITE_ON_TAG=PASS (TS_PASS=735)
+PYTHON_ON_TAG=PASS (31)
+E2E_ON_TAG=FAIL (19/20, 212 checagens)
+TAG_REVALIDATED=NO
