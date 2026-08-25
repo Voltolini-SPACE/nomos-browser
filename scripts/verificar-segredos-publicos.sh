@@ -35,14 +35,24 @@ echo "── 2. token de controle do runtime nunca versionado"
 if git ls-files | /usr/bin/grep -q "control-token"; then echo "  FALHA: control-token versionado"; ACHOU=1
 else echo "  ok: control-token nao esta no git"; fi
 
+# O padrao e MONTADO, nao escrito inteiro: escrito inteiro, este arquivo casaria
+# a si mesmo. Foi o que aconteceu — a varredura so passou a se enxergar depois
+# que o script virou arquivo versionado, e ate entao reportava zero.
+#
+# Duas defesas, porque uma so seria fragil: o padrao montado, e a exclusao
+# explicita deste arquivo da lista de candidatos. Um verificador que se acusa
+# gasta a atencao de quem le num falso positivo permanente.
+PADRAO_PESSOAL="/Users""/AI"
 echo "── 3. caminhos pessoais em arquivos de PRODUTO (nao evidencia)"
 PESSOAL=$(git ls-files -- 'packages/*' 'scripts/*' 'docs/*' 'tests/*' 'demos/*' '*.md' \
-  | /usr/bin/xargs /usr/bin/grep -lI "/Users/AI" 2>/dev/null | /usr/bin/grep -v "^evidence/" | head -10)
+  | /usr/bin/xargs /usr/bin/grep -lI "$PADRAO_PESSOAL" 2>/dev/null \
+  | /usr/bin/grep -v "^evidence/" \
+  | /usr/bin/grep -v "^scripts/verificar-segredos-publicos.sh$" | head -10)
 PESSOAIS=0
 if [ -n "$PESSOAL" ]; then
   echo "  caminhos absolutos em:"; echo "$PESSOAL" | sed 's/^/      /'
   PESSOAIS=$(printf '%s\n' "$PESSOAL" | /usr/bin/wc -l | tr -d ' ')
-else echo "  ok: nenhum /Users/AI em arquivo de produto"; fi
+else echo "  ok: nenhum caminho pessoal em arquivo de produto"; fi
 
 echo "── 4. dados de sessao/perfil de navegador versionados"
 S=$(git ls-files | /usr/bin/grep -E "^(sessions|profiles|downloads)/" | head -5)
