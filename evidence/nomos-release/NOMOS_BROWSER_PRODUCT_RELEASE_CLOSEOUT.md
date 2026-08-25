@@ -13,7 +13,7 @@ o motivo. Onde houve erro meu, o erro está aqui.
 | | |
 |---|---|
 | HEAD inicial | `6964cf0` — *FASE 31: NOMOS_LIVE_AGENT_FINAL_VALIDATION* |
-| HEAD final | `776d60f` e seguintes (ver §3) |
+| HEAD final | `076e446` · tag **`v0.3.0-rc.1`** |
 | Branch | `main` |
 | Remoto | **nenhum** (ver §10) |
 | Árvore | limpa |
@@ -42,6 +42,8 @@ declarantes)`, e `nomos-web --version` responde `0.3.0-rc.1`.
 | `1d607cd` | versão, README de produto, 10 docs novos, demos, manifesto, matriz de verdade, roadmap, marketing |
 | `a37a0c8` | security closeout: `PUBLIC_REPO_SECRET_LEAK=0`, caminhos pessoais fora do produto |
 | `776d60f` | screenshots reais, e o que falta declarado |
+| `ec7c871` | relatório de fechamento, marketing completo |
+| `076e446` | correção do verificador que se auto-acusava (ver §17) |
 | *(site)* `1a3ee3f` | página `/browser/`, `check.py` em todas as páginas, três correções, auditoria |
 
 ## 4. Testes
@@ -236,3 +238,80 @@ em `evidence/nomos-live-agent/11-regressao/INCIDENTE-processo-de-terceiro.md`,
 mantido por decisão explícita.
 
 `NO_KILL_WITHOUT_OWNERSHIP_PROOF=TRUE` foi respeitado em toda esta fase.
+
+
+## 17. Artefato de release
+
+```
+tag                        v0.3.0-rc.1  →  076e446
+RELEASE_ARTIFACT_REPRODUCIBLE=YES
+```
+
+Validado a partir de **clone da tag**, não da árvore de trabalho:
+
+| checagem | resultado |
+|---|---|
+| `git clone --branch v0.3.0-rc.1` | HEAD confere |
+| `npm ci --include=dev` | ok |
+| `tsc --noEmit` | sem erro |
+| `verificar-versao-coerente` | `0.3.0-rc.1` em 13 declarantes |
+| `verificar-links-docs` | `DOCS_LINKS_OK=YES` |
+| `verificar-segredos-publicos` | `PUBLIC_REPO_SECRET_LEAK=0` |
+| `nomos-web --version` | `0.3.0-rc.1` |
+
+### A tag foi recriada uma vez, e está dito
+
+O primeiro clone da tag encontrou algo que a árvore de trabalho não mostrava: o
+**verificador de segredos se acusava**. Ele procurava a string literal do
+caminho pessoal, e a string literal estava dentro dele. Enquanto era arquivo
+novo e não rastreado, não aparecia em `git ls-files` e a varredura reportava
+zero. No clone, onde já era arquivo versionado, passou a se enxergar.
+
+Vale registrar o formato do erro: **o instrumento estava certo sobre o mundo e
+errado sobre si mesmo**, e só a clonagem limpa mostrou a diferença. É o mesmo
+motivo pelo qual a sala limpa existe.
+
+A tag foi apagada e recriada sobre a correção. Isso é legítimo aqui e **não**
+viola a regra "nunca mover silenciosamente uma tag publicada" por duas razões:
+o repositório não tem remoto, então a tag nunca saiu desta máquina; e a
+recriação está escrita na própria mensagem da tag e neste relatório, o que é o
+oposto de silenciosamente.
+
+## 18. Estado final
+
+```
+MISSION_C_TECHNICAL=PASS
+PRODUCT_DEFINITION=PASS
+BRANDING=PASS
+PRODUCT_COPY=PASS
+README=PASS
+DOCS=PASS
+DEMOS=PASS
+VERSIONING=PASS
+CHANGELOG=PASS
+PUBLIC_REPO_SECRET_LEAK=0
+PRODUCT_SITE=PASS
+VOLTOLINI_SPACE_AUDIT=PASS
+MARKETING_PACKAGE=PASS
+PRODUCT_TRUTH_MATRIX=PASS
+RELEASE_CANDIDATE=PASS
+RELEASE_CLEAN_ROOM=PASS
+KNOWN_LIMITATIONS_DOCUMENTED=YES
+P99_FALSE_CLAIM=NO
+TREE_CLEAN=YES
+
+NOMOS_BROWSER_TECHNICAL_PRODUCT=COMPLETE
+NOMOS_BROWSER_MARKETING=COMPLETE
+NOMOS_BROWSER_SITE=BUILT_NOT_PUBLISHED
+NOMOS_BROWSER_GITHUB=PREPARED_NO_REMOTE
+NOMOS_BROWSER_RELEASE=TAGGED_NOT_PUBLISHED
+```
+
+**`READY_FOR_PUBLIC_LAUNCH` não pode ser afirmado**, e o motivo não é técnico.
+Três atos do dono continuam abertos (§15): titular dos direitos autorais,
+licença, e criação de remoto/publicação.
+
+Declarar `READY_FOR_PUBLIC_LAUNCH=YES` com o titular legal indefinido seria
+exatamente o tipo de afirmação que o resto deste trabalho existe para não fazer.
+O produto está **pronto para ser lançado**; o lançamento depende de decisões que
+não são minhas.
