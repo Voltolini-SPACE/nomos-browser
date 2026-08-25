@@ -1,0 +1,94 @@
+
+[1m── fast — unidade pura + guardas estáticos ─────────────────────────────[0m
+test:bench                                    OK
+test:lease                                    OK
+test:observability                            OK
+test:replay-hardening                         OK
+test:skills                                   OK
+test:traceability                             OK
+test:ui-build                                 OK
+test:config-schema                            OK
+ci:cobertura-da-matriz                        OK
+python:sdk                                    OK
+typecheck                                     OK
+build:ui                                      OK
+marca:selo-declarado                          OK
+marca:sem-hex-no-fonte                        OK
+marca:dist-nao-versionado                     OK
+desacoplamento:mcp-sem-playwright             OK
+deps:versoes-pinadas                          OK
+pacotes:manifestos-completos                  OK
+versao:coerente-em-todo-o-produto             OK
+versao:guarda-de-coerencia-nao-e-cego         OK
+config:tabela-gerada-esta-atual               OK
+supervisor:label-propria                      OK
+mcp:lancador-do-manifesto-fala-mcp            OK
+
+[1m── core — DOM, input, percepção, alvo, sessão (Chromium real) ─────────────────────────────[0m
+test:session                                  OK
+test:perception                               OK
+test:pointer-keyboard                         OK
+test:target-verifier                          OK
+
+[1m── security — testes de segurança + defaults fechados ─────────────────────────────[0m
+test:auth                                     OK
+test:policy-vault                             OK
+test:ownership                                OK
+test:injection-wired                          OK
+test:security-files-secrets                   OK
+test:security-net-injection                   OK
+segredo:nada-no-versionado                    OK
+mcp:manifesto-classifica-todas-as-tools       OK
+mcp:risco-por-tool-coerente                   OK
+shell:expansao-nao-colada-em-nao-ascii        OK
+shell:guarda-de-expansao-nao-e-cego           OK
+rede:bind-loopback-por-default                OK
+lease:fechado-por-default                     OK
+watchdog:ligado-por-default                   OK
+auth:ligada-por-default                       OK
+config:redacao-dos-sensiveis                  OK
+seguranca:t7-fechado                          OK
+
+[1m── providers — modelos ligados ao runtime (FASE 5) + contratos de provider ─────────────────────────────[0m
+memoria:disponivel-antes                      3.23 GB (livre 42%)
+test:aiprovider                               OK
+  memoria:apos-aiprovider                     7.82 GB
+test:vision                                   OK
+  memoria:apos-vision                         6.39 GB
+test:providers-runtime                        OK
+  memoria:apos-providers-runtime              6.39 GB
+test:cascata-percepcao                        OK
+  memoria:apos-cascata-percepcao              4.78 GB
+memoria:nenhum-modelo-residente               OK
+memoria:disponivel-depois                     4.67 GB (livre 67%)
+producao:sobreviveu-intacta                   OK
+
+[1m── integration — daemon e Chromium reais ─────────────────────────────[0m
+test:api                                      OK
+test:mcp                                      OK
+test:sdk-ts                                   OK
+test:cli                                      OK
+test:task-engine                              OK
+test:click-entrega                            OK
+test:audit-forense                            OK
+test:backpressure-audit                       OK
+
+[1m── adversarial — ataques, falhas provocadas, recovery e watchdog ─────────────────────────────[0m
+test:security-net-injection                   OK
+test:security-files-secrets                   OK
+test:injection-wired                          OK
+test:watchdog-wired                           OK
+test:recovery-watchdog                        OK
+seguranca:bateria-completa                    OK
+seguranca:guardas-vivos                       OK
+
+[1m── e2e — gates ponta a ponta ─────────────────────────────[0m
+test:e2e-gate                                 OK
+test:product02-gate                           OK
+
+[1m── recovery — vigia e supervisor ─────────────────────────────[0m
+test:recovery-watchdog                        OK
+test:supervisor                               OK
+
+[1m── resultado ─────────────────────────────[0m
+CI_PASS=YES

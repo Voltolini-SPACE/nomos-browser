@@ -235,8 +235,17 @@ echo "  │  Qualquer outra coisa nega — e isso já foi provado acima.       �
 echo "  └────────────────────────────────────────────────────────────────┘"
 echo
 
-"$NOMOS_BIN" mcp chamar "$MANIFESTO" browser_tab_switch --args "$ARGS" 2>&1 | tee /tmp/gate-a1-aprovo.log | sed 's/^/    /'
-R3="$(cat /tmp/gate-a1-aprovo.log)"
+# ATENÇÃO — `| tee` AQUI QUEBRA O GATE, e quebrou de verdade na primeira
+# tentativa do dono. Um pipe faz o stdout do `nomos` deixar de ser TTY, e o
+# `interactive_approver` recusa ANTES de perguntar:
+#     [NOMOS-E002] NEGADO (fail-closed): aprovação exige terminal interativo.
+# O dono chegou até aqui e foi o instrumento que fechou a porta na cara dele.
+# `script -q` resolve porque aloca um pty de verdade: o prompt aparece, a
+# digitação chega, E a transcrição é gravada. Este ramo só roda com TTY (a
+# checagem está logo acima), então `script` sempre tem terminal para herdar.
+/usr/bin/script -q /tmp/gate-a1-aprovo.log \
+  "$NOMOS_BIN" mcp chamar "$MANIFESTO" browser_tab_switch --args "$ARGS"
+R3="$(cat /tmp/gate-a1-aprovo.log 2>/dev/null)"
 
 ATIVA_3="$(ativa_agora)"
 echo
@@ -376,8 +385,10 @@ if [ "$G_APROVO_REAL" = "PASS" ] && [ "$ATIVA_3" != "$ATIVA_INICIAL" ]; then
   echo "  Uma segunda aprovação, para devolver o foco a $ATIVA_INICIAL."
   echo "  Digite APROVO de novo (ou qualquer outra coisa para deixar como está)."
   echo
-  "$NOMOS_BIN" mcp chamar "$MANIFESTO" browser_tab_switch \
-    --args "{\"page_id\":\"$ATIVA_INICIAL\"}" 2>&1 | sed 's/^/    /'
+  # Mesmo motivo do passo 3: nada de pipe entre o NOMOS e o terminal.
+  /usr/bin/script -q /tmp/gate-a1-reverter.log \
+    "$NOMOS_BIN" mcp chamar "$MANIFESTO" browser_tab_switch \
+    --args "{\"page_id\":\"$ATIVA_INICIAL\"}"
   ATIVA_FIM="$(ativa_agora)"
   echo "    ativa no fim: $ATIVA_FIM  (início: $ATIVA_INICIAL)"
   [ "$ATIVA_FIM" = "$ATIVA_INICIAL" ] && nota "revertido" || nota "não revertido — a troca segue válida, só não voltou"
