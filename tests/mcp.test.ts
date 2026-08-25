@@ -27,6 +27,7 @@ import { fileURLToPath } from "node:url";
 import { spawn } from "node:child_process";
 import {
   RuntimeClient,
+  SERVER_VERSION,
   SUPPORTED_PROTOCOL_VERSIONS,
   createMcpServer,
   type JsonRpcResponse,
@@ -563,7 +564,10 @@ test("4b. o pacote MCP importa apenas o contrato e a stdlib do Node", () => {
 test("4c. package.json declara o binário e não tem dependências", () => {
   const pkg = JSON.parse(readFileSync(PKG_JSON, "utf8"));
   assert.equal(pkg.name, "@nomos/browser-mcp");
-  assert.equal(pkg.version, "0.1.0");
+  // Literal aqui era armadilha: cada bump exigia editar o teste, e um bump
+  // esquecido em `SERVER_VERSION` passava despercebido. Agora o teste exige
+  // COERÊNCIA — que é o que importa — e nunca mais precisa ser editado.
+  assert.equal(pkg.version, SERVER_VERSION);
   assert.equal(pkg.type, "module");
   assert.equal(pkg.bin["nomos-browser-mcp"], "./src/server.ts");
   assert.equal(pkg.dependencies, undefined, "pacote MCP não pode ter dependências");

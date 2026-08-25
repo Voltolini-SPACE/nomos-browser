@@ -202,6 +202,13 @@ if roda fast; then
   # sem licença e sem `exports`, e só se descobre no dia do empacotamento.
   checar "pacotes:manifestos-completos" node scripts/verificar-manifestos.ts
 
+  # FASE 100 — a versao do produto era escrita a mao em TREZE lugares e nada
+  # obrigava os treze a concordarem. Pior: as asserções eram contra o LITERAL
+  # "0.1.0", entao o teste que deveria pegar a deriva era justamente o que
+  # precisava ser editado a cada bump. Agora a raiz e a fonte e o resto bate.
+  checar "versao:coerente-em-todo-o-produto" node scripts/verificar-versao-coerente.ts
+  checar "versao:guarda-de-coerencia-nao-e-cego" node scripts/verificar-versao-coerente.ts --autoteste
+
   # FASE 17 — a tabela publicada tem de ser a tabela ATUAL. Um `.md` gerado que
   # ninguém regenera é a mesma lista escrita à mão que esta fase existe para
   # matar, só que com carimbo de "gerado".

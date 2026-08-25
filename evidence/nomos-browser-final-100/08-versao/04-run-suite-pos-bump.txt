@@ -1,0 +1,41 @@
+aiprovider                   OK      pass=41   fail=0   28s
+api                          OK      pass=36   fail=0   4s
+audit-forense                OK      pass=12   fail=0   1s
+auth                         OK      pass=21   fail=0   0s
+backpressure-audit           OK      pass=13   fail=0   6s
+bench                        OK      pass=37   fail=0   1s
+cascata-percepcao            OK      pass=18   fail=0   4s
+cli                          OK      pass=35   fail=0   5s
+click-entrega                OK      pass=21   fail=0   9s
+config-schema                OK      pass=16   fail=0   0s
+e2e-gate                     OK      pass=12   fail=0   2s
+injection-wired              OK      pass=16   fail=0   1s
+lease                        OK      pass=37   fail=0   0s
+mcp                          OK      pass=36   fail=0   3s
+observability                OK      pass=22   fail=0   1s
+ownership                    OK      pass=11   fail=0   3s
+perception                   OK      pass=8    fail=0   1s
+pointer-keyboard             OK      pass=26   fail=0   2s
+policy-vault                 OK      pass=14   fail=0   2s
+product02-gate               OK      pass=3    fail=0   55s
+providers-runtime            OK      pass=14   fail=0   9s
+recovery-watchdog            OK      pass=24   fail=0   8s
+replay-hardening             OK      pass=44   fail=0   1s
+sdk-ts                       OK      pass=8    fail=0   1s
+security-files-secrets       OK      pass=38   fail=0   0s
+security-net-injection       OK      pass=22   fail=0   2s
+session                      OK      pass=12   fail=0   1s
+skills                       OK      pass=10   fail=0   0s
+supervisor                   OK      pass=10   fail=0   2s
+target-verifier              OK      pass=28   fail=0   2s
+task-engine                  OK      pass=19   fail=0   14s
+traceability                 OK      pass=7    fail=0   0s
+ui-build                     OK      pass=6    fail=0   2s
+vision                       OK      pass=50   fail=0   15s
+watchdog-wired               OK      pass=8    fail=0   10s
+
+TS_PASS=735
+TS_FAIL=0
+ARQUIVOS_OK=35
+ARQUIVOS_RUINS=0
+RESUMO=/Users/AI/Projects/nomos-browser/.suite/resumo.tsv

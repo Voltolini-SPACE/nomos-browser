@@ -87,7 +87,7 @@ const HEALTH: HealthResponse = {
   // acompanha o contrato; deixa-lo opcional so para nao mexer aqui faria a rota
   // poder parar de publicar a profundidade sem nada reprovar.
   queues: { running: 0, waiting: 0, sessions_with_queue: 1, max_concurrency: 4, max_queue: 64 },
-  version: "0.1.0",
+  version: "0.2.0-rc.1",
   contract: "1",
   uptime_s: 42,
 };

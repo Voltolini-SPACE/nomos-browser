@@ -199,8 +199,9 @@ Divergência aberta e não reconciliada: o corpo do `BRANDBOOK_NOMOS.md` afirma
 
 `LICENSE` declara "todos os direitos reservados" — que é o estado legal padrão na
 ausência de escolha, não uma decisão nova. Escolher MIT/Apache-2.0/AGPL é ato do
-dono. Não há nenhuma tag no repositório e `package.json` é `"private": true`:
-**nada foi lançado**. Ver `LICENSE`, `CHANGELOG.md` e `docs/RELEASE.md`.
+dono. `package.json` continua `"private": true`: a tag `v0.2.0-rc.1` marca uma
+versão do CÓDIGO, não uma publicação em registro nenhum. Ver `LICENSE`,
+`CHANGELOG.md` e `docs/RELEASE.md`.
 
 ---
 
@@ -218,6 +219,26 @@ real — **toda correção que mexe na classificação exige reassinatura do don
 até lá a integração fica parada. Planeje mudanças de manifesto em lote.
 
 `descricao` e `env` ficam fora do hash e podem mudar livremente.
+
+**A impressão ANTIGA não sai sozinha.** O catálogo é um mapa
+`impressão → {nome, comando}`, e `confiar` só ACRESCENTA. Depois da correção da
+elevação de privilégio, o catálogo do dono passou a listar `nomos-browser`
+**duas vezes**: `317f1589…` (o manifesto de 16 ferramentas, corrigido) e
+`d267002f…` (o de 13, com `browser_tabs` `A0` despachando `browser.new_tab`).
+Quem apresentar o arquivo antigo — que continua no histórico do git — obtém
+confiança para o manifesto vulnerável. Recomputado versão a versão em
+`evidence/nomos-browser-final-100/01-mcp-trust/05-origem-hash-antigo.txt`.
+
+Quem tira é o dono, e só ele:
+
+```sh
+git show 78491cc:packaging/mcp/manifesto.json > /tmp/manifesto-antigo.json
+nomos mcp revogar /tmp/manifesto-antigo.json
+```
+
+Revogar é bloqueio **duro**: o próprio NOMOS avisa que não confia de novo "nem
+que reapareça idêntico", e desfazer exige editar a lista de revogações à mão.
+Por isso não foi feito aqui.
 
 ## O que roda sem o dono, e o que não roda
 

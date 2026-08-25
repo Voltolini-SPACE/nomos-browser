@@ -30,6 +30,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from nomos_browser import (  # noqa: E402
     ACTION_ERROR_CODES,
+    SDK_VERSION,
     NomosBrowser,
     NomosBrowserError,
     NomosHttpError,
@@ -252,7 +253,7 @@ class TestWireFormat(RuntimeTestCase):
         create = self.runtime.requests[0]
         self.assertEqual(create["body"], {"owner": "nomos-sdk-python"})
         self.assertEqual(create["content_type"], "application/json")
-        self.assertIn("nomos-browser-sdk-python/0.1.0", create["user_agent"])
+        self.assertIn(f"nomos-browser-sdk-python/{SDK_VERSION}", create["user_agent"])
         self.assertIn("contract/1", create["user_agent"])
 
         # Regra invariante nº1 de docs/API.md: toda rota de ação leva session_id.
@@ -563,7 +564,7 @@ class TestManagementAndWait(RuntimeTestCase):
         health = {
             "runtime": "ok", "browser": "ok", "workers": {"active": 0, "max": 4},
             "sessions": {"total": 1, "active": 1, "idle": 0, "paused": 0},
-            "version": "0.1.0", "contract": "1", "uptime_s": 12,
+            "version": "0.2.0-rc.1", "contract": "1", "uptime_s": 12,
         }
         self.runtime.on("GET", "/health", health)
         self.runtime.on("GET", "/api/v1/sessions", [session_info()])

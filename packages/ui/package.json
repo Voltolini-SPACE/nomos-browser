@@ -1,6 +1,6 @@
 {
   "name": "@nomos/browser-ui",
-  "version": "0.1.0",
+  "version": "0.2.0-rc.1",
   "private": true,
   "type": "module",
   "license": "SEE LICENSE IN LICENSE",
@@ -12,7 +12,7 @@
     "url": "git+file:../..",
     "directory": "packages/ui"
   },
-  "description": "NOMOS Web \u2014 pagina de operacao. `build.ts` injeta os tokens do brandbook; `dist/` e artefato e nao e versionado.",
+  "description": "NOMOS Web — pagina de operacao. `build.ts` injeta os tokens do brandbook; `dist/` e artefato e nao e versionado.",
   "main": "./serve.ts",
   "exports": {
     ".": "./serve.ts",

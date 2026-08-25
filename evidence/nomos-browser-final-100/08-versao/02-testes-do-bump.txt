@@ -1,0 +1,18 @@
+=== testes tocados pelo bump ===
+ℹ pass 36
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2365.350625
+---
+ℹ pass 35
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4687.393792
+----------------------------------------------------------------------
+Ran 31 tests in 0.629s
+
+OK

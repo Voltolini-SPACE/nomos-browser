@@ -1,0 +1,42 @@
+=== TODAS as ocorrencias de 0.1.0 (rastreadas pelo git, sem node_modules) ===
+CHANGELOG.md:7:(`git tag -l` devolve vazio) e `package.json` declara `0.1.0` desde o início.
+NOMOS_BROWSER_FINAL_RELEASE_REPORT.md:9:VERSAO=0.1.0           (bump para 0.2.0-rc.1 preparado, NAO aplicado)
+NOMOS_BROWSER_FINAL_RELEASE_REPORT.md:177:4. **Eu:** bump `0.1.0 -> 0.2.0-rc.1`, commit de release, tag anotada
+docs/RELEASE.md:4:não tem tag alguma e `package.json` diz `0.1.0` desde o começo. Este documento
+docs/TROUBLESHOOTING.md:23:npm error Missing: @nomos/browser@0.1.0 from lock file
+docs/_gerado/CONFIGURATION.generated.md:50:| `version` | string | `0.1.0` | — | — | não | Versão anunciada em /health. Lida do package.json da raiz; sem variável de ambiente de propósito — versão não se configura, se publica. |
+package-lock.json:3:  "version": "0.1.0",
+package-lock.json:9:      "version": "0.1.0",
+package-lock.json:527:      "version": "0.1.0",
+package-lock.json:539:      "version": "0.1.0",
+package-lock.json:553:      "version": "0.1.0",
+package-lock.json:564:      "version": "0.1.0",
+package-lock.json:575:      "version": "0.1.0",
+package-lock.json:583:      "version": "0.1.0",
+package-lock.json:594:      "version": "0.1.0",
+package-lock.json:602:      "version": "0.1.0",
+package.json:3:  "version": "0.1.0",
+packages/api/package.json:3:  "version": "0.1.0",
+packages/api/src/config.ts:1004:  version: { tipo: "string", exemplo: "0.1.0", sensivel: false, resumo: "Versão anunciada em /health. Lida do package.json da raiz; sem variável de ambiente de propósito — versão não se configura, se publica." },
+packages/cli/package.json:3:  "version": "0.1.0",
+packages/cli/src/main.ts:47:export const CLI_VERSION = "0.1.0";
+packages/core/package.json:3:  "version": "0.1.0",
+packages/mcp/package.json:3:  "version": "0.1.0",
+packages/mcp/src/server.ts:34:export const SERVER_VERSION = "0.1.0" as const;
+packages/observability/package.json:3:  "version": "0.1.0",
+packages/sdk/package.json:3:  "version": "0.1.0",
+packages/skills/package.json:3:  "version": "0.1.0",
+packages/ui/package.json:3:  "version": "0.1.0",
+sdk-python/nomos_browser/client.py:68:SDK_VERSION = "0.1.0"
+sdk-python/pyproject.toml:7:version = "0.1.0"
+sdk-python/tests/test_client.py:255:        self.assertIn("nomos-browser-sdk-python/0.1.0", create["user_agent"])
+sdk-python/tests/test_client.py:566:            "version": "0.1.0", "contract": "1", "uptime_s": 12,
+tests/cli.test.ts:90:  version: "0.1.0",
+tests/mcp.test.ts:566:  assert.equal(pkg.version, "0.1.0");
+
+=== em evidence/ (historico — nao se altera) ===
+evidence/nomos-browser-final-closeout/01-mcp/daemon.log:1
+evidence/nomos-browser-final-loop/RELATORIO_FINAL_LOOP.md:2
+evidence/nomos-browser-final-validation/00-baseline/baseline.txt:1
+evidence/nomos-browser-final-validation/16-regression/backup/package-lock.json.orig:2
+evidence/nomos-browser-final-validation/FINAL_REPORT.md:6

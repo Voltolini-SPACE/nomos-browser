@@ -1,6 +1,6 @@
 {
   "name": "@nomos/browser-core",
-  "version": "0.1.0",
+  "version": "0.2.0-rc.1",
   "private": true,
   "type": "module",
   "license": "SEE LICENSE IN LICENSE",
@@ -12,7 +12,7 @@
     "url": "git+file:../..",
     "directory": "packages/core"
   },
-  "description": "Nucleo do NOMOS Browser Runtime \u2014 contrato, sessao, percepcao, alvo, politica, cofre e motor de task.",
+  "description": "Nucleo do NOMOS Browser Runtime — contrato, sessao, percepcao, alvo, politica, cofre e motor de task.",
   "main": "./src/contract.ts",
   "exports": {
     ".": "./src/contract.ts",

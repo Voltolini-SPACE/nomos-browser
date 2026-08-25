@@ -1001,7 +1001,7 @@ const POLITICAS = Object.freeze(Object.keys(NAMED_POLICIES));
 export const CONFIG_SCHEMA: Readonly<Record<string, ConfigKeySpec>> = Object.freeze({
   host: { tipo: "string", exemplo: "127.0.0.1", sensivel: false, resumo: "Endereço de bind do daemon. Loopback por default; sair dele é ato explícito." },
   port: { tipo: "inteiro", min: 0, max: 65535, exemplo: "7777", sensivel: false, resumo: "Porta HTTP. 0 = efêmera escolhida pelo SO." },
-  version: { tipo: "string", exemplo: "0.1.0", sensivel: false, resumo: "Versão anunciada em /health. Lida do package.json da raiz; sem variável de ambiente de propósito — versão não se configura, se publica." },
+  version: { tipo: "string", exemplo: "0.2.0-rc.1", sensivel: false, resumo: "Versão anunciada em /health. Lida do package.json da raiz; sem variável de ambiente de propósito — versão não se configura, se publica." },
   headless: { tipo: "boolean", exemplo: "true", sensivel: false, resumo: "Chromium sem janela. Default false: takeover humano precisa de janela visível." },
   "viewport.width": { tipo: "inteiro", min: 1, max: 20000, exemplo: "1440", sensivel: false, resumo: "Largura CSS do viewport." },
   "viewport.height": { tipo: "inteiro", min: 1, max: 20000, exemplo: "900", sensivel: false, resumo: "Altura CSS do viewport." },

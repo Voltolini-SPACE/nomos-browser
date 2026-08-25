@@ -1,0 +1,63 @@
+HEAD=60415e9e3bbd156a674090be74244e0608fd757e
+CLEAN_ROOM=/tmp/nomos-cr-closeout-60415e9
+ZERO_MANUAL_PATCHES=YES (só git clone)
+
+══ 1. git clone do HEAD                           OK
+
+══ 2. npm ci --include=dev                        OK
+
+══ 3. playwright install chromium                 OK
+
+══ 4. typecheck                                   OK
+
+══ 5. cobertura da matriz de CI                   OK
+
+══ 6. guarda de risco do MCP                      OK
+
+══ 7. spike de controle real                      OK
+
+══ 8.fast ci.sh fast                              OK
+
+══ 8.core ci.sh core                              OK
+
+══ 8.security ci.sh security                      OK
+
+══ 8.integration ci.sh integration                OK
+
+══ 8.adversarial ci.sh adversarial                OK
+
+══ 8.recovery ci.sh recovery                      OK
+
+══ 8.e2e ci.sh e2e                                OK
+
+══ 8.providers ci.sh providers                    OK
+
+══ 9. service.sh install                          OK
+
+══ 10. service.sh start                           OK
+
+══ 11. service.sh health                          OK
+
+══ 12. instância única                          OK
+
+── integração MCP (o registro é ato do dono) ──
+  impressão do manifesto DESTE clone: 317f15893e9ebd83afa17d11f66dd896c83342858ad723e0f4ed7afd32e27207
+
+══ 13. manifesto do clone é válido              OK
+
+══ 14. lançador do clone fala MCP                OK
+  ✓ este manifesto JÁ está registrado no catálogo do dono
+
+══ 15. nomos mcp conectar (registrado)            OK
+  MCP_CLEAN_ROOM=PASS
+
+══ 16. service.sh stop                            OK
+
+══ 17. service.sh uninstall                       OK
+
+══ 18. plist removido                             OK
+
+PASSOS_FALHOS=0
+CLEAN_ROOM_FINAL=PASS
+INSTALLATION_REPRODUCIBLE=YES
+MANIFESTO_IMPRESSAO=317f15893e9ebd83afa17d11f66dd896c83342858ad723e0f4ed7afd32e27207

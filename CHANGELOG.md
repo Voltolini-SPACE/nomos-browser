@@ -3,14 +3,21 @@
 Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento pretendido: [SemVer](https://semver.org/lang/pt-BR/).
 
-**Nada foi lançado ainda.** O repositório não tem nenhuma tag
-(`git tag -l` devolve vazio) e `package.json` declara `0.1.0` desde o início.
-Portanto tudo abaixo está em `[Não lançado]`. Anunciar uma versão que nunca foi
-marcada seria o tipo de mentira que o resto desta documentação existe para
-evitar. O procedimento para produzir a primeira versão real está em
+**Primeira versão marcada: `0.2.0-rc.1`.** Até ela o repositório não tinha tag
+alguma e `package.json` declarava `0.1.0` desde o início — e este arquivo dizia
+isso, porque anunciar uma versão que nunca foi marcada seria o tipo de mentira
+que o resto desta documentação existe para evitar. A tag anotada
+`v0.2.0-rc.1` aponta para o commit de release, e a revalidação foi feita a
+partir do CONTEÚDO DA TAG, não da árvore de trabalho. O procedimento está em
 [docs/RELEASE.md](docs/RELEASE.md).
 
-Desvio deliberado do formato: dentro de `[Não lançado]` as mudanças estão
+`rc.1` e não `0.2.0`: o produto fecha todos os portões que ele mesmo declara,
+mas há um limite medido e registrado — pelo caminho canônico `nomos mcp chamar`
+só ferramentas `A0` executam sem o dono num terminal, porque o CLI do NOMOS não
+oferece `--panel` nesse subcomando. Isso está em
+[docs/LIMITATIONS.md](docs/LIMITATIONS.md).
+
+Desvio deliberado do formato: dentro de cada versão as mudanças estão
 agrupadas **por commit**, e não só por categoria. As mensagens de commit deste
 projeto descrevem defeito, causa raiz e correção; agrupar tudo por categoria
 dissolveria essa cadeia. Cada bloco traz o sha, e dentro dele as categorias do
@@ -21,7 +28,42 @@ Legenda usada nos itens:
 
 ---
 
-## [Não lançado]
+## [0.2.0-rc.1] — 2026-08-25
+
+### `6a32a4c` · `601a6db` · `60415e9` — Loop 100: o registro do manifesto acendeu dois defeitos de caminho feliz (2026-08-25)
+
+Os dois defeitos abaixo dormiam num ramo que **só executa depois** que o dono
+registra o manifesto no catálogo do NOMOS. Enquanto o manifesto esteve
+experimental, tudo passava verde. Eles apareceram na primeira hora do primeiro
+uso real — que é exatamente onde ninguém testa.
+
+#### Corrigido — instalação
+- **`scripts/nomos-register.sh` morria no ramo "já registrado".** `$CURTA…`: o
+  `…` (U+2026) é multibyte e o bash não encerra o nome da variável ali; sob
+  `set -u` o script aborta com `CURTA…: unbound variable`. Guarda novo e
+  estático (`scripts/verificar-shell-expansao.ts`), com autoteste próprio,
+  ligado no `ci.sh`.
+
+#### Corrigido — integração com a Gi
+- **O barge-in sumia ao entrar em produção.** `gi_nomos.browser.executar` tem
+  duas portas: a do manifesto experimental honrava `cancelar`; a do manifesto
+  REGISTRADO usava `subprocess.run(...)`, que bloqueia até o fim e ignora o
+  evento. A Gi continuaria navegando depois de o dono mandar parar. Agora usa
+  `Popen` com sessão nova e derruba a árvore (o `nomos` gera `node
+  servidor.mjs`; matar só o pai deixaria o neto segurando a sessão).
+
+#### Adicionado — guardas
+- `versao:coerente-em-todo-o-produto` — a versão era escrita à mão em treze
+  lugares e nada obrigava os treze a concordarem; pior, as asserções eram contra
+  o literal `"0.1.0"`, então o teste que deveria pegar a deriva era justamente o
+  que precisava ser editado a cada bump.
+- `shell:expansao-nao-colada-em-nao-ascii` — a classe de defeito acima.
+
+#### Corrigido — documentação
+- O relatório anterior dizia **223 checagens** no E2E. Recontado a partir do
+  `e2e-final.json` commitado em `1e6baf7`: eram **213** já naquele run. Não
+  houve regressão de cobertura; o número estava errado no relatório.
+
 
 ### `0ebfe30` · `82c347c` · `aae1900` · `1e6baf7` — Closeout: elevação de privilégio pelo MCP, sessão durável, Gi ativada (2026-08-25)
 

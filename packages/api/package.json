@@ -1,6 +1,6 @@
 {
   "name": "@nomos/browser-api",
-  "version": "0.1.0",
+  "version": "0.2.0-rc.1",
   "private": true,
   "type": "module",
   "license": "SEE LICENSE IN LICENSE",
@@ -12,7 +12,7 @@
     "url": "git+file:../..",
     "directory": "packages/api"
   },
-  "description": "Daemon HTTP/WebSocket do NOMOS Browser Runtime \u2014 contrato v1, roteamento, autenticacao e configuracao.",
+  "description": "Daemon HTTP/WebSocket do NOMOS Browser Runtime — contrato v1, roteamento, autenticacao e configuracao.",
   "main": "./src/daemon.ts",
   "exports": {
     ".": "./src/daemon.ts",

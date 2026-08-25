@@ -1,7 +1,7 @@
 {
   "name": "@nomos/browser-cli",
-  "version": "0.1.0",
-  "description": "CLI nomos-web \u2014 cliente HTTP do NOMOS Browser Runtime (contrato v1)",
+  "version": "0.2.0-rc.1",
+  "description": "CLI nomos-web — cliente HTTP do NOMOS Browser Runtime (contrato v1)",
   "type": "module",
   "private": true,
   "bin": {

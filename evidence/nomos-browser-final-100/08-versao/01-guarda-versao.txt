@@ -1,0 +1,5 @@
+=== autoteste ===
+AUTOTESTE=OK (vê a deriva; não acusa o coerente)
+=== conferencia real ===
+VERSION_COHERENT=YES (0.2.0-rc.1 em 13 declarantes)
+RC=0
