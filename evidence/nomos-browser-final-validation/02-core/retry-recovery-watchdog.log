@@ -1,0 +1,42 @@
+▶ watchdog — crash, reinício e teto (FASE 20 / T10)
+  ✔ 1. um crash → reinicia; a contagem vem do DISCO, não do contador interno (209.774708ms)
+  ✔ 2. três crashes rápidos → crash_loop, PARA de reiniciar e registra a causa (712.654458ms)
+  ✔ 3. stop() manual → parada INTENCIONAL, não reinicia, não conta crash (427.860208ms)
+  ✔ 4. filho que ignora SIGTERM → escala para SIGKILL, e só no próprio filho (389.587ms)
+  ✔ 5. backoff cresce mas tem TETO — o intervalo nunca vira 'nunca' (849.774459ms)
+  ✔ 5b. a janela é DESLIZANTE — crash antigo sai da conta e o orçamento volta (251.741458ms)
+✔ watchdog — crash, reinício e teto (FASE 20 / T10) (2843.834583ms)
+▶ watchdog — nunca mata o que não iniciou
+  ✔ 6. pid alheio: recusado, contado, e o processo continua vivo (207.982209ms)
+  ✔ 7. porta ocupada → port_busy, sem spawn e sem tocar no ocupante (103.521791ms)
+  ✔ 8. host fora de loopback é recusado na construção (0.236583ms)
+✔ watchdog — nunca mata o que não iniciou (311.939208ms)
+▶ recovery — snapshot atômico e snapshot corrompido
+  ✔ 9. save() é atômico: nenhum .tmp sobrevive e o leitor nunca vê meio arquivo (236.992833ms)
+  ✔ 10. sobra de .tmp do crash é INERTE — não é lida nem listada (5.625459ms)
+  ✔ 11. state.json TRUNCADO → terminate/snapshot_corrupted, e o pid vivo lá dentro é IGNORADO (120.60175ms)
+  ✔ 12. schema desconhecido, campo faltando e sessão CLOSED → terminate com motivo distinto (18.384708ms)
+  ✔ 13. patch em snapshot ausente LANÇA — não recria estado do nada (0.333875ms)
+✔ recovery — snapshot atômico e snapshot corrompido (382.521458ms)
+▶ recovery — pid vivo, pid morto, CDP mudo
+  ✔ 14. browser_pid MORTO (SIGKILL real) → orphan, jamais reattach (122.383833ms)
+  ✔ 15. browser_pid ausente → orphan/browser_pid_unknown (5.603375ms)
+  ✔ 16. endpoint de CDP fora de loopback é recusado ANTES de qualquer requisição (T2) (101.766584ms)
+  ✔ 17. scan() decide TODAS as sessões — nenhuma fica sem decisão e sem motivo (0.799625ms)
+✔ recovery — pid vivo, pid morto, CDP mudo (231.093917ms)
+▶ recovery — reattach contra Chromium REAL
+  ✔ 18. CDP vivo + identidade confere → reattach, e a verificação confirma a URL (21.137417ms)
+  ✔ 19. URL divergiu sob o crash → recover + needs_reobservation, NUNCA 'assume que continua lá' (114.096083ms)
+  ✔ 20. número de abas divergiu → recover/pages_divergent (880.19075ms)
+  ✔ 21. ação destrutiva em voo → UNKNOWN_OUTCOME: nem sucesso, nem falha, nem repetição cega (29.072791ms)
+  ✔ 22. porta reciclada por OUTRO Chromium (identidade não confere) → orphan, sem conectar (17.872333ms)
+  ✔ 23. SIGKILL no Chromium com sessão ativa → orphan/browser_pid_dead, e nada é inventado (25.104542ms)
+✔ recovery — reattach contra Chromium REAL (3502.31725ms)
+ℹ tests 24
+ℹ suites 5
+ℹ pass 24
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 7607.577708

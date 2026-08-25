@@ -1,0 +1,46 @@
+modelo=qwen2.5vl:3b  dpr=1  fator=default  passes=[0,1,2]  execucoes=3
+residentes_antes=[]
+grande   320x200     passes=0 exec=1 erro= 73.8px DENTRO=SIM inf=1  12715ms refino=desligado (vision_refine_passes = 0)
+grande   320x200     passes=0 exec=2 erro= 65.6px DENTRO=SIM inf=1   1642ms refino=desligado (vision_refine_passes = 0)
+grande   320x200     passes=0 exec=3 erro= 65.6px DENTRO=SIM inf=1   1668ms refino=desligado (vision_refine_passes = 0)
+medio    160x100     passes=0 exec=1 erro= 82.6px DENTRO=SIM inf=1   8909ms refino=desligado (vision_refine_passes = 0)
+medio    160x100     passes=0 exec=2 erro= 82.6px DENTRO=SIM inf=1   1771ms refino=desligado (vision_refine_passes = 0)
+medio    160x100     passes=0 exec=3 erro= 82.6px DENTRO=SIM inf=1   1861ms refino=desligado (vision_refine_passes = 0)
+pequeno  80x50       passes=0 exec=1 erro= 22.9px DENTRO=SIM inf=1   8728ms refino=desligado (vision_refine_passes = 0)
+pequeno  80x50       passes=0 exec=2 erro= 22.9px DENTRO=SIM inf=1   1621ms refino=desligado (vision_refine_passes = 0)
+pequeno  80x50       passes=0 exec=3 erro= 22.9px DENTRO=SIM inf=1   1637ms refino=desligado (vision_refine_passes = 0)
+grande   320x200     passes=1 exec=1 erro=121.7px DENTRO=SIM inf=2   8600ms refino=usado
+grande   320x200     passes=1 exec=2 erro=121.7px DENTRO=SIM inf=2   3317ms refino=usado
+grande   320x200     passes=1 exec=3 erro=121.7px DENTRO=SIM inf=2   3531ms refino=usado
+medio    160x100     passes=1 exec=1 erro=161.8px DENTRO=NAO inf=2   8814ms refino=usado
+medio    160x100     passes=1 exec=2 erro=161.8px DENTRO=NAO inf=2   3301ms refino=usado
+medio    160x100     passes=1 exec=3 erro=161.8px DENTRO=NAO inf=2   3288ms refino=usado
+pequeno  80x50       passes=1 exec=1 erro= 23.6px DENTRO=SIM inf=2   8404ms refino=usado (convergiu: centro moveu 0.7% do recorte)
+pequeno  80x50       passes=1 exec=2 erro= 23.6px DENTRO=SIM inf=2   3219ms refino=usado (convergiu: centro moveu 0.7% do recorte)
+pequeno  80x50       passes=1 exec=3 erro= 23.6px DENTRO=SIM inf=2   5422ms refino=usado (convergiu: centro moveu 0.7% do recorte)
+grande   320x200     passes=2 exec=1 erro= 40.8px DENTRO=SIM inf=3  10776ms refino=usado
+grande   320x200     passes=2 exec=2 erro= 40.8px DENTRO=SIM inf=3   5122ms refino=usado
+grande   320x200     passes=2 exec=3 erro= 40.8px DENTRO=SIM inf=3   5025ms refino=usado
+medio    160x100     passes=2 exec=1 erro= 78.9px DENTRO=SIM inf=3  10575ms refino=usado
+medio    160x100     passes=2 exec=2 erro= 77.5px DENTRO=SIM inf=3   4898ms refino=usado
+medio    160x100     passes=2 exec=3 erro= 77.5px DENTRO=SIM inf=3   5050ms refino=usado
+pequeno  80x50       passes=2 exec=1 erro= 23.6px DENTRO=SIM inf=2   3512ms refino=usado (convergiu: centro moveu 0.7% do recorte)
+pequeno  80x50       passes=2 exec=2 erro= 23.6px DENTRO=SIM inf=2   3394ms refino=usado (convergiu: centro moveu 0.7% do recorte)
+pequeno  80x50       passes=2 exec=3 erro= 23.6px DENTRO=SIM inf=2   3091ms refino=usado (convergiu: centro moveu 0.7% do recorte)
+
+RESUMO  (mediana das 3 execuções; 'estável' = execuções 2 e 3 idênticas)
+tamanho   passes  erro_med  dentro   inferencias  estavel
+grande    0         65.6px    3/3             1  sim
+grande    1        121.7px    3/3             2  sim
+grande    2         40.8px    3/3             3  sim
+medio     0         82.6px    3/3             1  sim
+medio     1        161.8px    0/3             2  sim
+medio     2         77.5px    3/3             3  sim
+pequeno   0         22.9px    3/3             1  sim
+pequeno   1         23.6px    3/3             2  sim
+pequeno   2         23.6px    3/3             2  sim
+
+VEREDITO grande   sem_refino=65.6px (3/3 dentro)  com_refino=121.7px (3/3 dentro)
+VEREDITO medio    sem_refino=82.6px (3/3 dentro)  com_refino=161.8px (0/3 dentro)
+VEREDITO pequeno  sem_refino=22.9px (3/3 dentro)  com_refino=23.6px (3/3 dentro)
+residentes_depois=[]

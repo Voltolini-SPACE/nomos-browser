@@ -1,0 +1,52 @@
+modelo=qwen2.5vl:3b  dpr=1  fator=default  passes=[0]  execucoes=3
+residentes_antes=[]
+grande   320x200     aim=box_center     passes=0 exec=1 erro=  4.6px DENTRO=SIM inf=1  13274ms margem=  97px mirou=box_center (vision_refine_passes = 0)
+grande   320x200     aim=box_center     passes=0 exec=2 erro=  4.2px DENTRO=SIM inf=1   1741ms margem=  97px mirou=box_center (vision_refine_passes = 0)
+grande   320x200     aim=box_center     passes=0 exec=3 erro=  4.2px DENTRO=SIM inf=1   1756ms margem=  97px mirou=box_center (vision_refine_passes = 0)
+medio    160x100     aim=box_center     passes=0 exec=1 erro=  5.0px DENTRO=SIM inf=1   8985ms margem=  46px mirou=box_center (vision_refine_passes = 0)
+medio    160x100     aim=box_center     passes=0 exec=2 erro=  5.0px DENTRO=SIM inf=1   1768ms margem=  46px mirou=box_center (vision_refine_passes = 0)
+medio    160x100     aim=box_center     passes=0 exec=3 erro=  5.0px DENTRO=SIM inf=1   1745ms margem=  46px mirou=box_center (vision_refine_passes = 0)
+pequeno  80x50       aim=box_center     passes=0 exec=1 erro=  5.4px DENTRO=SIM inf=1   8957ms margem=  22px mirou=box_center (vision_refine_passes = 0)
+pequeno  80x50       aim=box_center     passes=0 exec=2 erro=  5.4px DENTRO=SIM inf=1   2306ms margem=  22px mirou=box_center (vision_refine_passes = 0)
+pequeno  80x50       aim=box_center     passes=0 exec=3 erro=  5.4px DENTRO=SIM inf=1   1859ms margem=  22px mirou=box_center (vision_refine_passes = 0)
+grande   320x200     aim=point          passes=0 exec=1 erro=  4.5px DENTRO=SIM inf=1   4771ms margem=  98px mirou=point (vision_refine_passes = 0)
+grande   320x200     aim=point          passes=0 exec=2 erro=  4.5px DENTRO=SIM inf=1   1846ms margem=  98px mirou=point (vision_refine_passes = 0)
+grande   320x200     aim=point          passes=0 exec=3 erro=  4.5px DENTRO=SIM inf=1   1888ms margem=  98px mirou=point (vision_refine_passes = 0)
+medio    160x100     aim=point          passes=0 exec=1 erro=  4.1px DENTRO=SIM inf=1   1965ms margem=  49px mirou=point (vision_refine_passes = 0)
+medio    160x100     aim=point          passes=0 exec=2 erro=  4.1px DENTRO=SIM inf=1   1828ms margem=  49px mirou=point (vision_refine_passes = 0)
+medio    160x100     aim=point          passes=0 exec=3 erro=  4.1px DENTRO=SIM inf=1   1884ms margem=  49px mirou=point (vision_refine_passes = 0)
+pequeno  80x50       aim=point          passes=0 exec=1 erro=  2.8px DENTRO=SIM inf=1   1967ms margem=  23px mirou=point (vision_refine_passes = 0)
+pequeno  80x50       aim=point          passes=0 exec=2 erro=  2.8px DENTRO=SIM inf=1   1883ms margem=  23px mirou=point (vision_refine_passes = 0)
+pequeno  80x50       aim=point          passes=0 exec=3 erro=  2.8px DENTRO=SIM inf=1   1793ms margem=  23px mirou=point (vision_refine_passes = 0)
+grande   320x200     aim=point_then_box passes=0 exec=1 erro=  4.5px DENTRO=SIM inf=1   1730ms margem=  98px mirou=point (vision_refine_passes = 0)
+grande   320x200     aim=point_then_box passes=0 exec=2 erro=  4.5px DENTRO=SIM inf=1   1722ms margem=  98px mirou=point (vision_refine_passes = 0)
+grande   320x200     aim=point_then_box passes=0 exec=3 erro=  4.5px DENTRO=SIM inf=1   1739ms margem=  98px mirou=point (vision_refine_passes = 0)
+medio    160x100     aim=point_then_box passes=0 exec=1 erro=  4.1px DENTRO=SIM inf=1   1732ms margem=  49px mirou=point (vision_refine_passes = 0)
+medio    160x100     aim=point_then_box passes=0 exec=2 erro=  4.1px DENTRO=SIM inf=1   1703ms margem=  49px mirou=point (vision_refine_passes = 0)
+medio    160x100     aim=point_then_box passes=0 exec=3 erro=  4.1px DENTRO=SIM inf=1   1707ms margem=  49px mirou=point (vision_refine_passes = 0)
+pequeno  80x50       aim=point_then_box passes=0 exec=1 erro=  2.8px DENTRO=SIM inf=1   1741ms margem=  23px mirou=point (vision_refine_passes = 0)
+pequeno  80x50       aim=point_then_box passes=0 exec=2 erro=  2.8px DENTRO=SIM inf=1   1745ms margem=  23px mirou=point (vision_refine_passes = 0)
+pequeno  80x50       aim=point_then_box passes=0 exec=3 erro=  2.8px DENTRO=SIM inf=1   1743ms margem=  23px mirou=point (vision_refine_passes = 0)
+
+RESUMO  (mediana das execuções; 'estável' = execuções 2 e 3 idênticas)
+tamanho   aim             passes  erro_med  margem  dentro   inferencias  estavel
+grande    box_center      0          4.2px    97px    3/3             1  sim
+grande    point           0          4.5px    98px    3/3             1  sim
+grande    point_then_box  0          4.5px    98px    3/3             1  sim
+medio     box_center      0            5px    46px    3/3             1  sim
+medio     point           0          4.1px    49px    3/3             1  sim
+medio     point_then_box  0          4.1px    49px    3/3             1  sim
+pequeno   box_center      0          5.4px    22px    3/3             1  sim
+pequeno   point           0          2.8px    23px    3/3             1  sim
+pequeno   point_then_box  0          2.8px    23px    3/3             1  sim
+
+VEREDITO grande   aim=box_center      sem_refino=4.2px (3/0 dentro)  com_refino=nullpx (0/0 dentro)
+VEREDITO grande   aim=point           sem_refino=4.5px (3/0 dentro)  com_refino=nullpx (0/0 dentro)
+VEREDITO grande   aim=point_then_box  sem_refino=4.5px (3/0 dentro)  com_refino=nullpx (0/0 dentro)
+VEREDITO medio    aim=box_center      sem_refino=5px (3/0 dentro)  com_refino=nullpx (0/0 dentro)
+VEREDITO medio    aim=point           sem_refino=4.1px (3/0 dentro)  com_refino=nullpx (0/0 dentro)
+VEREDITO medio    aim=point_then_box  sem_refino=4.1px (3/0 dentro)  com_refino=nullpx (0/0 dentro)
+VEREDITO pequeno  aim=box_center      sem_refino=5.4px (3/0 dentro)  com_refino=nullpx (0/0 dentro)
+VEREDITO pequeno  aim=point           sem_refino=2.8px (3/0 dentro)  com_refino=nullpx (0/0 dentro)
+VEREDITO pequeno  aim=point_then_box  sem_refino=2.8px (3/0 dentro)  com_refino=nullpx (0/0 dentro)
+residentes_depois=[]

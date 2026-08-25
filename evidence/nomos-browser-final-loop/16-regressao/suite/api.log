@@ -1,0 +1,41 @@
+✔ 1) GET /health responde 200 com contract=1 (24.01725ms)
+✔ 2) POST /api/v1/sessions cria sessão e GET a lista (665.429542ms)
+✔ 3) browser.goto na fixture e browser.observe devolvem envelope com sucesso (79.522208ms)
+✔ 4) browser.upload sob política restricted devolve 403 CAPABILITY_DENIED (5.257ms)
+✔ 5) detach do cliente deixa a sessão viva, órfã e reatável (5.850208ms)
+✔ 6) WebSocket /events entrega ao menos um RuntimeEvent após uma ação (10.036791ms)
+✔ 6b) filtro ?events= com nome desconhecido fecha o socket em vez de calar (1.275334ms)
+✔ 7) rota inexistente devolve 404 com envelope, não HTML de stack trace (1.131833ms)
+✔ 7b) sessão inexistente e session_id ausente saem no envelope (1.6595ms)
+✔ FASE 43) SessionQueue respeita concorrência e recusa fila cheia com BACKPRESSURE_REJECTED (1.320417ms)
+✔ FASE 43) prazo estourado devolve TIMEOUT e admite que a ação segue correndo (40.422833ms)
+✔ roteador distingue rota ausente de método errado e conhece as ações do contrato (0.125667ms)
+✔ parseEventFilter separa evento conhecido de desconhecido (0.067208ms)
+✔ config: ambiente vence arquivo, override vence ambiente, lixo não é coagido (0.699834ms)
+▶ rotas de ação restantes operam contra o Chromium real
+  ✔ browser.find resolve o alvo e diz por qual estratégia (143.114ms)
+  ✔ browser.click muda a página de verdade e a verificação confirma (206.596084ms)
+  ✔ browser.wait espera condição verificável, não duração fixa (307.056042ms)
+  ✔ browser.type escreve no campo e browser.press dispara tecla (184.379333ms)
+  ✔ browser.scroll rola o contêiner alvo (135.514375ms)
+  ✔ browser.screenshot devolve referência e dimensões lidas do PNG (59.054084ms)
+  ✔ abas: tabs, new_tab, switch_tab, close_tab (54.221583ms)
+  ✔ histórico: back, forward, reload (36.384084ms)
+  ✔ browser.network registra tráfego e declara o que descartou (8.462917ms)
+  ✔ browser.download é negado por capability antes de tocar o disco (0.909417ms)
+  ✔ browser.task sem AgentProvider falha explicitamente, não devolve QUEUED decorativo (1.480625ms)
+  ✔ alvo inexistente e ambíguo saem com o código certo (11.153917ms)
+  ✔ takeover congela o agente com 409 e release exige reobservação (7.601875ms)
+  ✔ handoff troca o dono preservando URL e abas (1.886708ms)
+  ✔ URL de esquema proibido é bloqueada antes da navegação (anti-SSRF) (1.090833ms)
+✔ rotas de ação restantes operam contra o Chromium real (1334.395917ms)
+✔ browser.type com credential_ref injeta sem vazar em resposta, evento ou audit (668.380792ms)
+✔ encerramento fecha a sessão e o pool volta a zero (43.799792ms)
+ℹ tests 32
+ℹ suites 0
+ℹ pass 32
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3280.99

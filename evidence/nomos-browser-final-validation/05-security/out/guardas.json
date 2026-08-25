@@ -1,0 +1,98 @@
+[
+  {
+    "nome": "navegar para file:///etc/passwd",
+    "esperado": "bloqueado",
+    "observado": "status=403 code=POLICY_BLOCKED success=false",
+    "bloqueado": true
+  },
+  {
+    "nome": "navegar para javascript: URL",
+    "esperado": "bloqueado",
+    "observado": "status=403 code=POLICY_BLOCKED success=false",
+    "bloqueado": true
+  },
+  {
+    "nome": "navegar para chrome://settings",
+    "esperado": "bloqueado",
+    "observado": "status=403 code=POLICY_BLOCKED success=false",
+    "bloqueado": true
+  },
+  {
+    "nome": "navegar para devtools://devtools",
+    "esperado": "bloqueado",
+    "observado": "status=403 code=POLICY_BLOCKED success=false",
+    "bloqueado": true
+  },
+  {
+    "nome": "navegar para data: URL",
+    "esperado": "bloqueado",
+    "observado": "status=403 code=POLICY_BLOCKED success=false",
+    "bloqueado": true
+  },
+  {
+    "nome": "SSRF metadata 169.254.169.254",
+    "esperado": "bloqueado",
+    "observado": "status=403 code=POLICY_BLOCKED success=false",
+    "bloqueado": true
+  },
+  {
+    "nome": "SSRF RFC1918 10.0.0.1",
+    "esperado": "bloqueado",
+    "observado": "status=403 code=POLICY_BLOCKED success=false",
+    "bloqueado": true
+  },
+  {
+    "nome": "SSRF localhost (sem allow_internal)",
+    "esperado": "bloqueado",
+    "observado": "status=403 code=POLICY_BLOCKED success=false",
+    "bloqueado": true
+  },
+  {
+    "nome": "SSRF via .local",
+    "esperado": "bloqueado",
+    "observado": "status=403 code=POLICY_BLOCKED success=false",
+    "bloqueado": true
+  },
+  {
+    "nome": "upload path traversal ../../etc/passwd",
+    "esperado": "bloqueado",
+    "observado": "status=403 code=UPLOAD_DENIED success=false",
+    "bloqueado": true
+  },
+  {
+    "nome": "upload caminho absoluto fora da raiz",
+    "esperado": "bloqueado",
+    "observado": "status=403 code=UPLOAD_DENIED success=false",
+    "bloqueado": true
+  },
+  {
+    "nome": "download com url file://",
+    "esperado": "bloqueado",
+    "observado": "status=403 code=POLICY_BLOCKED success=false",
+    "bloqueado": true
+  },
+  {
+    "nome": "capability negada: send",
+    "esperado": "bloqueado",
+    "observado": "status=404 code=INVALID_REQUEST success=false",
+    "bloqueado": true
+  },
+  {
+    "nome": "token ausente",
+    "esperado": "bloqueado",
+    "observado": "status=401 code=CAPABILITY_DENIED success=false",
+    "bloqueado": true
+  },
+  {
+    "nome": "token errado",
+    "esperado": "bloqueado",
+    "observado": "status=401 code=CAPABILITY_DENIED success=false",
+    "bloqueado": true
+  },
+  {
+    "nome": "session_id de outra sessão inexistente",
+    "esperado": "bloqueado",
+    "observado": "status=404 code=SESSION_NOT_FOUND success=false",
+    "bloqueado": true
+  }
+]

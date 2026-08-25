@@ -1,0 +1,136 @@
+{
+  "base0": {
+    "rss": 174,
+    "filhos": 0,
+    "chromium": 0
+  },
+  "amostras": [
+    {
+      "ciclo": 1,
+      "ms": 329,
+      "rss": 138,
+      "filhos": 0,
+      "chromium": 0,
+      "sessoes_vivas": 0
+    },
+    {
+      "ciclo": 2,
+      "ms": 296,
+      "rss": 142,
+      "filhos": 0,
+      "chromium": 0,
+      "sessoes_vivas": 0
+    },
+    {
+      "ciclo": 3,
+      "ms": 272,
+      "rss": 115,
+      "filhos": 0,
+      "chromium": 0,
+      "sessoes_vivas": 0
+    },
+    {
+      "ciclo": 4,
+      "ms": 283,
+      "rss": 100,
+      "filhos": 0,
+      "chromium": 0,
+      "sessoes_vivas": 0
+    },
+    {
+      "ciclo": 5,
+      "ms": 279,
+      "rss": 100,
+      "filhos": 0,
+      "chromium": 0,
+      "sessoes_vivas": 0
+    },
+    {
+      "ciclo": 6,
+      "ms": 284,
+      "rss": 101,
+      "filhos": 0,
+      "chromium": 0,
+      "sessoes_vivas": 0
+    },
+    {
+      "ciclo": 7,
+      "ms": 281,
+      "rss": 107,
+      "filhos": 0,
+      "chromium": 0,
+      "sessoes_vivas": 0
+    },
+    {
+      "ciclo": 8,
+      "ms": 301,
+      "rss": 97,
+      "filhos": 0,
+      "chromium": 0,
+      "sessoes_vivas": 0
+    },
+    {
+      "ciclo": 9,
+      "ms": 317,
+      "rss": 93,
+      "filhos": 0,
+      "chromium": 0,
+      "sessoes_vivas": 0
+    },
+    {
+      "ciclo": 10,
+      "ms": 352,
+      "rss": 109,
+      "filhos": 0,
+      "chromium": 0,
+      "sessoes_vivas": 0
+    },
+    {
+      "ciclo": 11,
+      "ms": 293,
+      "rss": 109,
+      "filhos": 0,
+      "chromium": 0,
+      "sessoes_vivas": 0
+    },
+    {
+      "ciclo": 12,
+      "ms": 295,
+      "rss": 113,
+      "filhos": 0,
+      "chromium": 0,
+      "sessoes_vivas": 0
+    },
+    {
+      "ciclo": 13,
+      "ms": 347,
+      "rss": 93,
+      "filhos": 0,
+      "chromium": 0,
+      "sessoes_vivas": 0
+    },
+    {
+      "ciclo": 14,
+      "ms": 306,
+      "rss": 95,
+      "filhos": 0,
+      "chromium": 0,
+      "sessoes_vivas": 0
+    },
+    {
+      "ciclo": 15,
+      "ms": 302,
+      "rss": 117,
+      "filhos": 0,
+      "chromium": 0,
+      "sessoes_vivas": 0
+    }
+  ],
+  "conc_ok": 4,
+  "fim": {
+    "rss": 139,
+    "filhos": 0,
+    "chromium": 0,
+    "sessoes": 0
+  }
+}

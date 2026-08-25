@@ -1,0 +1,15 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Loja de Teste NOMOS</title>
+<style>body{font:16px system-ui;margin:0;padding:24px;background:#fff;color:#111}
+#comprar{position:absolute;left:400px;top:120px;width:160px;height:100px;background:rgb(20,120,220);color:#fff;border:0;font-size:18px}
+#resultado{margin-top:260px;font-weight:700}
+a#baixar{display:inline-block;margin-top:300px}
+</style></head><body>
+<h1>Loja de Teste</h1>
+<button id="comprar" aria-label="Adicionar ao carrinho">Adicionar ao carrinho</button>
+<div id="resultado">carrinho: vazio</div>
+<a id="baixar" href="/arquivo.txt" download="nomos-e2e.txt">Baixar recibo</a>
+<script>
+document.getElementById('comprar').addEventListener('click', (e) => {
+  document.getElementById('resultado').textContent = 'carrinho: 1 item | isTrusted=' + e.isTrusted;
+});
+</script></body></html>

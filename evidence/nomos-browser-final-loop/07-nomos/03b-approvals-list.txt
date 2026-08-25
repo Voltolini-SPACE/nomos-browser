@@ -1,0 +1,2 @@
+[7c04de23-19b1-42f4-a0a2-9a61453aa799] A5 · instalar skill alvo=mcp:confiar:nomos-browser:piso=A5:tools_declaradas=13 motivo=ação sensível: exige aprovação explícita
+exit=0

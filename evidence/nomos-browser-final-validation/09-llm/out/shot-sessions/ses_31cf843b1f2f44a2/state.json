@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "session_id": "ses_31cf843b1f2f44a2",
+  "owner": "SHOT",
+  "profile": "default",
+  "url": "about:blank",
+  "page_ids": [
+    "pg_828b6f958b184d74"
+  ],
+  "context_id": "ctx_d43769e4b69d41d8",
+  "capabilities": {
+    "navigate": true,
+    "read": true,
+    "click": true,
+    "type": true,
+    "download": false,
+    "upload": false,
+    "send": false,
+    "purchase": false,
+    "payment": false,
+    "delete": false
+  },
+  "cdp_endpoint": null,
+  "browser_pid": 49161,
+  "browser_id": "ctx_d43769e4b69d41d8",
+  "criado_em": "2026-08-24T20:50:50.452Z",
+  "ultima_atividade": "2026-08-24T20:50:50.452Z",
+  "status": "IDLE",
+  "ephemeral": false,
+  "in_flight_action": null
+}

@@ -1,0 +1,70 @@
+### 1 E2E independente
+PASS  E2E-01  abrir site, localizar elemento, clicar, validar  (390ms)
+PASS  E2E-02  navegar por resultados e extrair informação  (379ms)
+PASS  E2E-03  preencher formulário, validar campos, cancelar  (3481ms)
+PASS  E2E-04  SPA com conteúdo tardio  (890ms)
+PASS  E2E-05  multi-aba: abrir, listar, trocar, fechar  (114ms)
+PASS  E2E-06  download real para dentro da raiz permitida  (174ms)
+PASS  E2E-07  upload de arquivo de fixture  (54ms)
+PASS  E2E-07b  upload fora da raiz é negado (controle negativo)  (1ms)
+PASS  E2E-08  falha no meio da tarefa e continuidade da sessão  (3202ms)
+FAIL  E2E-09  caminho NOMOS/Gi → runtime → resultado  (72ms)
+FAIL  E2E-10  visão quando DOM/acessibilidade não bastam  (26ms)
+PASS  E2E-AUD  trilha auditável da bateria inteira  (0ms)
+E2E_TOTAL=12 E2E_PASS=10 E2E_FAIL=2
+BROWSER_E2E_SUITE=FAIL
+### 2 injecao
+
+CASOS=14 OK=14 FALHAS=0
+ATAQUES_DETECTADOS_ALTA=8/8
+FALSE_POSITIVE_CONTROL=6/6
+POLICY_MODES=PASS
+AUDIT_NO_LITERAL=PASS
+INJECTION_PROTECTION_WIRED=PASS
+### 3 auditoria
+AUDIT_CAMPOS_FALTANDO=[]
+AUDIT_COMPLETE=PASS
+### 4 coordenadas
+VISION_COORDINATE_PASS=100%  ERRO_MEDIO=0px  ERRO_MAX=0px
+VISION_ENGINE_CAPABILITY=PASS
+### 5 guardas
+ADVERSARIAL_TOTAL=16 BLOQUEADOS=16 PASSARAM=0
+SECURITY_LIVE_GUARDS=PASS
+### 6 visao e2e
+ERRO_PX=4.1 (dx=4.0 dy=1.0) DENTRO_DO_ALVO=SIM
+MARGEM_ATE_A_BORDA=49px (alvo 160x100)
+audit.trace=[{"strategy":"semantic","outcome":"miss","probe":"semantic(literal) sobre 19 tipos interativos","candidates":0,"reason":"página sem elementos interativos","duration_ms":13},{"strategy":"vision","outcome":"hit","probe":"vision:ollama(\"o botao vermelho escrito COMPRAR\")","candidates":1,"duration_ms":13462,"detail":{"passadas":0,"box_p1":{"x":404,"y":124,"width":158,"height":100},"box_refinada":{"x":404,"y":124,"width":158,"height":100},"deslocamento_px":0,"area_ratio_p1_p2":1,"refino":"desligado","motivo":"vision_refine_passes = 0","inferencias":1,"regiao_de_recorte":null,"aim_modo":"point_then_box","aim":"point","aim_point":{"x":476,"y":171},"aim_box_bruta":{"x":404,"y":124,"width":158,"height":100},"aim_motivo":null}}]
+E2E_VISAO=PASS  strategy=vision erro=4.1px isTrusted=true
+### 7 task e2e
+TASK_CHECKPOINT=PASS
+TASK_RETRY=PASS
+TASK_RESUME=PASS
+TASK_IDEMPOTENCY=PASS
+TASK_CANCEL=PASS
+TASK_CRASH_RECOVERY=PASS
+TASK_CLEANUP=PASS
+TASK_ENGINE=PASS
+### 8 grupo de processos
+NOVO:   filho vivo durante=1, órfãos após kill=0
+TESTE_VACUO=NAO (filho subiu nos dois casos)
+TEST_TIMEOUT_GROUP_KILL=PASS
+### 9 residuais
+usage: tr [-Ccsu] string1 string2
+       tr [-Ccu] -d string1
+       tr [-Ccu] -s string1
+       tr [-Ccu] -ds string1 string2
+usage: tr [-Ccsu] string1 string2
+       tr [-Ccu] -d string1
+       tr [-Ccu] -s string1
+       tr [-Ccu] -ds string1 string2
+usage: tr [-Ccsu] string1 string2
+       tr [-Ccu] -d string1
+       tr [-Ccu] -s string1
+       tr [-Ccu] -ds string1 string2
+daemons= chromium= orfaos=
+### 10 producao NOMOS intacta
+83005	-9	br.com.se7enpay.nomos.servico
+12728	0	ai.sovereign.omniroute
+83034	-9	com.nomos.panel
+29108	0	com.gijarvis.backend
+VERIF_FIM

@@ -1,0 +1,53 @@
+▶ estatística — percentil que a amostra não sustenta
+  ✔ 1. N=10 ⇒ p99 é null e marcado insuficiente; N=100 ⇒ p99 é numérico (1.380375ms)
+  ✔ a mesma regra vale para p95: N=19 recusa, N=20 reporta (0.112333ms)
+  ✔ mínimo é ceil(1/(1-q)) — 2 / 20 / 100 (0.228209ms)
+  ✔ configuração pode LEVANTAR o piso, nunca baixá-lo (0.194041ms)
+  ✔ nearest-rank: devolve valor MEDIDO, não interpolação (0.095583ms)
+  ✔ ordena antes de calcular: entrada fora de ordem dá o mesmo resultado (0.059875ms)
+  ✔ média e desvio amostral conferem com valor calculado à mão (0.053542ms)
+  ✔ N=1: min=max=média, desvio null, p50 null — uma medição não é distribuição (0.071375ms)
+  ✔ 2. lista vazia não explode: devolve relatório vazio explícito, sem zeros falsos (0.096834ms)
+  ✔ amostra não finita é recusada em vez de virar NaN no relatório (0.121542ms)
+✔ estatística — percentil que a amostra não sustenta (3.638375ms)
+▶ Benchmark.run — medição
+  ✔ 3. N=10 ⇒ p99 null/insuficiente; N=100 ⇒ p99 numérico, no run de verdade (2.4985ms)
+  ✔ 4. latência sintética de 20 ms cai na faixa esperada — com controle negativo (280.128167ms)
+  ✔ 5. aquecimento NÃO entra na estatística — com controle negativo sem aquecimento (249.808916ms)
+  ✔ função assíncrona é aguardada e medida (97.308584ms)
+  ✔ 6. iteração que lança NÃO vira amostra; o erro é reportado, não engolido (34.633917ms)
+  ✔ erro no aquecimento é marcado como warmup e não conta como iteração medida (0.19925ms)
+  ✔ 7. memória antes/depois e CPU são coletadas como delta real (56.488792ms)
+  ✔ CPU quase parada num run ocioso — controle negativo do contador de CPU (160.377542ms)
+  ✔ entrada inválida falha fechado em vez de virar default silencioso (0.551667ms)
+  ✔ iteracoes:0 devolve resultado vazio explícito, sem explodir (0.115542ms)
+  ✔ rótulos do run são redigidos antes de entrar no resultado (0.146917ms)
+✔ Benchmark.run — medição (882.622542ms)
+▶ Benchmark — relatórios
+  ✔ 8. markdown nunca imprime número para percentil que a amostra não sustenta (0.565625ms)
+  ✔ JSON do relatório é parseável, declara contrato e declara a omissão das amostras (0.196167ms)
+  ✔ relatório sem nenhum run é vazio EXPLÍCITO, não uma tabela em branco (0.061875ms)
+  ✔ nome com pipe não quebra a tabela markdown (0.090375ms)
+✔ Benchmark — relatórios (0.978667ms)
+▶ QualityBench — FASE 33
+  ✔ 9. declarou sucesso e a verificação REFUTOU ⇒ false_success, e aparece no resumo (0.566542ms)
+  ✔ declarou e a verificação NÃO rodou ⇒ unverified_claim, jamais false_success (0.094875ms)
+  ✔ human_escalation é classe própria e não conta como sucesso do agente (0.10675ms)
+  ✔ classifyCase cobre os seis desfechos, com escalação em primeiro lugar (0.055958ms)
+  ✔ 10. false_success NUNCA sai do resumo, nem quando vale zero (0.113583ms)
+  ✔ 11. bench vazio: divisão por zero vira null, relatório vazio explícito, sem exceção (0.089083ms)
+  ✔ nenhuma declaração ⇒ false_success_of_declared é null, não 0 e não NaN (0.076958ms)
+  ✔ subdeclaração: não declarou mas a verificação comprovou (0.058ms)
+  ✔ segredo no detalhe do caso é redigido antes de entrar no relatório (0.107042ms)
+  ✔ aceita VerificationResult do contrato sem adaptador e preserva confiança/observação (0.05325ms)
+  ✔ caso mal formado falha fechado (0.092583ms)
+  ✔ toJSON({cases:false}) omite os casos mas mantém o resumo íntegro (0.070333ms)
+✔ QualityBench — FASE 33 (1.603625ms)
+ℹ tests 37
+ℹ suites 4
+ℹ pass 37
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1130.263

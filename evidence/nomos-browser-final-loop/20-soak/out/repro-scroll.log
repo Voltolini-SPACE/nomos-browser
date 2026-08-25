@@ -1,0 +1,12 @@
+antes do scroll: SCROLL-0
+browser.scroll → success=true scrolled={"dx":0,"dy":1400} at={"x":0,"y":0} backend=cdp em 15ms
+  t≈   16ms  SCROLL-0
+  t≈   52ms  SCROLL-1400
+  t≈  102ms  SCROLL-1400
+  t≈  252ms  SCROLL-1400
+  t≈  502ms  SCROLL-1400
+  t≈ 1002ms  SCROLL-1400
+  t≈ 2002ms  SCROLL-1400
+  t≈ 4001ms  SCROLL-1400
+segundo browser.scroll → success=true em 10ms
+  depois do segundo: SCROLL-2800

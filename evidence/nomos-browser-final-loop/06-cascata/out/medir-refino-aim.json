@@ -1,0 +1,1149 @@
+{
+  "quando": "2026-08-25T00:36:19.909Z",
+  "modelo": "qwen2.5vl:3b",
+  "dpr": 1,
+  "fator": null,
+  "goal": "o botao vermelho escrito COMPRAR",
+  "centro": {
+    "x": 480,
+    "y": 170
+  },
+  "linhas": [
+    {
+      "tamanho": "grande",
+      "alvo": {
+        "x": 320,
+        "y": 70,
+        "w": 320,
+        "h": 200
+      },
+      "refine_passes": 0,
+      "aim_modo": "box_center",
+      "aim": "box_center",
+      "aim_point": {
+        "x": 476,
+        "y": 172
+      },
+      "margem_px": 97,
+      "execucao": 1,
+      "ok": true,
+      "strategy": "vision",
+      "box": {
+        "x": 322,
+        "y": 73,
+        "width": 322,
+        "height": 201
+      },
+      "centro": {
+        "x": 483,
+        "y": 174
+      },
+      "erro_px": 4.6,
+      "dentro_do_alvo": true,
+      "ms": 13274,
+      "inferencias": 1,
+      "refino": "desligado",
+      "motivo": "vision_refine_passes = 0",
+      "deslocamento_px": 0,
+      "area_ratio_p1_p2": 1,
+      "erro": ""
+    },
+    {
+      "tamanho": "grande",
+      "alvo": {
+        "x": 320,
+        "y": 70,
+        "w": 320,
+        "h": 200
+      },
+      "refine_passes": 0,
+      "aim_modo": "box_center",
+      "aim": "box_center",
+      "aim_point": {
+        "x": 476,
+        "y": 172
+      },
+      "margem_px": 97,
+      "execucao": 2,
+      "ok": true,
+      "strategy": "vision",
+      "box": {
+        "x": 322,
+        "y": 73,
+        "width": 322,
+        "height": 200
+      },
+      "centro": {
+        "x": 483,
+        "y": 173
+      },
+      "erro_px": 4.2,
+      "dentro_do_alvo": true,
+      "ms": 1741,
+      "inferencias": 1,
+      "refino": "desligado",
+      "motivo": "vision_refine_passes = 0",
+      "deslocamento_px": 0,
+      "area_ratio_p1_p2": 1,
+      "erro": ""
+    },
+    {
+      "tamanho": "grande",
+      "alvo": {
+        "x": 320,
+        "y": 70,
+        "w": 320,
+        "h": 200
+      },
+      "refine_passes": 0,
+      "aim_modo": "box_center",
+      "aim": "box_center",
+      "aim_point": {
+        "x": 476,
+        "y": 172
+      },
+      "margem_px": 97,
+      "execucao": 3,
+      "ok": true,
+      "strategy": "vision",
+      "box": {
+        "x": 322,
+        "y": 73,
+        "width": 322,
+        "height": 200
+      },
+      "centro": {
+        "x": 483,
+        "y": 173
+      },
+      "erro_px": 4.2,
+      "dentro_do_alvo": true,
+      "ms": 1756,
+      "inferencias": 1,
+      "refino": "desligado",
+      "motivo": "vision_refine_passes = 0",
+      "deslocamento_px": 0,
+      "area_ratio_p1_p2": 1,
+      "erro": ""
+    },
+    {
+      "tamanho": "medio",
+      "alvo": {
+        "x": 400,
+        "y": 120,
+        "w": 160,
+        "h": 100
+      },
+      "refine_passes": 0,
+      "aim_modo": "box_center",
+      "aim": "box_center",
+      "aim_point": {
+        "x": 476,
+        "y": 171
+      },
+      "margem_px": 46,
+      "execucao": 1,
+      "ok": true,
+      "strategy": "vision",
+      "box": {
+        "x": 404,
+        "y": 124,
+        "width": 158,
+        "height": 100
+      },
+      "centro": {
+        "x": 483,
+        "y": 174
+      },
+      "erro_px": 5,
+      "dentro_do_alvo": true,
+      "ms": 8985,
+      "inferencias": 1,
+      "refino": "desligado",
+      "motivo": "vision_refine_passes = 0",
+      "deslocamento_px": 0,
+      "area_ratio_p1_p2": 1,
+      "erro": ""
+    },
+    {
+      "tamanho": "medio",
+      "alvo": {
+        "x": 400,
+        "y": 120,
+        "w": 160,
+        "h": 100
+      },
+      "refine_passes": 0,
+      "aim_modo": "box_center",
+      "aim": "box_center",
+      "aim_point": {
+        "x": 476,
+        "y": 171
+      },
+      "margem_px": 46,
+      "execucao": 2,
+      "ok": true,
+      "strategy": "vision",
+      "box": {
+        "x": 404,
+        "y": 124,
+        "width": 158,
+        "height": 100
+      },
+      "centro": {
+        "x": 483,
+        "y": 174
+      },
+      "erro_px": 5,
+      "dentro_do_alvo": true,
+      "ms": 1768,
+      "inferencias": 1,
+      "refino": "desligado",
+      "motivo": "vision_refine_passes = 0",
+      "deslocamento_px": 0,
+      "area_ratio_p1_p2": 1,
+      "erro": ""
+    },
+    {
+      "tamanho": "medio",
+      "alvo": {
+        "x": 400,
+        "y": 120,
+        "w": 160,
+        "h": 100
+      },
+      "refine_passes": 0,
+      "aim_modo": "box_center",
+      "aim": "box_center",
+      "aim_point": {
+        "x": 476,
+        "y": 171
+      },
+      "margem_px": 46,
+      "execucao": 3,
+      "ok": true,
+      "strategy": "vision",
+      "box": {
+        "x": 404,
+        "y": 124,
+        "width": 158,
+        "height": 100
+      },
+      "centro": {
+        "x": 483,
+        "y": 174
+      },
+      "erro_px": 5,
+      "dentro_do_alvo": true,
+      "ms": 1745,
+      "inferencias": 1,
+      "refino": "desligado",
+      "motivo": "vision_refine_passes = 0",
+      "deslocamento_px": 0,
+      "area_ratio_p1_p2": 1,
+      "erro": ""
+    },
+    {
+      "tamanho": "pequeno",
+      "alvo": {
+        "x": 440,
+        "y": 145,
+        "w": 80,
+        "h": 50
+      },
+      "refine_passes": 0,
+      "aim_modo": "box_center",
+      "aim": "box_center",
+      "aim_point": {
+        "x": 482,
+        "y": 172
+      },
+      "margem_px": 22,
+      "execucao": 1,
+      "ok": true,
+      "strategy": "vision",
+      "box": {
+        "x": 446,
+        "y": 148,
+        "width": 77,
+        "height": 50
+      },
+      "centro": {
+        "x": 485,
+        "y": 173
+      },
+      "erro_px": 5.4,
+      "dentro_do_alvo": true,
+      "ms": 8957,
+      "inferencias": 1,
+      "refino": "desligado",
+      "motivo": "vision_refine_passes = 0",
+      "deslocamento_px": 0,
+      "area_ratio_p1_p2": 1,
+      "erro": ""
+    },
+    {
+      "tamanho": "pequeno",
+      "alvo": {
+        "x": 440,
+        "y": 145,
+        "w": 80,
+        "h": 50
+      },
+      "refine_passes": 0,
+      "aim_modo": "box_center",
+      "aim": "box_center",
+      "aim_point": {
+        "x": 482,
+        "y": 172
+      },
+      "margem_px": 22,
+      "execucao": 2,
+      "ok": true,
+      "strategy": "vision",
+      "box": {
+        "x": 446,
+        "y": 148,
+        "width": 77,
+        "height": 50
+      },
+      "centro": {
+        "x": 485,
+        "y": 173
+      },
+      "erro_px": 5.4,
+      "dentro_do_alvo": true,
+      "ms": 2306,
+      "inferencias": 1,
+      "refino": "desligado",
+      "motivo": "vision_refine_passes = 0",
+      "deslocamento_px": 0,
+      "area_ratio_p1_p2": 1,
+      "erro": ""
+    },
+    {
+      "tamanho": "pequeno",
+      "alvo": {
+        "x": 440,
+        "y": 145,
+        "w": 80,
+        "h": 50
+      },
+      "refine_passes": 0,
+      "aim_modo": "box_center",
+      "aim": "box_center",
+      "aim_point": {
+        "x": 482,
+        "y": 172
+      },
+      "margem_px": 22,
+      "execucao": 3,
+      "ok": true,
+      "strategy": "vision",
+      "box": {
+        "x": 446,
+        "y": 148,
+        "width": 77,
+        "height": 50
+      },
+      "centro": {
+        "x": 485,
+        "y": 173
+      },
+      "erro_px": 5.4,
+      "dentro_do_alvo": true,
+      "ms": 1859,
+      "inferencias": 1,
+      "refino": "desligado",
+      "motivo": "vision_refine_passes = 0",
+      "deslocamento_px": 0,
+      "area_ratio_p1_p2": 1,
+      "erro": ""
+    },
+    {
+      "tamanho": "grande",
+      "alvo": {
+        "x": 320,
+        "y": 70,
+        "w": 320,
+        "h": 200
+      },
+      "refine_passes": 0,
+      "aim_modo": "point",
+      "aim": "point",
+      "aim_point": {
+        "x": 476,
+        "y": 172
+      },
+      "margem_px": 98,
+      "execucao": 1,
+      "ok": true,
+      "strategy": "vision",
+      "box": {
+        "x": 315,
+        "y": 72,
+        "width": 322,
+        "height": 200
+      },
+      "centro": {
+        "x": 476,
+        "y": 172
+      },
+      "erro_px": 4.5,
+      "dentro_do_alvo": true,
+      "ms": 4771,
+      "inferencias": 1,
+      "refino": "desligado",
+      "motivo": "vision_refine_passes = 0",
+      "deslocamento_px": 0,
+      "area_ratio_p1_p2": 1,
+      "erro": ""
+    },
+    {
+      "tamanho": "grande",
+      "alvo": {
+        "x": 320,
+        "y": 70,
+        "w": 320,
+        "h": 200
+      },
+      "refine_passes": 0,
+      "aim_modo": "point",
+      "aim": "point",
+      "aim_point": {
+        "x": 476,
+        "y": 172
+      },
+      "margem_px": 98,
+      "execucao": 2,
+      "ok": true,
+      "strategy": "vision",
+      "box": {
+        "x": 315,
+        "y": 72,
+        "width": 322,
+        "height": 200
+      },
+      "centro": {
+        "x": 476,
+        "y": 172
+      },
+      "erro_px": 4.5,
+      "dentro_do_alvo": true,
+      "ms": 1846,
+      "inferencias": 1,
+      "refino": "desligado",
+      "motivo": "vision_refine_passes = 0",
+      "deslocamento_px": 0,
+      "area_ratio_p1_p2": 1,
+      "erro": ""
+    },
+    {
+      "tamanho": "grande",
+      "alvo": {
+        "x": 320,
+        "y": 70,
+        "w": 320,
+        "h": 200
+      },
+      "refine_passes": 0,
+      "aim_modo": "point",
+      "aim": "point",
+      "aim_point": {
+        "x": 476,
+        "y": 172
+      },
+      "margem_px": 98,
+      "execucao": 3,
+      "ok": true,
+      "strategy": "vision",
+      "box": {
+        "x": 315,
+        "y": 72,
+        "width": 322,
+        "height": 200
+      },
+      "centro": {
+        "x": 476,
+        "y": 172
+      },
+      "erro_px": 4.5,
+      "dentro_do_alvo": true,
+      "ms": 1888,
+      "inferencias": 1,
+      "refino": "desligado",
+      "motivo": "vision_refine_passes = 0",
+      "deslocamento_px": 0,
+      "area_ratio_p1_p2": 1,
+      "erro": ""
+    },
+    {
+      "tamanho": "medio",
+      "alvo": {
+        "x": 400,
+        "y": 120,
+        "w": 160,
+        "h": 100
+      },
+      "refine_passes": 0,
+      "aim_modo": "point",
+      "aim": "point",
+      "aim_point": {
+        "x": 476,
+        "y": 171
+      },
+      "margem_px": 49,
+      "execucao": 1,
+      "ok": true,
+      "strategy": "vision",
+      "box": {
+        "x": 397,
+        "y": 121,
+        "width": 158,
+        "height": 100
+      },
+      "centro": {
+        "x": 476,
+        "y": 171
+      },
+      "erro_px": 4.1,
+      "dentro_do_alvo": true,
+      "ms": 1965,
+      "inferencias": 1,
+      "refino": "desligado",
+      "motivo": "vision_refine_passes = 0",
+      "deslocamento_px": 0,
+      "area_ratio_p1_p2": 1,
+      "erro": ""
+    },
+    {
+      "tamanho": "medio",
+      "alvo": {
+        "x": 400,
+        "y": 120,
+        "w": 160,
+        "h": 100
+      },
+      "refine_passes": 0,
+      "aim_modo": "point",
+      "aim": "point",
+      "aim_point": {
+        "x": 476,
+        "y": 171
+      },
+      "margem_px": 49,
+      "execucao": 2,
+      "ok": true,
+      "strategy": "vision",
+      "box": {
+        "x": 397,
+        "y": 121,
+        "width": 158,
+        "height": 100
+      },
+      "centro": {
+        "x": 476,
+        "y": 171
+      },
+      "erro_px": 4.1,
+      "dentro_do_alvo": true,
+      "ms": 1828,
+      "inferencias": 1,
+      "refino": "desligado",
+      "motivo": "vision_refine_passes = 0",
+      "deslocamento_px": 0,
+      "area_ratio_p1_p2": 1,
+      "erro": ""
+    },
+    {
+      "tamanho": "medio",
+      "alvo": {
+        "x": 400,
+        "y": 120,
+        "w": 160,
+        "h": 100
+      },
+      "refine_passes": 0,
+      "aim_modo": "point",
+      "aim": "point",
+      "aim_point": {
+        "x": 476,
+        "y": 171
+      },
+      "margem_px": 49,
+      "execucao": 3,
+      "ok": true,
+      "strategy": "vision",
+      "box": {
+        "x": 397,
+        "y": 121,
+        "width": 158,
+        "height": 100
+      },
+      "centro": {
+        "x": 476,
+        "y": 171
+      },
+      "erro_px": 4.1,
+      "dentro_do_alvo": true,
+      "ms": 1884,
+      "inferencias": 1,
+      "refino": "desligado",
+      "motivo": "vision_refine_passes = 0",
+      "deslocamento_px": 0,
+      "area_ratio_p1_p2": 1,
+      "erro": ""
+    },
+    {
+      "tamanho": "pequeno",
+      "alvo": {
+        "x": 440,
+        "y": 145,
+        "w": 80,
+        "h": 50
+      },
+      "refine_passes": 0,
+      "aim_modo": "point",
+      "aim": "point",
+      "aim_point": {
+        "x": 482,
+        "y": 172
+      },
+      "margem_px": 23,
+      "execucao": 1,
+      "ok": true,
+      "strategy": "vision",
+      "box": {
+        "x": 443.5,
+        "y": 147,
+        "width": 77,
+        "height": 50
+      },
+      "centro": {
+        "x": 482,
+        "y": 172
+      },
+      "erro_px": 2.8,
+      "dentro_do_alvo": true,
+      "ms": 1967,
+      "inferencias": 1,
+      "refino": "desligado",
+      "motivo": "vision_refine_passes = 0",
+      "deslocamento_px": 0,
+      "area_ratio_p1_p2": 1,
+      "erro": ""
+    },
+    {
+      "tamanho": "pequeno",
+      "alvo": {
+        "x": 440,
+        "y": 145,
+        "w": 80,
+        "h": 50
+      },
+      "refine_passes": 0,
+      "aim_modo": "point",
+      "aim": "point",
+      "aim_point": {
+        "x": 482,
+        "y": 172
+      },
+      "margem_px": 23,
+      "execucao": 2,
+      "ok": true,
+      "strategy": "vision",
+      "box": {
+        "x": 443.5,
+        "y": 147,
+        "width": 77,
+        "height": 50
+      },
+      "centro": {
+        "x": 482,
+        "y": 172
+      },
+      "erro_px": 2.8,
+      "dentro_do_alvo": true,
+      "ms": 1883,
+      "inferencias": 1,
+      "refino": "desligado",
+      "motivo": "vision_refine_passes = 0",
+      "deslocamento_px": 0,
+      "area_ratio_p1_p2": 1,
+      "erro": ""
+    },
+    {
+      "tamanho": "pequeno",
+      "alvo": {
+        "x": 440,
+        "y": 145,
+        "w": 80,
+        "h": 50
+      },
+      "refine_passes": 0,
+      "aim_modo": "point",
+      "aim": "point",
+      "aim_point": {
+        "x": 482,
+        "y": 172
+      },
+      "margem_px": 23,
+      "execucao": 3,
+      "ok": true,
+      "strategy": "vision",
+      "box": {
+        "x": 443.5,
+        "y": 147,
+        "width": 77,
+        "height": 50
+      },
+      "centro": {
+        "x": 482,
+        "y": 172
+      },
+      "erro_px": 2.8,
+      "dentro_do_alvo": true,
+      "ms": 1793,
+      "inferencias": 1,
+      "refino": "desligado",
+      "motivo": "vision_refine_passes = 0",
+      "deslocamento_px": 0,
+      "area_ratio_p1_p2": 1,
+      "erro": ""
+    },
+    {
+      "tamanho": "grande",
+      "alvo": {
+        "x": 320,
+        "y": 70,
+        "w": 320,
+        "h": 200
+      },
+      "refine_passes": 0,
+      "aim_modo": "point_then_box",
+      "aim": "point",
+      "aim_point": {
+        "x": 476,
+        "y": 172
+      },
+      "margem_px": 98,
+      "execucao": 1,
+      "ok": true,
+      "strategy": "vision",
+      "box": {
+        "x": 315,
+        "y": 72,
+        "width": 322,
+        "height": 200
+      },
+      "centro": {
+        "x": 476,
+        "y": 172
+      },
+      "erro_px": 4.5,
+      "dentro_do_alvo": true,
+      "ms": 1730,
+      "inferencias": 1,
+      "refino": "desligado",
+      "motivo": "vision_refine_passes = 0",
+      "deslocamento_px": 0,
+      "area_ratio_p1_p2": 1,
+      "erro": ""
+    },
+    {
+      "tamanho": "grande",
+      "alvo": {
+        "x": 320,
+        "y": 70,
+        "w": 320,
+        "h": 200
+      },
+      "refine_passes": 0,
+      "aim_modo": "point_then_box",
+      "aim": "point",
+      "aim_point": {
+        "x": 476,
+        "y": 172
+      },
+      "margem_px": 98,
+      "execucao": 2,
+      "ok": true,
+      "strategy": "vision",
+      "box": {
+        "x": 315,
+        "y": 72,
+        "width": 322,
+        "height": 200
+      },
+      "centro": {
+        "x": 476,
+        "y": 172
+      },
+      "erro_px": 4.5,
+      "dentro_do_alvo": true,
+      "ms": 1722,
+      "inferencias": 1,
+      "refino": "desligado",
+      "motivo": "vision_refine_passes = 0",
+      "deslocamento_px": 0,
+      "area_ratio_p1_p2": 1,
+      "erro": ""
+    },
+    {
+      "tamanho": "grande",
+      "alvo": {
+        "x": 320,
+        "y": 70,
+        "w": 320,
+        "h": 200
+      },
+      "refine_passes": 0,
+      "aim_modo": "point_then_box",
+      "aim": "point",
+      "aim_point": {
+        "x": 476,
+        "y": 172
+      },
+      "margem_px": 98,
+      "execucao": 3,
+      "ok": true,
+      "strategy": "vision",
+      "box": {
+        "x": 315,
+        "y": 72,
+        "width": 322,
+        "height": 200
+      },
+      "centro": {
+        "x": 476,
+        "y": 172
+      },
+      "erro_px": 4.5,
+      "dentro_do_alvo": true,
+      "ms": 1739,
+      "inferencias": 1,
+      "refino": "desligado",
+      "motivo": "vision_refine_passes = 0",
+      "deslocamento_px": 0,
+      "area_ratio_p1_p2": 1,
+      "erro": ""
+    },
+    {
+      "tamanho": "medio",
+      "alvo": {
+        "x": 400,
+        "y": 120,
+        "w": 160,
+        "h": 100
+      },
+      "refine_passes": 0,
+      "aim_modo": "point_then_box",
+      "aim": "point",
+      "aim_point": {
+        "x": 476,
+        "y": 171
+      },
+      "margem_px": 49,
+      "execucao": 1,
+      "ok": true,
+      "strategy": "vision",
+      "box": {
+        "x": 397,
+        "y": 121,
+        "width": 158,
+        "height": 100
+      },
+      "centro": {
+        "x": 476,
+        "y": 171
+      },
+      "erro_px": 4.1,
+      "dentro_do_alvo": true,
+      "ms": 1732,
+      "inferencias": 1,
+      "refino": "desligado",
+      "motivo": "vision_refine_passes = 0",
+      "deslocamento_px": 0,
+      "area_ratio_p1_p2": 1,
+      "erro": ""
+    },
+    {
+      "tamanho": "medio",
+      "alvo": {
+        "x": 400,
+        "y": 120,
+        "w": 160,
+        "h": 100
+      },
+      "refine_passes": 0,
+      "aim_modo": "point_then_box",
+      "aim": "point",
+      "aim_point": {
+        "x": 476,
+        "y": 171
+      },
+      "margem_px": 49,
+      "execucao": 2,
+      "ok": true,
+      "strategy": "vision",
+      "box": {
+        "x": 397,
+        "y": 121,
+        "width": 158,
+        "height": 100
+      },
+      "centro": {
+        "x": 476,
+        "y": 171
+      },
+      "erro_px": 4.1,
+      "dentro_do_alvo": true,
+      "ms": 1703,
+      "inferencias": 1,
+      "refino": "desligado",
+      "motivo": "vision_refine_passes = 0",
+      "deslocamento_px": 0,
+      "area_ratio_p1_p2": 1,
+      "erro": ""
+    },
+    {
+      "tamanho": "medio",
+      "alvo": {
+        "x": 400,
+        "y": 120,
+        "w": 160,
+        "h": 100
+      },
+      "refine_passes": 0,
+      "aim_modo": "point_then_box",
+      "aim": "point",
+      "aim_point": {
+        "x": 476,
+        "y": 171
+      },
+      "margem_px": 49,
+      "execucao": 3,
+      "ok": true,
+      "strategy": "vision",
+      "box": {
+        "x": 397,
+        "y": 121,
+        "width": 158,
+        "height": 100
+      },
+      "centro": {
+        "x": 476,
+        "y": 171
+      },
+      "erro_px": 4.1,
+      "dentro_do_alvo": true,
+      "ms": 1707,
+      "inferencias": 1,
+      "refino": "desligado",
+      "motivo": "vision_refine_passes = 0",
+      "deslocamento_px": 0,
+      "area_ratio_p1_p2": 1,
+      "erro": ""
+    },
+    {
+      "tamanho": "pequeno",
+      "alvo": {
+        "x": 440,
+        "y": 145,
+        "w": 80,
+        "h": 50
+      },
+      "refine_passes": 0,
+      "aim_modo": "point_then_box",
+      "aim": "point",
+      "aim_point": {
+        "x": 482,
+        "y": 172
+      },
+      "margem_px": 23,
+      "execucao": 1,
+      "ok": true,
+      "strategy": "vision",
+      "box": {
+        "x": 443.5,
+        "y": 147,
+        "width": 77,
+        "height": 50
+      },
+      "centro": {
+        "x": 482,
+        "y": 172
+      },
+      "erro_px": 2.8,
+      "dentro_do_alvo": true,
+      "ms": 1741,
+      "inferencias": 1,
+      "refino": "desligado",
+      "motivo": "vision_refine_passes = 0",
+      "deslocamento_px": 0,
+      "area_ratio_p1_p2": 1,
+      "erro": ""
+    },
+    {
+      "tamanho": "pequeno",
+      "alvo": {
+        "x": 440,
+        "y": 145,
+        "w": 80,
+        "h": 50
+      },
+      "refine_passes": 0,
+      "aim_modo": "point_then_box",
+      "aim": "point",
+      "aim_point": {
+        "x": 482,
+        "y": 172
+      },
+      "margem_px": 23,
+      "execucao": 2,
+      "ok": true,
+      "strategy": "vision",
+      "box": {
+        "x": 443.5,
+        "y": 147,
+        "width": 77,
+        "height": 50
+      },
+      "centro": {
+        "x": 482,
+        "y": 172
+      },
+      "erro_px": 2.8,
+      "dentro_do_alvo": true,
+      "ms": 1745,
+      "inferencias": 1,
+      "refino": "desligado",
+      "motivo": "vision_refine_passes = 0",
+      "deslocamento_px": 0,
+      "area_ratio_p1_p2": 1,
+      "erro": ""
+    },
+    {
+      "tamanho": "pequeno",
+      "alvo": {
+        "x": 440,
+        "y": 145,
+        "w": 80,
+        "h": 50
+      },
+      "refine_passes": 0,
+      "aim_modo": "point_then_box",
+      "aim": "point",
+      "aim_point": {
+        "x": 482,
+        "y": 172
+      },
+      "margem_px": 23,
+      "execucao": 3,
+      "ok": true,
+      "strategy": "vision",
+      "box": {
+        "x": 443.5,
+        "y": 147,
+        "width": 77,
+        "height": 50
+      },
+      "centro": {
+        "x": 482,
+        "y": 172
+      },
+      "erro_px": 2.8,
+      "dentro_do_alvo": true,
+      "ms": 1743,
+      "inferencias": 1,
+      "refino": "desligado",
+      "motivo": "vision_refine_passes = 0",
+      "deslocamento_px": 0,
+      "area_ratio_p1_p2": 1,
+      "erro": ""
+    }
+  ],
+  "veredito": [
+    {
+      "tamanho": "grande",
+      "aim": "box_center",
+      "erro_sem_refino": 4.2,
+      "erro_com_refino": null,
+      "dentro_sem": 3,
+      "dentro_com": 0,
+      "total": 0
+    },
+    {
+      "tamanho": "grande",
+      "aim": "point",
+      "erro_sem_refino": 4.5,
+      "erro_com_refino": null,
+      "dentro_sem": 3,
+      "dentro_com": 0,
+      "total": 0
+    },
+    {
+      "tamanho": "grande",
+      "aim": "point_then_box",
+      "erro_sem_refino": 4.5,
+      "erro_com_refino": null,
+      "dentro_sem": 3,
+      "dentro_com": 0,
+      "total": 0
+    },
+    {
+      "tamanho": "medio",
+      "aim": "box_center",
+      "erro_sem_refino": 5,
+      "erro_com_refino": null,
+      "dentro_sem": 3,
+      "dentro_com": 0,
+      "total": 0
+    },
+    {
+      "tamanho": "medio",
+      "aim": "point",
+      "erro_sem_refino": 4.1,
+      "erro_com_refino": null,
+      "dentro_sem": 3,
+      "dentro_com": 0,
+      "total": 0
+    },
+    {
+      "tamanho": "medio",
+      "aim": "point_then_box",
+      "erro_sem_refino": 4.1,
+      "erro_com_refino": null,
+      "dentro_sem": 3,
+      "dentro_com": 0,
+      "total": 0
+    },
+    {
+      "tamanho": "pequeno",
+      "aim": "box_center",
+      "erro_sem_refino": 5.4,
+      "erro_com_refino": null,
+      "dentro_sem": 3,
+      "dentro_com": 0,
+      "total": 0
+    },
+    {
+      "tamanho": "pequeno",
+      "aim": "point",
+      "erro_sem_refino": 2.8,
+      "erro_com_refino": null,
+      "dentro_sem": 3,
+      "dentro_com": 0,
+      "total": 0
+    },
+    {
+      "tamanho": "pequeno",
+      "aim": "point_then_box",
+      "erro_sem_refino": 2.8,
+      "erro_com_refino": null,
+      "dentro_sem": 3,
+      "dentro_com": 0,
+      "total": 0
+    }
+  ]
+}

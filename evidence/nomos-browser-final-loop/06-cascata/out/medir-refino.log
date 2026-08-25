@@ -1,0 +1,45 @@
+modelo=qwen2.5vl:3b  residentes_antes=[]
+grande   320x200     passes=0 exec=1 erro= 20.1px DENTRO=SIM inf=1  14896ms refino=desligado (vision_refine_passes = 0)
+grande   320x200     passes=0 exec=2 erro= 73.8px DENTRO=SIM inf=1   1661ms refino=desligado (vision_refine_passes = 0)
+grande   320x200     passes=0 exec=3 erro= 73.8px DENTRO=SIM inf=1   1651ms refino=desligado (vision_refine_passes = 0)
+medio    160x100     passes=0 exec=1 erro= 78.0px DENTRO=SIM inf=1   8483ms refino=desligado (vision_refine_passes = 0)
+medio    160x100     passes=0 exec=2 erro= 96.4px DENTRO=NAO inf=1   1590ms refino=desligado (vision_refine_passes = 0)
+medio    160x100     passes=0 exec=3 erro= 96.4px DENTRO=NAO inf=1   1503ms refino=desligado (vision_refine_passes = 0)
+pequeno  80x50       passes=0 exec=1 erro=  -   DENTRO=- inf=-   7651ms refino=- ERRO=TARGET_NOT_FOUND
+pequeno  80x50       passes=0 exec=2 erro=  -   DENTRO=- inf=-    641ms refino=- ERRO=TARGET_NOT_FOUND
+pequeno  80x50       passes=0 exec=3 erro=  -   DENTRO=- inf=-    606ms refino=- ERRO=TARGET_NOT_FOUND
+grande   320x200     passes=1 exec=1 erro= 65.5px DENTRO=SIM inf=2   8057ms refino=usado
+grande   320x200     passes=1 exec=2 erro= 65.5px DENTRO=SIM inf=2   3006ms refino=usado
+grande   320x200     passes=1 exec=3 erro= 65.5px DENTRO=SIM inf=2   3103ms refino=usado
+medio    160x100     passes=1 exec=1 erro=153.8px DENTRO=NAO inf=2   8235ms refino=usado
+medio    160x100     passes=1 exec=2 erro=153.8px DENTRO=NAO inf=2   3378ms refino=usado
+medio    160x100     passes=1 exec=3 erro=153.8px DENTRO=NAO inf=2   3162ms refino=usado
+pequeno  80x50       passes=1 exec=1 erro=  -   DENTRO=- inf=-    641ms refino=- ERRO=TARGET_NOT_FOUND
+pequeno  80x50       passes=1 exec=2 erro=  -   DENTRO=- inf=-    602ms refino=- ERRO=TARGET_NOT_FOUND
+pequeno  80x50       passes=1 exec=3 erro=  -   DENTRO=- inf=-    619ms refino=- ERRO=TARGET_NOT_FOUND
+grande   320x200     passes=2 exec=1 erro= 61.5px DENTRO=SIM inf=3   9665ms refino=usado (convergiu: centro moveu 0.5% do recorte)
+grande   320x200     passes=2 exec=2 erro= 61.5px DENTRO=SIM inf=3   4748ms refino=usado (convergiu: centro moveu 0.5% do recorte)
+grande   320x200     passes=2 exec=3 erro= 61.5px DENTRO=SIM inf=3   4702ms refino=usado (convergiu: centro moveu 0.5% do recorte)
+medio    160x100     passes=2 exec=1 erro=100.9px DENTRO=NAO inf=3  10873ms refino=usado
+medio    160x100     passes=2 exec=2 erro=100.9px DENTRO=NAO inf=3   4699ms refino=usado
+medio    160x100     passes=2 exec=3 erro=100.9px DENTRO=NAO inf=3   5114ms refino=usado
+pequeno  80x50       passes=2 exec=1 erro=  -   DENTRO=- inf=-    721ms refino=- ERRO=TARGET_NOT_FOUND
+pequeno  80x50       passes=2 exec=2 erro=  -   DENTRO=- inf=-    687ms refino=- ERRO=TARGET_NOT_FOUND
+pequeno  80x50       passes=2 exec=3 erro=  -   DENTRO=- inf=-    709ms refino=- ERRO=TARGET_NOT_FOUND
+
+RESUMO  (mediana das 3 execuções; 'estável' = execuções 2 e 3 idênticas)
+tamanho   passes  erro_med  dentro   inferencias  estavel
+grande    0         73.8px    3/3             1  sim
+grande    1         65.5px    3/3             2  sim
+grande    2         61.5px    3/3             3  sim
+medio     0         96.4px    1/3             1  sim
+medio     1        153.8px    0/3             2  sim
+medio     2        100.9px    0/3             3  sim
+pequeno   0              -    0/3                sim
+pequeno   1              -    0/3                sim
+pequeno   2              -    0/3                sim
+
+VEREDITO grande   sem_refino=73.8px (3/3 dentro)  com_refino=65.5px (3/3 dentro)
+VEREDITO medio    sem_refino=96.4px (1/3 dentro)  com_refino=153.8px (0/3 dentro)
+VEREDITO pequeno  sem_refino=nullpx (0/3 dentro)  com_refino=nullpx (0/3 dentro)
+residentes_depois=[]

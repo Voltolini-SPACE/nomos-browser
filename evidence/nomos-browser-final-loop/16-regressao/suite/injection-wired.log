@@ -1,0 +1,24 @@
+✔ 0a. raw_web_content nasce em withhold_on_detection (186.048625ms)
+✔ 0b. NOMOS_BROWSER_RAW_WEB_CONTENT é lida e registrada (0.244125ms)
+✔ 0c. valor inválido lança, não vira default silencioso (0.325583ms)
+✔ 1. 'ignore previous instructions' é detectado e o cru é retido (31.033041ms)
+✔ 2. exfiltração de cookies é detectada em severidade alta (12.424208ms)
+✔ 3. pedido de invocar browser.download é detectado (10.782875ms)
+✔ 4. pedido financeiro é detectado (10.641583ms)
+✔ 5. comando de shell é detectado (9.9765ms)
+✔ 6. URL de exfiltração isolada é detectada (11.818166ms)
+✔ 7a. FALSE_POSITIVE_CONTROL: artigo SOBRE injeção continua inteiro (10.189166ms)
+✔ 7b. FALSE_POSITIVE_CONTROL: texto inocente não é marcado (10.876417ms)
+✔ 8. browser.extract sela e retém igual a observe, mantendo o campo content (65.748625ms)
+✔ 9. payload em aria-label é pego pela ÁRVORE AX, mesmo fora do corte do DOM (13.564084ms)
+✔ 10. CONTROLE NEGATIVO: página limpa não acusa, e o inspetor comprovadamente rodou (12.391875ms)
+✔ 11. o bloco entregue ao modelo só fecha com o nonce da chamada (23.356542ms)
+✔ 12. a trilha registra a detecção e NUNCA o trecho literal (210.598625ms)
+ℹ tests 16
+ℹ suites 0
+ℹ pass 16
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 995.057292

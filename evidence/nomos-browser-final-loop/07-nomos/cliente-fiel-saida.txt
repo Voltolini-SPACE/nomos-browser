@@ -1,0 +1,22 @@
+[PASS] 00 manifesto canônico carrega com a MESMA validação do NOMOS — nome=nomos-browser tools=13 nivel_padrao=A5
+# daemon real em http://127.0.0.1:57416 (runtime_dir=/tmp/nomos-fiel-rt-SD8u3T)
+[PASS] 01 discoverability — tools/list devolve as 13 com schema e nível do manifesto — server=nomos-browser-mcp tools=13 schema_ok=true niveis_do_manifesto_ok=true
+[PASS] 01b nenhuma tool do server escapa da classificação do manifesto — A0=5 A2=7 A5=1
+[PASS] 02 autenticação — sem NOMOS_BROWSER_TOKEN o adaptador recusa com erro próprio — isError=true código=MCP_NO_CREDENTIAL
+[PASS] 03 sessão — o adaptador criou a sessão sozinho e devolveu o session_id — isError=false session_id=ses_6546515c043648e5
+[PASS] 03b ação — navegação real chegou ao Chromium e voltou estruturada — route=browser.goto session_id=ses_6546515c043648e5 http=200 action_id=act_mt84l39n_3 state=IDLE duration_ms=40
+[PASS] 03c sessão reutilizada no MESMO processo sem o cliente pedir — session_id da 2ª chamada=ses_6546515c043648e5
+[PASS] 04 retorno estruturado — browser_extract traz o conteúdo REAL da página — marcador=true envelope_json=true
+[PASS] 05 ação com efeito — clique real mudou o DOM e a extração seguinte vê a mudança — click_isError=false estado_depois=clicado
+[PASS] 06 erro — tool inexistente vira erro JSON-RPC, não resultado vazio — McpErro: ferramenta desconhecida: browser_teleportar
+[PASS] 06b erro — argumento inválido vira erro JSON-RPC com a razão exata — McpErro: browser_navigate: argumento(s) desconhecido(s): urlz. Aceitos: url, wait_until, session_id
+[PASS] 06c erro — falha de EXECUÇÃO volta como isError com o código do contrato — código=TARGET_NOT_FOUND
+[PASS] 06d controle — o MESMO caminho com sucesso NÃO marca isError — extract.isError=false click_alvo_ruim.isError=true
+[PASS] 07 cancelamento — notificação de cancelamento não recebe resposta e não derruba o stream — ping após notifications/cancelled respondeu=true
+[PASS] 07b cancelamento — chamada abandonada morre com o subprocesso e vira erro, não silêncio — McpErro: server MCP encerrou sem responder (handshake?)
+[PASS] 08 timeout — server que não fala MCP estoura o prazo em vez de pendurar o cliente — McpErro: server MCP não respondeu em 2s (o comando do manifesto fala MCP?) (1505 ms)
+[PASS] 09 reconnect — subprocesso morto, novo processo faz handshake e lista as 13 de novo — server=nomos-browser-mcp tools=13 pid_novo=89834
+[PASS] 09b reconnect — a SESSÃO sobreviveu ao adaptador: o processo novo retoma pelo session_id — session_id retomado=ses_6546515c043648e5 conteúdo_ainda_visível=true
+
+casos=18 falhas=0
+NOMOS_TRANSPORT_E2E=PASS

@@ -1,0 +1,6 @@
+screenshot=/Users/AI/Projects/nomos-browser/evidence/nomos-browser-final-validation/09-llm/out/shot-sessions/ses_31cf843b1f2f44a2/screenshots/shot_181984c2d0324879.png bytes=10367 caixa_do_alvo_no_momento={"x":400,"y":120,"width":160,"height":100}
+qwen2.5vl:3b     alvo real           12387ms achou=true conf=0.99 centro=509,200 erro=41.7px area=2% correto=true
+qwen2.5vl:3b     controle negativo     953ms achou=false conf=- centro=- erro=- area=- correto=true
+moondream:1.8b   alvo real            2975ms achou=false conf=- centro=- erro=- area=- correto=false
+moondream:1.8b   controle negativo     610ms achou=true conf=0.67 centro=1,1 erro=508.6px area=0% correto=true
+qwen3.5 think:false  ok=true/true frio=6853ms quente=6068ms

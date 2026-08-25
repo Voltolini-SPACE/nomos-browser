@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "session_id": "ses_ab633961e98c4182",
+  "owner": "DIAG",
+  "profile": "default",
+  "url": "about:blank",
+  "page_ids": [
+    "pg_b377eb74c4d4415a"
+  ],
+  "context_id": "ctx_7472e23d36ff41f7",
+  "capabilities": {
+    "navigate": true,
+    "read": true,
+    "click": true,
+    "type": true,
+    "download": false,
+    "upload": false,
+    "send": false,
+    "purchase": false,
+    "payment": false,
+    "delete": false
+  },
+  "cdp_endpoint": null,
+  "browser_pid": 13677,
+  "browser_id": "ctx_7472e23d36ff41f7",
+  "criado_em": "2026-08-24T23:35:08.942Z",
+  "ultima_atividade": "2026-08-24T23:35:08.942Z",
+  "status": "IDLE",
+  "ephemeral": false,
+  "in_flight_action": null
+}

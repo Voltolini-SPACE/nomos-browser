@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "session_id": "ses_e9facf0adcc84ed0",
+  "owner": "MEDIR-REFINO",
+  "profile": "default",
+  "url": "about:blank",
+  "page_ids": [
+    "pg_6f6f48f4ee47432f"
+  ],
+  "context_id": "ctx_96c86565be804d97",
+  "capabilities": {
+    "navigate": true,
+    "read": true,
+    "click": true,
+    "type": true,
+    "download": false,
+    "upload": false,
+    "send": false,
+    "purchase": false,
+    "payment": false,
+    "delete": false
+  },
+  "cdp_endpoint": null,
+  "browser_pid": 21684,
+  "browser_id": "ctx_96c86565be804d97",
+  "criado_em": "2026-08-25T00:04:59.383Z",
+  "ultima_atividade": "2026-08-25T00:04:59.383Z",
+  "status": "IDLE",
+  "ephemeral": false,
+  "in_flight_action": null
+}

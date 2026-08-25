@@ -1,0 +1,186 @@
+── FASE 20 · soak pesado e concorrência ────────────────────────────────
+# produção antes : ai.sovereign.omniroute=12728 br.com.se7enpay.nomos.servico=83005 com.nomos.panel=83034
+# painel :8795   : p33027
+# memória antes  : 5.14 GB disponíveis · 68% livre (macOS)
+# fixture em http://127.0.0.1:58525
+# daemon do soak em http://127.0.0.1:58526 (pid 40551)
+
+── dimensionamento (medido, não assumido) ──────────────────────────────
+  memória disponível : 5.13 GB (68% livre pelo macOS)
+  custo por sessão   : 339 MB (Chromium persistente + helpers, MEDIDO abrindo e fechando uma)
+  RSS base do daemon : 182 MB sem sessão alguma
+  sonda ENXERGA      : com 1 sessão aberta viu 5 filhos, 5 Chromium, 519 MB de árvore
+  reserva p/ produção: 1.6 GB
+  concorrência       : pedida 10 → escolhida 10
+  motivo             : cabem 10 sessões no orçamento de 3.53 GB a 339 MB cada — as 10 pedidas cabem
+  ciclos             : 100
+
+── 20.1 · soak sequencial de 100 ciclos ─────────────────────────────
+  ciclo   1     895ms  rss_d= 201MB  rss_tot=  201MB  fds=  44  filhos=  0  chr=  0  sess=0  pag=0  lease=0  task=0  mem=5.26GB  28/28
+  ciclo  10    1659ms  rss_d= 223MB  rss_tot=  223MB  fds=  46  filhos=  0  chr=  0  sess=0  pag=0  lease=0  task=0  mem=5.50GB  45/45  download=nomos-soak-20.txt:36B upload=ARQUIVO:carta-soak.txt:37 injecao=det:true/sev:alta task=COMPLETED:6passos task.cleanup=abas:4/lease:1/fila:1+0
+  ciclo  20    1641ms  rss_d= 229MB  rss_tot=  229MB  fds=  46  filhos=  0  chr=  0  sess=0  pag=0  lease=0  task=0  mem=5.27GB  45/45  download=nomos-soak-20.txt:36B upload=ARQUIVO:carta-soak.txt:37 injecao=det:true/sev:alta task=COMPLETED:6passos task.cleanup=abas:4/lease:1/fila:1+0
+   ↳ ciclo 25: visao=OK(476,171) erro_px=4.1 · memória 5.08GB → 5.95GB · residentes depois=[]
+  ciclo  30    1635ms  rss_d=  94MB  rss_tot=   94MB  fds=  46  filhos=  0  chr=  0  sess=0  pag=0  lease=0  task=0  mem=5.06GB  45/45  download=nomos-soak-20.txt:36B upload=ARQUIVO:carta-soak.txt:37 injecao=det:true/sev:alta task=COMPLETED:6passos task.cleanup=abas:4/lease:1/fila:1+0
+  ciclo  40    1643ms  rss_d= 117MB  rss_tot=  117MB  fds=  46  filhos=  0  chr=  0  sess=0  pag=0  lease=0  task=0  mem=4.05GB  45/45  download=nomos-soak-20.txt:36B upload=ARQUIVO:carta-soak.txt:37 injecao=det:true/sev:alta task=COMPLETED:6passos task.cleanup=abas:4/lease:1/fila:1+0
+   ↳ ciclo 50: visao=OK(476,171) erro_px=4.1 · memória 4.24GB → 6.20GB · residentes depois=[]
+  ciclo  50   26383ms  rss_d=  58MB  rss_tot=   58MB  fds=  45  filhos=  0  chr=  0  sess=0  pag=0  lease=0  task=0  mem=6.19GB  55/55  download=nomos-soak-20.txt:36B upload=ARQUIVO:carta-soak.txt:37 injecao=det:true/sev:alta task=COMPLETED:6passos task.cleanup=abas:4/lease:1/fila:1+0 visao=OK(476,171) erro_px=4.1
+  ciclo  60    1644ms  rss_d= 105MB  rss_tot=  105MB  fds=  46  filhos=  0  chr=  0  sess=0  pag=0  lease=0  task=0  mem=5.35GB  45/45  download=nomos-soak-20.txt:36B upload=ARQUIVO:carta-soak.txt:37 injecao=det:true/sev:alta task=COMPLETED:6passos task.cleanup=abas:4/lease:1/fila:1+0
+  ciclo  70    1670ms  rss_d= 108MB  rss_tot=  108MB  fds=  46  filhos=  0  chr=  0  sess=0  pag=0  lease=0  task=0  mem=4.75GB  45/45  download=nomos-soak-20.txt:36B upload=ARQUIVO:carta-soak.txt:37 injecao=det:true/sev:alta task=COMPLETED:6passos task.cleanup=abas:4/lease:1/fila:1+0
+   ↳ ciclo 75: visao=OK(476,171) erro_px=4.1 · memória 4.22GB → 5.99GB · residentes depois=[]
+  ciclo  80    1650ms  rss_d=  92MB  rss_tot=   92MB  fds=  46  filhos=  0  chr=  0  sess=0  pag=0  lease=0  task=0  mem=5.60GB  45/45  download=nomos-soak-20.txt:36B upload=ARQUIVO:carta-soak.txt:37 injecao=det:true/sev:alta task=COMPLETED:6passos task.cleanup=abas:4/lease:1/fila:1+0
+  ciclo  90    1610ms  rss_d= 105MB  rss_tot=  105MB  fds=  46  filhos=  0  chr=  0  sess=0  pag=0  lease=0  task=0  mem=5.23GB  45/45  download=nomos-soak-20.txt:36B upload=ARQUIVO:carta-soak.txt:37 injecao=det:true/sev:alta task=COMPLETED:6passos task.cleanup=abas:4/lease:1/fila:1+0
+   ↳ ciclo 100: visao=OK(476,171) erro_px=4.1 · memória 4.59GB → 6.21GB · residentes depois=[]
+  ciclo 100   25896ms  rss_d=  59MB  rss_tot=   59MB  fds=  45  filhos=  0  chr=  0  sess=0  pag=0  lease=0  task=0  mem=6.18GB  55/55  download=nomos-soak-20.txt:36B upload=ARQUIVO:carta-soak.txt:37 injecao=det:true/sev:alta task=COMPLETED:6passos task.cleanup=abas:4/lease:1/fila:1+0 visao=OK(476,171) erro_px=4.1
+  estado final do daemon do soak: sessões=0 páginas=0 leases=0 tasks_RUNNING=0 chromium=0 filhos=0
+
+── 20.2 · concorrência ─────────────────────────────────────────────────
+  regime ALTO : 10 sessões simultâneas com max_workers=10
+    aceitas=10/10 recusadas=0 passos=130/130 pico_workers=10 pico_em_voo=10 ⇒ PASS
+    · max_workers pedido=10 efetivo=10
+    · sessões ainda listadas depois de todos fecharem: 0
+  regime BAIXO: 10 sessões simultâneas com max_workers=3 (aperto de propósito)
+    aceitas=3/10 (esperado 3) recusadas=7 códigos={"OK":3,"BACKPRESSURE_REJECTED":7} passos=39/39 ⇒ PASS
+    · max_workers pedido=3 efetivo=3
+    · sessões ainda listadas depois de todos fecharem: 0
+  regime FILA : uma sessão, max_concurrency=1 max_queue=1, 8 ações simultâneas
+    atendidas=2 recusadas=6 fila_do_daemon: running_max=1 waiting_max=1 linhas de auditoria da recusa=6 ⇒ PASS
+    · 429 detail: running=1 waiting=1 max_queue=1 concurrency=1
+    · 429 detail: running=1 waiting=1 max_queue=1 concurrency=1
+    · 429 detail: running=1 waiting=1 max_queue=1 concurrency=1
+    · 429 detail: running=1 waiting=1 max_queue=1 concurrency=1
+    · 429 detail: running=1 waiting=1 max_queue=1 concurrency=1
+    · 429 detail: running=1 waiting=1 max_queue=1 concurrency=1
+    · depois da pressão a sessão navega e o DOM responde: PAGINA-POS-PRESSAO
+
+── série de RSS por bucket de 10 ciclos (MB) ────────────────────────────
+  rss_daemon (só o processo Node do runtime)
+  ciclos   1– 10  min   201  méd   213.9  max   223 MB  [                                    ───|──  ]
+  ciclos  11– 20  min   223  méd   224.6  max   229 MB  [                                         ─|─]
+  ciclos  21– 30  min    70  méd   143.2  max   230 MB  [   ──────────────────|──────────────────────]
+  ciclos  31– 40  min   110  méd   114.5  max   117 MB  [             ─|─                            ]
+  ciclos  41– 50  min    58  méd   120.8  max   131 MB  [────────────────|──                         ]
+  ciclos  51– 60  min    80  méd    96.3  max   105 MB  [      ────|──                               ]
+  ciclos  61– 70  min   104  méd   104.7  max   108 MB  [           ─|─                              ]
+  ciclos  71– 80  min    62  méd    93.7  max   109 MB  [ ────────|────                              ]
+  ciclos  81– 90  min    92  méd   102.8  max   105 MB  [         ──|─                               ]
+  ciclos  91–100  min    59  méd   100.4  max   105 MB  [───────────|─                               ]
+  rss_total_processo (Node + TODA a descendência: Chromium, helpers, crashpad)
+  ciclos   1– 10  min   201  méd   213.9  max   223 MB  [                                    ───|──  ]
+  ciclos  11– 20  min   223  méd   224.6  max   229 MB  [                                         ─|─]
+  ciclos  21– 30  min    70  méd   143.2  max   230 MB  [   ──────────────────|──────────────────────]
+  ciclos  31– 40  min   110  méd   114.5  max   117 MB  [             ─|─                            ]
+  ciclos  41– 50  min    58  méd   120.8  max   131 MB  [────────────────|──                         ]
+  ciclos  51– 60  min    80  méd    96.3  max   105 MB  [      ────|──                               ]
+  ciclos  61– 70  min   104  méd   104.7  max   108 MB  [           ─|─                              ]
+  ciclos  71– 80  min    62  méd    93.7  max   109 MB  [ ────────|────                              ]
+  ciclos  81– 90  min    92  méd   102.8  max   105 MB  [         ──|─                               ]
+  ciclos  91–100  min    59  méd   100.4  max   105 MB  [───────────|─                               ]
+
+── reta ajustada na SEGUNDA METADE da série ─────────────────────────────
+  rss_daemon           n= 50  inclinação=   0.0488 MB/ciclo  R²= 0.0041  primeiro=    80  último=    59  Δ=  -21.0
+  rss_total_processo   n= 50  inclinação=   0.0488 MB/ciclo  R²= 0.0041  primeiro=    80  último=    59  Δ=  -21.0
+  fds_abertos          n= 50  inclinação=   0.0054 un/ciclo  R²= 0.0070  primeiro=    44  último=    45  Δ=    1.0
+  processos_filhos     n= 50  inclinação=   0.0000 un/ciclo  R²= 1.0000  primeiro=     0  último=     0  Δ=    0.0
+  chromium_vivos       n= 50  inclinação=   0.0000 un/ciclo  R²= 1.0000  primeiro=     0  último=     0  Δ=    0.0
+  sessoes_vivas        n= 50  inclinação=   0.0000 un/ciclo  R²= 1.0000  primeiro=     0  último=     0  Δ=    0.0
+  paginas_abertas      n= 50  inclinação=   0.0000 un/ciclo  R²= 1.0000  primeiro=     0  último=     0  Δ=    0.0
+  leases               n= 50  inclinação=   0.0000 un/ciclo  R²= 1.0000  primeiro=     0  último=     0  Δ=    0.0
+  tasks_ativas         n= 50  inclinação=   0.0000 un/ciclo  R²= 1.0000  primeiro=     0  último=     0  Δ=    0.0
+  suspeitas de crescimento (inclinação>limiar E R²≥0.3): nenhuma
+
+── latência por operação ───────────────────────────────────────────────
+  [soak sequencial]
+  browser.extract            n= 1029  p50=     5ms  p95=     24ms  p99=     31ms  max=     42ms
+  browser.tabs               n=  300  p50=     2ms  p95=      2ms  p99=      4ms  max=      6ms
+  lease.get                  n=  206  p50=     0ms  p95=      1ms  p99=      1ms  max=      2ms
+  browser.open               n=  125  p50=    46ms  p95=     50ms  p99=     54ms  max=     54ms
+  sessions.list              n=  105  p50=     1ms  p95=      2ms  p99=      8ms  max=     11ms
+  tasks.list                 n=  105  p50=     3ms  p95=      5ms  p99=      9ms  max=     11ms
+  sessions.create            n=  105  p50=    97ms  p95=    119ms  p99=    135ms  max=    139ms
+  sessions.delete            n=  105  p50=    27ms  p95=     45ms  p99=     52ms  max=     77ms
+  browser.find               n=  104  p50=   113ms  p95=    116ms  p99=   3024ms  max=   3025ms
+  browser.click              n=  100  p50=   142ms  p95=    164ms  p99=    166ms  max=    172ms
+  browser.type               n=  100  p50=   132ms  p95=    135ms  p99=    143ms  max=    149ms
+  browser.scroll             n=  100  p50=    10ms  p95=     15ms  p99=     17ms  max=     18ms
+  browser.new_tab            n=  100  p50=    54ms  p95=     60ms  p99=     63ms  max=     77ms
+  browser.switch_tab         n=  100  p50=     1ms  p95=      1ms  p99=      2ms  max=      2ms
+  browser.screenshot         n=  100  p50=    17ms  p95=     20ms  p99=     21ms  max=     22ms
+  browser.close_tab          n=  100  p50=     2ms  p95=      3ms  p99=      3ms  max=      3ms
+  browser.download           n=   10  p50=     6ms  p95=      7ms  p99=      7ms  max=      7ms
+  browser.upload             n=   10  p50=    24ms  p95=     26ms  p99=     26ms  max=     26ms
+  browser.task               n=   10  p50=   615ms  p95=    635ms  p99=    635ms  max=    635ms
+  browser.find(visao)        n=    4  p50= 12986ms  p95=  14503ms  p99=  14503ms  max=  14503ms
+  browser.click(visao)       n=    4  p50=  1739ms  p95=   1804ms  p99=   1804ms  max=   1804ms
+  [concorrência · regime ALTO]
+  browser.extract            n=   40  p50=    48ms  p95=     75ms  p99=     79ms  max=     79ms
+  browser.tabs               n=   20  p50=     7ms  p95=     12ms  p99=     14ms  max=     14ms
+  sessions.create            n=   10  p50=   543ms  p95=    557ms  p99=    557ms  max=    557ms
+  browser.open               n=   10  p50=   169ms  p95=    174ms  p99=    174ms  max=    174ms
+  browser.click              n=   10  p50=   264ms  p95=    267ms  p99=    267ms  max=    267ms
+  browser.type               n=   10  p50=   204ms  p95=    206ms  p99=    206ms  max=    206ms
+  browser.screenshot         n=   10  p50=    34ms  p95=     39ms  p99=     39ms  max=     39ms
+  browser.new_tab            n=   10  p50=   126ms  p95=    151ms  p99=    151ms  max=    151ms
+  browser.close_tab          n=   10  p50=    17ms  p95=     28ms  p99=     28ms  max=     28ms
+  sessions.delete            n=   10  p50=   115ms  p95=    161ms  p99=    161ms  max=    161ms
+  health                     n=    5  p50=     1ms  p95=      2ms  p99=      2ms  max=      2ms
+  sessions.list              n=    4  p50=     1ms  p95=      4ms  p99=      4ms  max=      4ms
+  tasks.list                 n=    2  p50=     1ms  p95=      1ms  p99=      1ms  max=      1ms
+  [concorrência · regime BAIXO]
+  browser.extract            n=   12  p50=    25ms  p95=     37ms  p99=     37ms  max=     37ms
+  sessions.create            n=   10  p50=    15ms  p95=    192ms  p99=    192ms  max=    192ms
+  browser.tabs               n=    6  p50=     3ms  p95=      3ms  p99=      3ms  max=      3ms
+  sessions.list              n=    4  p50=     0ms  p95=      4ms  p99=      4ms  max=      4ms
+  health                     n=    3  p50=     1ms  p95=      1ms  p99=      1ms  max=      1ms
+  browser.open               n=    3  p50=    68ms  p95=     71ms  p99=     71ms  max=     71ms
+  browser.click              n=    3  p50=   158ms  p95=    187ms  p99=    187ms  max=    187ms
+  browser.type               n=    3  p50=   143ms  p95=    143ms  p99=    143ms  max=    143ms
+  browser.screenshot         n=    3  p50=    23ms  p95=     23ms  p99=     23ms  max=     23ms
+  browser.new_tab            n=    3  p50=    65ms  p95=     65ms  p99=     65ms  max=     65ms
+  browser.close_tab          n=    3  p50=     5ms  p95=      5ms  p99=      5ms  max=      5ms
+  sessions.delete            n=    3  p50=    51ms  p95=     54ms  p99=     54ms  max=     54ms
+  tasks.list                 n=    2  p50=     1ms  p95=      1ms  p99=      1ms  max=      1ms
+  [concorrência · fila por sessão]
+  browser.goto(fila)         n=    8  p50=     5ms  p95=   5042ms  p99=   5042ms  max=   5042ms
+  sessions.list              n=    2  p50=     0ms  p95=      1ms  p99=      1ms  max=      1ms
+  sessions.create            n=    1  p50=   119ms  p95=    119ms  p99=    119ms  max=    119ms
+  browser.open               n=    1  p50=    48ms  p95=     48ms  p99=     48ms  max=     48ms
+  browser.goto               n=    1  p50=    15ms  p95=     15ms  p99=     15ms  max=     15ms
+  browser.extract            n=    1  p50=    41ms  p95=     41ms  p99=     41ms  max=     41ms
+  sessions.delete            n=    1  p50=    42ms  p95=     42ms  p99=     42ms  max=     42ms
+
+── erros por código ────────────────────────────────────────────────────
+  soak         {"TARGET_NOT_FOUND":4}
+  conc_alto    (nenhum)
+  conc_baixo   {"BACKPRESSURE_REJECTED":7}
+  conc_fila    {"BACKPRESSURE_REJECTED":6}
+
+── resíduo e integridade ───────────────────────────────────────────────
+  processos remanescentes desta execução : 0
+  sessões vivas no encerramento de cada daemon: [{"daemon":"soak","vivas":0},{"daemon":"conc-alto","vivas":0},{"daemon":"conc-baixo","vivas":0},{"daemon":"conc-fila","vivas":0}]
+  tasks RUNNING pela API no fim do soak : 0
+  tasks RUNNING em disco (todos os daemons): 0
+  leases fantasma (sessão fechada com dono): 0 em 105 sessões conferidas
+  arquivos .json lidos e parseados : 258
+  linhas .jsonl lidas e parseadas  : 6348
+  arquivos QUEBRADOS               : 0
+  snapshots de sessão não-CLOSED   : 0
+
+── máquina ─────────────────────────────────────────────────────────────
+  produção antes : ai.sovereign.omniroute=12728 br.com.se7enpay.nomos.servico=83005 com.nomos.panel=83034
+  produção depois: ai.sovereign.omniroute=12728 br.com.se7enpay.nomos.servico=83005 com.nomos.panel=83034
+  produção intacta (mesmos PIDs): SIM
+  painel :8795 antes/depois: p33027 / p33027 ⇒ INTACTO
+  memória: 5.13 GB → 5.25 GB disponíveis
+  modelos residentes no fim: []
+
+SERIE=/Users/AI/Projects/nomos-browser/evidence/nomos-browser-final-loop/20-soak/out/soak-serie.jsonl
+CONCORRENCIA=/Users/AI/Projects/nomos-browser/evidence/nomos-browser-final-loop/20-soak/out/concorrencia.jsonl
+RELATORIO=/Users/AI/Projects/nomos-browser/evidence/nomos-browser-final-loop/20-soak/out/soak-final.json
+CICLOS_EXECUTADOS=100/100 (pedidos 100)
+SESSOES_SIMULTANEAS=10 (pedidas 10)
+
+SOAK_100_CYCLES=PASS
+CONCURRENCY_10_SESSIONS=PASS
+MEMORY_STABLE=YES   rss_daemon=0.0488 MB/ciclo R²=0.0041 · rss_total=0.0488 MB/ciclo R²=0.0041
+PROCESS_RESIDUAL=0
+SESSION_RESIDUAL=0

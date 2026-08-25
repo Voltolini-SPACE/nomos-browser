@@ -1,0 +1,34 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Alvos de coordenada</title>
+<style>html,body{margin:0;padding:0}body{font:14px system-ui;height:2400px;background:#fff}
+.b{position:absolute;background:rgb(20,120,220);color:#fff;border:0;display:flex;align-items:center;justify-content:center}
+/* CONSERTO DE INSTRUMENTO (FASE 4): este painel e SO EXIBICAO. Sem
+   pointer-events:none ele intercepta o hit-test — depois que #a4 passou a
+   receber clique de verdade, o JSON escrito aqui esticou a caixa por cima de
+   #a5 e o runtime (corretamente) recusou o clique com TARGET_NOT_ACTIONABLE,
+   apontando div#log como o elemento no ponto. Um log de diagnostico que rouba
+   clique mede a si mesmo, nao o produto. */
+#log{position:fixed;right:4px;top:4px;background:#ffd;padding:4px;font:12px monospace;z-index:9;pointer-events:none;max-width:280px;overflow:hidden;white-space:nowrap}
+</style></head><body>
+<div id="log">sem clique</div>
+<button class="b" id="a1" style="left:40px;top:40px;width:120px;height:40px">A1</button>
+<button class="b" id="a2" style="left:400px;top:120px;width:160px;height:100px">COMPRAR</button>
+<button class="b" id="a3" style="left:900px;top:300px;width:200px;height:60px">A3</button>
+<button class="b" id="a4" style="left:60px;top:700px;width:100px;height:100px">A4</button>
+<button class="b" id="a5" style="left:600px;top:1500px;width:180px;height:50px">A5</button>
+<button class="b" id="a6" style="left:1150px;top:60px;width:200px;height:40px">A6-parcial</button>
+<div id="saidas"></div>
+<script>
+document.querySelectorAll('button').forEach(b=>{
+  const s=document.createElement('div'); s.id='out-'+b.id; s.textContent='sem clique'; s.style.cssText='position:absolute;left:-9999px';
+  document.getElementById('saidas').appendChild(s);
+  b.addEventListener('click',e=>{
+    const r=e.target.getBoundingClientRect();
+    const o={id:e.target.id,clientX:e.clientX,clientY:e.clientY,pageX:e.pageX,pageY:e.pageY,
+      isTrusted:e.isTrusted,rect:{x:r.x,y:r.y,w:r.width,h:r.height},
+      scrollY:Math.round(window.scrollY),dpr:window.devicePixelRatio,
+      vw:window.innerWidth,vh:window.innerHeight};
+    document.getElementById('out-'+e.target.id).textContent=JSON.stringify(o);
+    document.getElementById('log').textContent=JSON.stringify(o);
+  });
+});
+</script></body></html>

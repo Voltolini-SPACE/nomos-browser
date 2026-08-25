@@ -1,0 +1,1 @@
+[NOMOS-E002] 'nomos-browser' não é confiável (experimental) — conectar exige confirmação em terminal, ou registre com: nomos mcp confiar

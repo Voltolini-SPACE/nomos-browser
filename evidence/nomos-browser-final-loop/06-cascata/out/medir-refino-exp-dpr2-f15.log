@@ -1,0 +1,21 @@
+modelo=qwen2.5vl:3b  dpr=2  fator=1.5  passes=[0,1]  execucoes=2
+residentes_antes=[]
+medio    160x100     passes=0 exec=1 erro=106.4px DENTRO=NAO inf=1  38521ms refino=desligado (vision_refine_passes = 0)
+medio    160x100     passes=0 exec=2 erro=106.4px DENTRO=NAO inf=1  55122ms refino=desligado (vision_refine_passes = 0)
+pequeno  80x50       passes=0 exec=1 erro=  -   DENTRO=- inf=-  40661ms refino=- ERRO=TARGET_NOT_FOUND
+pequeno  80x50       passes=0 exec=2 erro=  -   DENTRO=- inf=-      4ms refino=- ERRO=TARGET_NOT_FOUND
+medio    160x100     passes=1 exec=1 erro= 50.4px DENTRO=SIM inf=2  51537ms refino=usado
+medio    160x100     passes=1 exec=2 erro= 50.4px DENTRO=SIM inf=2  15117ms refino=usado
+pequeno  80x50       passes=1 exec=1 erro=  -   DENTRO=- inf=-   3717ms refino=- ERRO=TARGET_NOT_FOUND
+pequeno  80x50       passes=1 exec=2 erro=  -   DENTRO=- inf=-   2412ms refino=- ERRO=TARGET_NOT_FOUND
+
+RESUMO  (mediana das 3 execuções; 'estável' = execuções 2 e 3 idênticas)
+tamanho   passes  erro_med  dentro   inferencias  estavel
+medio     0        106.4px    0/2             1  NAO
+medio     1         50.4px    2/2             2  NAO
+pequeno   0              -    0/2                NAO
+pequeno   1              -    0/2                NAO
+
+VEREDITO medio    sem_refino=106.4px (0/2 dentro)  com_refino=50.4px (2/2 dentro)
+VEREDITO pequeno  sem_refino=nullpx (0/2 dentro)  com_refino=nullpx (0/2 dentro)
+residentes_depois=[qwen2.5vl:3b]

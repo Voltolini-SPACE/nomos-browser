@@ -1,0 +1,43 @@
+
+[1m── 1. manifesto ─────────────────────────────[0m
+  [32mOK[0m    caminho absoluto: /Users/AI/Projects/nomos-browser/packaging/mcp/manifesto.json
+  [32mOK[0m    resolução: por CAMINHO (o campo 'nome' não é aceito por 'confiar'/'chamar')
+  [32mOK[0m    manifesto válido — nome='nomos-browser', 13 tool(s), nivel_padrao=A5, maior risco declarado=A5
+  [32mOK[0m    comando (roda com cwd=/Users/AI/Projects/nomos-browser/packaging/mcp): node servidor.mjs
+
+[1m── 2. impressão digital que será registrada ─────────────────────────────[0m
+  SHA-256: d267002feb6f9e4a8d24331fa75eb504629515469e9f07b2deb94edd803e0ffe
+  (qualquer byte em nome/comando/nivel_padrao/tools muda este hash e
+   derruba a confiança já registrada — descricao/env/signature ficam fora)
+
+[1m── 3. estado atual no catálogo do dono ─────────────────────────────[0m
+  [33mAVISO[0m ainda EXPERIMENTAL — o dono precisa registrar (passo 5)
+    servers MCP confiáveis (1) · 0 revogado(s):
+    
+      ✓ calendario-ics  [6ea7c63d83e06926…]  ['python3', 'servidor.py']
+
+[1m── 4. daemon do NOMOS Browser ─────────────────────────────[0m
+  [33mAVISO[0m runtime NÃO responde em http://127.0.0.1:7777 — suba com:
+        cd /Users/AI/Projects/nomos-browser && node packages/api/src/daemon.ts
+        (ou, como serviço do dono: scripts/service.sh instalar)
+  [32mOK[0m    credencial do runtime presente: /Users/AI/.nomos-browser/control-token
+
+  ambiente que o conector precisa herdar:
+        export NOMOS_BROWSER_URL=http://127.0.0.1:7777
+        export NOMOS_BROWSER_TOKEN_FILE=/Users/AI/.nomos-browser/control-token   # (ou NOMOS_BROWSER_TOKEN=...)
+
+[1m── 5. o que FALTA — e só o dono pode fazer ─────────────────────────────[0m
+  Inspecionar (num TERMINAL — pede "ACEITO O RISCO" enquanto experimental):
+        /Users/AI/.local/bin/nomos mcp conectar /Users/AI/Projects/nomos-browser/packaging/mcp/manifesto.json
+
+  Registrar — escolha UMA porta:
+    a) terminal interativo (pede "CONFIO"):
+        /Users/AI/.local/bin/nomos mcp confiar /Users/AI/Projects/nomos-browser/packaging/mcp/manifesto.json
+
+    b) fila do painel do dono (http://127.0.0.1:8795):
+        /Users/AI/.local/bin/nomos mcp confiar /Users/AI/Projects/nomos-browser/packaging/mcp/manifesto.json --panel
+
+  Nenhuma das duas é executada por este script. A decisão é sua.
+
+[1m── 6. verificação final ─────────────────────────────[0m
+NOMOS_MCP_REGISTRADO=NAO  impressao=d267002feb6f9e4a8d24331fa75eb504629515469e9f07b2deb94edd803e0ffe  (BLOQUEADO_POR_APROVACAO)

@@ -1,0 +1,65 @@
+▶ FASE 6 — contrato AIProvider
+  ✔ A1. ScriptedProvider satisfaz a forma exigida (0.666791ms)
+  ✔ A2. assertAIProvider REJEITA o que não satisfaz (controle negativo) (0.499041ms)
+  ✔ A3. resposta de sucesso carrega text, usage, latency_ms, provider_id e model (1.8085ms)
+  ✔ A4. DETERMINISMO: mesma entrada, mesma saída, e o log não altera a saída (0.697292ms)
+  ✔ A5. I2/I3: não existe sucesso vazio, e erro zera o texto (0.133958ms)
+  ✔ A6. regra de erro produz resposta tipada, nunca exceção (0.109417ms)
+  ✔ A7. prompt não previsto FALHA fechado em vez de virar eco plausível (0.197ms)
+  ✔ A8. validação: request nunca lança e recusa entrada inválida (1.887917ms)
+  ✔ A9. capability ausente NEGA em vez de tentar em silêncio (0.124292ms)
+  ✔ A10. normalizeUsage: não reportado é null, nunca zero; total é derivado (0.146375ms)
+  ✔ A11. leaksInto pega cru, url-encoded e base64; ignora agulha curta (0.082708ms)
+✔ FASE 6 — contrato AIProvider (7.215584ms)
+▶ FASE 6 — adaptador AIProvider → AgentProvider
+  ✔ B1. cinco verbos presentes e nome derivado do provider (0.168084ms)
+  ✔ B2. observe é no-op honesto: devolve a observação do runtime intacta (0.228292ms)
+  ✔ B3. reason devolve o texto do modelo e LANÇA quando o modelo falha (0.274833ms)
+  ✔ B4. T4: o resumo mandado ao modelo NÃO leva atributos do DOM (0.100709ms)
+  ✔ B5. plan converte JSON em Plan e valida contra ACTION_CLASS (0.414917ms)
+  ✔ B6. plan FALHA FECHADO: ação inventada, JSON quebrado e plano gigante (0.487ms)
+  ✔ B6b. verificação de kind desconhecido LANÇA em vez de sumir em silêncio (0.182291ms)
+  ✔ B7. act SEM executor é negado; COM executor delega (0.135625ms)
+  ✔ B8. verify SEM verificador devolve NÃO-verificado com confiança 0 (0.104875ms)
+  ✔ B9. summarizeObservation reporta truncamento em vez de escondê-lo (0.125584ms)
+  ✔ B10. extractJsonObject respeita chaves dentro de string (0.028458ms)
+✔ FASE 6 — adaptador AIProvider → AgentProvider (2.39525ms)
+▶ FASE 7 — OllamaProvider: identidade e guardas
+  ✔ C1. provider_id é DERIVADO do modelo e distingue modelos (0.319666ms)
+  ✔ C2. base_url não-loopback é RECUSADA na construção (0.1975ms)
+  ✔ C3. backend MORTO: health degrada para down e request devolve NETWORK — sem lançar (18.000792ms)
+  ✔ C4. modelo AUSENTE no backend é degraded, NÃO exceção (11.642416ms)
+  ✔ C5. HTTP 500 e JSON corrompido viram erro tipado, não sucesso vazio (4.283792ms)
+  ✔ C6. HTTP 200 com response vazio é EMPTY_OUTPUT, jamais ok (1.123375ms)
+  ✔ C7. `thinking` que come o orçamento é diagnosticado, e não atravessa a fronteira (1.145083ms)
+  ✔ C8. corpo de erro que ECOA o prompt é descartado (1.002583ms)
+  ✔ C9. TIMEOUT é distinguido de NETWORK contra socket que nunca responde (1106.605708ms)
+  ✔ C9b. cabeçalhos rápidos + CORPO que nunca fecha também estouram o timeout (1204.603083ms)
+  ✔ C10. ABORTED pelo chamador é distinto de TIMEOUT (1.146042ms)
+  ✔ C11. o corpo enviado ao backend é o esperado (options, think, keep_alive, format) (2.570417ms)
+  ✔ C12. resident() distingue 'não consegui consultar' de 'nada residente' (3.021708ms)
+✔ FASE 7 — OllamaProvider: identidade e guardas (2356.02725ms)
+[FASE7] backend vivo, 6 modelos; residentes ANTES: []
+▶ FASE 7 — dois modelos locais REAIS, executados em série
+  ✔ D1. health real: backend vivo e os DOIS modelos presentes (8.0485ms)
+[FASE7] ollama:qwen3.5:4b-q8_0 echo=qwen3.5:4b-q8_0 family=qwen35 caps=completion|vision|tools|thinking lat=35120/17861ms tok=35/2 descarregado=true conv="4" aberto_sha=ff78720fad07093e aberto="Um teste automatizado precisa de controle negativo para garantir que o sistema rejeite cor"
+[FASE7] residência ambiente antes de qwen2.5-coder:7b: []
+  ✔ D2. qwen3.5:4b-q8_0 responde de verdade (e é descarregado depois) (55562.51375ms)
+[FASE7] ollama:qwen2.5-coder:7b echo=qwen2.5-coder:7b family=qwen2 caps=completion|tools|insert lat=15956/1321ms tok=54/2 descarregado=true conv="4" aberto_sha=e87d953bd17c9366 aberto="Um teste automatizado precisa de controle negativo para garantir que o teste esteja funcio"
+[FASE7] identidade A=ollama:qwen3.5:4b-q8_0/qwen35  B=ollama:qwen2.5-coder:7b/qwen2
+[FASE7][REFUTACAO] convergente A="4" B="4" iguais=true | aberto sha A=ff78720fad07093e B=e87d953bd17c9366 iguais=false prefixo_comum=71 chars "Um teste automatizado precisa de controle negativo para garantir que o "
+  ✔ D3. qwen2.5-coder:7b responde de verdade (e é descarregado depois) (17839.280875ms)
+  ✔ D4. os dois são distinguidos INEQUIVOCAMENTE pela identidade (0.910584ms)
+  ✔ D5. REFUTAÇÃO: o TEXTO da resposta não é discriminador de identidade (0.462917ms)
+[FASE7] reason() real: "O próximo passo é clicar no botão \"Entrar\" (e1) para iniciar o processo de autenticação, pois ele é o elemento interativo destinado a essa a"
+  ✔ D6. adaptador de agente roda sobre um provider REAL (27210.047959ms)
+[FASE7] residentes DEPOIS: []
+✔ FASE 7 — dois modelos locais REAIS, executados em série (100637.5165ms)
+ℹ tests 41
+ℹ suites 4
+ℹ pass 41
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 103224.978209

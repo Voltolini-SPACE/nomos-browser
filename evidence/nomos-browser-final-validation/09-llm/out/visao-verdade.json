@@ -1,0 +1,99 @@
+{
+  "verdade": {
+    "x": 400,
+    "y": 120,
+    "w": 160,
+    "h": 100,
+    "cx": 480,
+    "cy": 170
+  },
+  "screenshot": "/Users/AI/Projects/nomos-browser/evidence/nomos-browser-final-validation/09-llm/out/shot-sessions/ses_31cf843b1f2f44a2/screenshots/shot_181984c2d0324879.png",
+  "resultados": [
+    {
+      "model": "qwen2.5vl:3b",
+      "rotulo": "alvo real",
+      "goal": "o botao azul escrito COMPRAR",
+      "ms": 12387,
+      "achou": true,
+      "confianca": 0.99,
+      "box": {
+        "x": 409,
+        "y": 150,
+        "width": 200,
+        "height": 100
+      },
+      "centro": {
+        "x": 509,
+        "y": 200
+      },
+      "erro_px": 41.7,
+      "fracao_da_tela": 0.02,
+      "clicaria_dentro": true,
+      "comportamento_correto": true,
+      "erro": ""
+    },
+    {
+      "model": "qwen2.5vl:3b",
+      "rotulo": "controle negativo",
+      "goal": "o botao verde escrito FINALIZAR PEDIDO AGORA",
+      "ms": 953,
+      "achou": false,
+      "confianca": null,
+      "box": null,
+      "centro": null,
+      "erro_px": null,
+      "fracao_da_tela": null,
+      "clicaria_dentro": null,
+      "comportamento_correto": true,
+      "erro": ""
+    },
+    {
+      "model": "moondream:1.8b",
+      "rotulo": "alvo real",
+      "goal": "o botao azul escrito COMPRAR",
+      "ms": 2975,
+      "achou": false,
+      "confianca": null,
+      "box": null,
+      "centro": null,
+      "erro_px": null,
+      "fracao_da_tela": null,
+      "clicaria_dentro": null,
+      "comportamento_correto": false,
+      "erro": ""
+    },
+    {
+      "model": "moondream:1.8b",
+      "rotulo": "controle negativo",
+      "goal": "o botao verde escrito FINALIZAR PEDIDO AGORA",
+      "ms": 610,
+      "achou": true,
+      "confianca": 0.67,
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      },
+      "centro": {
+        "x": 1,
+        "y": 1
+      },
+      "erro_px": 508.6,
+      "fracao_da_tela": 0,
+      "clicaria_dentro": false,
+      "comportamento_correto": true,
+      "erro": ""
+    },
+    {
+      "model": "qwen3.5:4b-q8_0",
+      "rotulo": "texto com think:false",
+      "ok1": true,
+      "ok2": true,
+      "frio_ms": 6853,
+      "quente_ms": 6068,
+      "erro": null,
+      "classe": "PROVIDER_PASS"
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Formulario de Teste</title></head><body>
+<h1>Cadastro</h1>
+<form id="f" onsubmit="document.getElementById('saida').textContent='ENVIADO';return false;">
+  <label for="nome">Nome</label><input id="nome" name="nome" type="text"><br>
+  <label for="email">E-mail</label><input id="email" name="email" type="email"><br>
+  <input id="arquivo" type="file">
+  <button id="enviar" type="submit">Enviar</button>
+  <button id="cancelar" type="button" onclick="document.getElementById('f').reset();document.getElementById('saida').textContent='CANCELADO'">Cancelar</button>
+</form>
+<div id="saida">-</div>
+<div id="nomearquivo">sem arquivo</div>
+<script>document.getElementById('arquivo').addEventListener('change',e=>{document.getElementById('nomearquivo').textContent='arquivo: '+(e.target.files[0]?e.target.files[0].name:'nenhum')});</script>
+</body></html>

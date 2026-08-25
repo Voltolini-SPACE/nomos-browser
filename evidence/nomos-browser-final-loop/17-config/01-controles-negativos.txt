@@ -1,0 +1,79 @@
+====================================================================
+CONTROLE A — chave FALSA em DaemonConfig sem entrada no CONFIG_SCHEMA
+====================================================================
+[controle] chave_falsa_de_controle injetada em DaemonConfig + baseDefaults
+✖ toda chave de DaemonConfig tem entrada no schema (2.911709ms)
+✔ toda entrada do schema corresponde a uma chave real de DaemonConfig (1.585166ms)
+✔ CONFIG_SCHEMA e ENV_KEYS cobrem exatamente o mesmo conjunto, menos as exceções declaradas (0.228209ms)
+✔ toda variável de ambiente declarada muda a config e registra a proveniência (2.255416ms)
+✔ controle negativo: sem a variável, a proveniência é default (0.159666ms)
+✔ toda variável recusa valor inválido com mensagem que nomeia campo e origem (3.185625ms)
+✔ faixa declarada é imposta pelo código: min e max passam, min-1 e max+1 são recusados (2.563541ms)
+✔ inteiro declarado não aceita fracionário — nem por arredondamento silencioso (2.760584ms)
+✔ enum declarado aceita todos os seus valores e recusa qualquer outro (0.8005ms)
+✔ todo exemplo declarado no schema é válido (1.81625ms)
+✔ provider-ref declarado recusa backend desconhecido e modelo vazio (0.397042ms)
+✔ chave sensível sai redigida e chave comum sai em claro (0.321458ms)
+✔ controle negativo: describeConfig sem redação DEIXA o caminho passar (0.250084ms)
+✔ o schema exposto carrega default e env LIDOS do código, não redigitados (8.530875ms)
+✔ a tabela markdown lista TODAS as variáveis de ambiente (0.510708ms)
+✔ a rota de schema não carrega valor efetivo nenhum (0.370209ms)
+✖ failing tests:
+✖ toda chave de DaemonConfig tem entrada no schema (2.911709ms)
+  AssertionError [ERR_ASSERTION]: chave(s) de DaemonConfig sem entrada em CONFIG_SCHEMA: chave_falsa_de_controle
+[controle] revertido
+
+====================================================================
+CONTROLE B — entrada de schema apontando para chave INEXISTENTE
+====================================================================
+[controle] chave_que_nao_existe injetada no CONFIG_SCHEMA
+✔ toda chave de DaemonConfig tem entrada no schema (1.82925ms)
+✖ toda entrada do schema corresponde a uma chave real de DaemonConfig (3.287458ms)
+✖ CONFIG_SCHEMA e ENV_KEYS cobrem exatamente o mesmo conjunto, menos as exceções declaradas (0.248375ms)
+✔ toda variável de ambiente declarada muda a config e registra a proveniência (3.292667ms)
+✔ controle negativo: sem a variável, a proveniência é default (0.164292ms)
+✔ toda variável recusa valor inválido com mensagem que nomeia campo e origem (3.174083ms)
+✔ faixa declarada é imposta pelo código: min e max passam, min-1 e max+1 são recusados (4.011791ms)
+✔ inteiro declarado não aceita fracionário — nem por arredondamento silencioso (0.830375ms)
+✔ enum declarado aceita todos os seus valores e recusa qualquer outro (0.3475ms)
+✖ todo exemplo declarado no schema é válido (0.173375ms)
+✔ provider-ref declarado recusa backend desconhecido e modelo vazio (0.26825ms)
+✔ chave sensível sai redigida e chave comum sai em claro (0.279583ms)
+✔ controle negativo: describeConfig sem redação DEIXA o caminho passar (0.227542ms)
+✔ o schema exposto carrega default e env LIDOS do código, não redigitados (11.865834ms)
+✔ a tabela markdown lista TODAS as variáveis de ambiente (0.982625ms)
+✔ a rota de schema não carrega valor efetivo nenhum (0.483917ms)
+✖ failing tests:
+✖ toda entrada do schema corresponde a uma chave real de DaemonConfig (3.287458ms)
+  AssertionError [ERR_ASSERTION]: entrada(s) de CONFIG_SCHEMA sem chave real: chave_que_nao_existe
+✖ CONFIG_SCHEMA e ENV_KEYS cobrem exatamente o mesmo conjunto, menos as exceções declaradas (0.248375ms)
+  AssertionError [ERR_ASSERTION]: chave de schema sem NOMOS_BROWSER_*: chave_que_nao_existe
+✖ todo exemplo declarado no schema é válido (0.173375ms)
+[controle] revertido
+
+====================================================================
+CONTROLE C — faixa MENTIROSA no schema (port declarado 0..70000)
+====================================================================
+[controle] faixa de port inflada de 65535 para 70000 SEM tocar em applyKey
+✖ toda variável recusa valor inválido com mensagem que nomeia campo e origem (0.776583ms)
+✖ faixa declarada é imposta pelo código: min e max passam, min-1 e max+1 são recusados (0.186833ms)
+✖ failing tests:
+✖ toda variável recusa valor inválido com mensagem que nomeia campo e origem (0.776583ms)
+✖ faixa declarada é imposta pelo código: min e max passam, min-1 e max+1 são recusados (0.186833ms)
+[controle] revertido
+
+====================================================================
+CONTROLE D — teste de teste removido da matriz de CI (vision)
+====================================================================
+E_PROVIDERS="aiprovider providers-runtime cascata-percepcao"
+  security        6 arquivo(s)
+  arquivos em tests/: 34   declarados na matriz: 33
+
+FALHA 1 — arquivo de teste FORA de todo estagio (nunca roda em ci.sh all):
+    tests/vision.test.ts
+
+VISION_IN_CI=NO
+AIPROVIDER_IN_CI=YES
+ALL_TEST_FILES_IN_CI=NO
+CI_COBERTURA=FAIL (2 problema(s))
+[controle] revertido

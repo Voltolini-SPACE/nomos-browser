@@ -1,0 +1,196 @@
+{
+  "rel": {
+    "alvos": 6,
+    "medidos": 6,
+    "erro_medio_px": 0,
+    "erro_max_px": 0,
+    "cliques_dentro_do_alvo": "6/6",
+    "taxa_sucesso": 100,
+    "isTrusted_true": "6/6",
+    "dpr": 1,
+    "viewport": "1280x800",
+    "screenshot_ref": "shot_e211cbef0c12457c",
+    "screenshot_persistido": true,
+    "screenshot_dims": {
+      "width": 1280,
+      "height": 800
+    },
+    "screenshot_bate_com_viewport": true
+  },
+  "medidas": [
+    {
+      "id": "a1",
+      "rotulo": "viewport inicial",
+      "sem_evento": false,
+      "ok": true,
+      "box": {
+        "x": 40,
+        "y": 40,
+        "width": 120,
+        "height": 40
+      },
+      "alvo": {
+        "x": 100,
+        "y": 60
+      },
+      "evento": {
+        "clientX": 100,
+        "clientY": 60,
+        "isTrusted": true,
+        "scrollY": 0,
+        "dpr": 1,
+        "vw": 1280,
+        "vh": 800
+      },
+      "dx": 0,
+      "dy": 0,
+      "dist": 0,
+      "dentro": true
+    },
+    {
+      "id": "a2",
+      "rotulo": "viewport inicial",
+      "sem_evento": false,
+      "ok": true,
+      "box": {
+        "x": 400,
+        "y": 120,
+        "width": 160,
+        "height": 100
+      },
+      "alvo": {
+        "x": 480,
+        "y": 170
+      },
+      "evento": {
+        "clientX": 480,
+        "clientY": 170,
+        "isTrusted": true,
+        "scrollY": 0,
+        "dpr": 1,
+        "vw": 1280,
+        "vh": 800
+      },
+      "dx": 0,
+      "dy": 0,
+      "dist": 0,
+      "dentro": true
+    },
+    {
+      "id": "a3",
+      "rotulo": "viewport inicial",
+      "sem_evento": false,
+      "ok": true,
+      "box": {
+        "x": 900,
+        "y": 300,
+        "width": 200,
+        "height": 60
+      },
+      "alvo": {
+        "x": 1000,
+        "y": 330
+      },
+      "evento": {
+        "clientX": 1000,
+        "clientY": 330,
+        "isTrusted": true,
+        "scrollY": 0,
+        "dpr": 1,
+        "vw": 1280,
+        "vh": 800
+      },
+      "dx": 0,
+      "dy": 0,
+      "dist": 0,
+      "dentro": true
+    },
+    {
+      "id": "a6",
+      "rotulo": "viewport inicial",
+      "sem_evento": false,
+      "ok": true,
+      "box": {
+        "x": 1150,
+        "y": 60,
+        "width": 200,
+        "height": 40
+      },
+      "alvo": {
+        "x": 1250,
+        "y": 80
+      },
+      "evento": {
+        "clientX": 1250,
+        "clientY": 80,
+        "isTrusted": true,
+        "scrollY": 0,
+        "dpr": 1,
+        "vw": 1280,
+        "vh": 800
+      },
+      "dx": 0,
+      "dy": 0,
+      "dist": 0,
+      "dentro": true
+    },
+    {
+      "id": "a4",
+      "rotulo": "apos scroll 600",
+      "sem_evento": false,
+      "ok": true,
+      "box": {
+        "x": 60,
+        "y": 100,
+        "width": 100,
+        "height": 100
+      },
+      "alvo": {
+        "x": 110,
+        "y": 150
+      },
+      "evento": {
+        "clientX": 110,
+        "clientY": 150,
+        "isTrusted": true,
+        "scrollY": 600,
+        "dpr": 1,
+        "vw": 1280,
+        "vh": 800
+      },
+      "dx": 0,
+      "dy": 0,
+      "dist": 0,
+      "dentro": true
+    },
+    {
+      "id": "a5",
+      "rotulo": "apos scroll 1500",
+      "sem_evento": false,
+      "ok": true,
+      "box": {
+        "x": 600,
+        "y": 0,
+        "width": 180,
+        "height": 50
+      },
+      "alvo": {
+        "x": 690,
+        "y": 25
+      },
+      "evento": {
+        "clientX": 690,
+        "clientY": 25,
+        "isTrusted": true,
+        "scrollY": 1500,
+        "dpr": 1,
+        "vw": 1280,
+        "vh": 800
+      },
+      "dx": 0,
+      "dy": 0,
+      "dist": 0,
+      "dentro": true
+    }
+  ]
+}

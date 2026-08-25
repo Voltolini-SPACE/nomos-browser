@@ -1,0 +1,67 @@
+[
+  {
+    "tipo": "texto",
+    "model": "qwen3.5:4b-q8_0",
+    "disponivel": true,
+    "health_status": "ok",
+    "health_reason": null,
+    "health_ms": 10,
+    "frio_ms": 7688,
+    "quente_ms": 6544,
+    "ok1": false,
+    "ok2": false,
+    "erro": {
+      "code": "EMPTY_OUTPUT",
+      "message": "modelo gastou o orçamento de tokens no raciocínio interno e não emitiu resposta; use think:false ou aumente max_tokens",
+      "detail": {
+        "thinking_chars": 25,
+        "done_reason": "length",
+        "model": "qwen3.5:4b-q8_0"
+      }
+    },
+    "timeout_explicito": "OK:TIMEOUT",
+    "cancelamento": "OK:ABORTED",
+    "classe": "PROVIDER_FAIL"
+  },
+  {
+    "tipo": "texto",
+    "model": "qwen2.5-coder:7b",
+    "disponivel": true,
+    "health_status": "ok",
+    "health_reason": null,
+    "health_ms": 1,
+    "frio_ms": 5446,
+    "quente_ms": 4183,
+    "ok1": true,
+    "ok2": true,
+    "erro": null,
+    "timeout_explicito": "OK:TIMEOUT",
+    "cancelamento": "OK:ABORTED",
+    "classe": "PROVIDER_PASS"
+  },
+  {
+    "tipo": "visao",
+    "model": "qwen2.5vl:3b",
+    "ms": 11906,
+    "achou": false,
+    "confianca": null,
+    "box": null,
+    "erro": "",
+    "classe": "PROVIDER_DEGRADED"
+  },
+  {
+    "tipo": "visao",
+    "model": "moondream:1.8b",
+    "ms": 3452,
+    "achou": true,
+    "confianca": 0,
+    "box": {
+      "x": 0,
+      "y": 0,
+      "width": 1024,
+      "height": 664
+    },
+    "erro": "",
+    "classe": "PROVIDER_PASS"
+  }
+]

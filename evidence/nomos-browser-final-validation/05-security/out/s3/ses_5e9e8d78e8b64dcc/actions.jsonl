@@ -1,0 +1,2 @@
+{"timestamp":"2026-08-24T20:35:34.960Z","session":"ses_5e9e8d78e8b64dcc","actor":"unknown","action":"browser.open","target":null,"result":"ok","verified":false,"action_id":"act_mt7p3xje_3"}
+{"timestamp":"2026-08-24T20:35:34.963Z","session":"ses_5e9e8d78e8b64dcc","actor":"unknown","action":"browser.download","target":null,"result":"error","verified":false,"action_id":"act_mt7p3xki_5","detail":{"code":"POLICY_BLOCKED"}}

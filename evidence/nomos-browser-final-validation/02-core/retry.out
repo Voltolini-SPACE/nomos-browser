@@ -1,0 +1,5 @@
+### recovery-watchdog inicio 20:17:17
+### recovery-watchdog rc=0 fim 20:17:25
+### aiprovider inicio 20:17:25
+bash: line 1: 28980 Terminated: 15          ( sleep 900; kill -9 $p 2> /dev/null )
+### aiprovider rc=0 fim 20:19:08

@@ -1,0 +1,28 @@
+modelo=qwen2.5vl:3b  dpr=1  fator=default  passes=[0,1]  execucoes=2
+residentes_antes=[]
+grande   320x200     aim=point_then_box passes=0 exec=1 erro=  4.5px DENTRO=SIM inf=1  12602ms margem=  98px mirou=point (vision_refine_passes = 0)
+grande   320x200     aim=point_then_box passes=0 exec=2 erro=  4.5px DENTRO=SIM inf=1   1952ms margem=  98px mirou=point (vision_refine_passes = 0)
+medio    160x100     aim=point_then_box passes=0 exec=1 erro=  4.1px DENTRO=SIM inf=1   9096ms margem=  49px mirou=point (vision_refine_passes = 0)
+medio    160x100     aim=point_then_box passes=0 exec=2 erro=  4.1px DENTRO=SIM inf=1   2326ms margem=  49px mirou=point (vision_refine_passes = 0)
+pequeno  80x50       aim=point_then_box passes=0 exec=1 erro=  2.8px DENTRO=SIM inf=1   8985ms margem=  23px mirou=point (vision_refine_passes = 0)
+pequeno  80x50       aim=point_then_box passes=0 exec=2 erro=  2.8px DENTRO=SIM inf=1   2303ms margem=  23px mirou=point (vision_refine_passes = 0)
+grande   320x200     aim=point_then_box passes=1 exec=1 erro= 59.2px DENTRO=SIM inf=2   9009ms margem=  70px mirou=point
+grande   320x200     aim=point_then_box passes=1 exec=2 erro= 59.2px DENTRO=SIM inf=2   3828ms margem=  70px mirou=point
+medio    160x100     aim=point_then_box passes=1 exec=1 erro=  4.1px DENTRO=SIM inf=2   8833ms margem=  49px mirou=point (caixa refinada não cabe na região recortada)
+medio    160x100     aim=point_then_box passes=1 exec=2 erro=  4.1px DENTRO=SIM inf=2   3535ms margem=  49px mirou=point (caixa refinada não cabe na região recortada)
+pequeno  80x50       aim=point_then_box passes=1 exec=1 erro=  2.8px DENTRO=SIM inf=2   8675ms margem=  23px mirou=point (caixa refinada não cabe na região recortada)
+pequeno  80x50       aim=point_then_box passes=1 exec=2 erro=  2.8px DENTRO=SIM inf=2   3717ms margem=  23px mirou=point (caixa refinada não cabe na região recortada)
+
+RESUMO  (mediana das execuções; 'estável' = execuções 2 e 3 idênticas)
+tamanho   aim             passes  erro_med  margem  dentro   inferencias  estavel
+grande    point_then_box  0          4.5px    98px    2/2             1  NAO
+grande    point_then_box  1         59.2px    70px    2/2             2  NAO
+medio     point_then_box  0          4.1px    49px    2/2             1  NAO
+medio     point_then_box  1          4.1px    49px    2/2             2  NAO
+pequeno   point_then_box  0          2.8px    23px    2/2             1  NAO
+pequeno   point_then_box  1          2.8px    23px    2/2             2  NAO
+
+VEREDITO grande   aim=point_then_box  sem_refino=4.5px (2/2 dentro)  com_refino=59.2px (2/2 dentro)
+VEREDITO medio    aim=point_then_box  sem_refino=4.1px (2/2 dentro)  com_refino=4.1px (2/2 dentro)
+VEREDITO pequeno  aim=point_then_box  sem_refino=2.8px (2/2 dentro)  com_refino=2.8px (2/2 dentro)
+residentes_depois=[]

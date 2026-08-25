@@ -1,0 +1,33 @@
+✔ 1a. tools/list devolve exatamente as 13 ferramentas do escopo (15.263625ms)
+✔ 1b. toda ferramenta tem inputSchema JSON Schema utilizável (0.756167ms)
+✔ 1c. campos obrigatórios estão declarados onde a API v1 exige (0.278458ms)
+✔ 2a. browser_navigate com session_id explícito faz UM POST em /api/v1/browser.goto (42.975292ms)
+✔ 2b. sem session_id: cria UMA sessão, reutiliza nas chamadas seguintes (7.455333ms)
+✔ 2c. chamadas concorrentes sem session_id não criam duas sessões (6.300375ms)
+✔ 2d. cada ferramenta cai na rota do contrato, com o corpo certo (22.996333ms)
+✔ 3a. runtime com success=false vira isError preservando error.code (1.185792ms)
+✔ 3b. CONTROLE: o mesmo caminho com success=true NÃO marca isError (1.097916ms)
+✔ 3c. runtime inalcançável vira isError explícito, não sucesso vazio (0.640416ms)
+✔ 3d. resposta fora do envelope ActionResponse não é aceita como sucesso (1.101666ms)
+✔ 3e. resposta não-JSON do runtime não vira sucesso (5.946667ms)
+✔ 3f. argumento inválido vira erro de PROTOCOLO e não toca o runtime (0.995291ms)
+✔ 3g. ferramenta desconhecida é erro de protocolo, não silêncio (0.155916ms)
+✔ 4a. o fonte do pacote MCP não menciona o motor de navegador (2.960625ms)
+✔ 4b. o pacote MCP importa apenas o contrato e a stdlib do Node (1.448667ms)
+✔ 4c. package.json declara o binário e não tem dependências (0.264167ms)
+✔ 5a. processo real: initialize + tools/list + tools/call por stdio (402.425167ms)
+✔ 5b. processo real: linha inválida vira -32700 e o servidor continua vivo (261.488209ms)
+✔ 5c. processo real: JSON quebrado na linha devolve -32700 (264.596791ms)
+✔ 5d. stdin fechado logo após o pedido não trunca a resposta (405.59825ms)
+✔ 5e. URL de runtime inválida derruba o arranque em vez de cair no default (258.492208ms)
+✔ 6a. buildRuntimeCall é pura e monta o caminho com o prefixo do contrato (0.309333ms)
+✔ 6b. ToolInputError carrega um ActionErrorCode do contrato (0.169041ms)
+✔ 6c. RuntimeClient recusa esquema não-HTTP (0.614083ms)
+ℹ tests 25
+ℹ suites 0
+ℹ pass 25
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2057.953417

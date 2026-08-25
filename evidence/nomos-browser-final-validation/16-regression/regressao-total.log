@@ -1,0 +1,108 @@
+### 1/6 suite completa (24 arquivos, isolados)
+
+[1m── fast — unidade pura ─────────────────────────────[0m
+test:auth                                     OK
+test:lease                                    OK
+test:skills                                   OK
+test:traceability                             OK
+test:observability                            OK
+test:replay-hardening                         OK
+test:bench                                    OK
+test:sdk-ts                                   OK
+test:mcp                                      OK
+test:cli                                      OK
+test:policy-vault                             OK
+test:security-files-secrets                   OK
+test:security-net-injection                   OK
+test:ui-build                                 OK
+python:sdk                                    OK
+typecheck                                     OK
+
+[1m── guards — marca, segredos, desacoplamento ─────────────────────────────[0m
+build:ui                                      OK
+marca:sem-hex-no-fonte                        OK
+marca:dist-nao-versionado                     OK
+marca:selo-declarado                          OK
+segredo:nada-no-versionado                    OK
+desacoplamento:mcp-sem-playwright             OK
+deps:versoes-pinadas                          OK
+rede:bind-loopback-por-default                OK
+auth:ligada-por-default                       OK
+
+[1m── integration — daemon e Chromium reais ─────────────────────────────[0m
+test:session                                  OK
+test:perception                               OK
+test:pointer-keyboard                         OK
+test:target-verifier                          OK
+test:api                                      OK
+
+[1m── adversarial — segurança e falha ─────────────────────────────[0m
+test:security-net-injection                   OK
+test:security-files-secrets                   OK
+test:recovery-watchdog                        OK
+
+[1m── e2e — gates ponta a ponta ─────────────────────────────[0m
+test:e2e-gate                                 OK
+test:product02-gate                           OK
+
+[1m── resultado ─────────────────────────────[0m
+CI_PASS=YES
+### 2/6 run-suite.sh completo
+aiprovider                   OK      pass=41   fail=0   25s
+api                          OK      pass=32   fail=0   2s
+auth                         OK      pass=21   fail=0   1s
+bench                        OK      pass=37   fail=0   1s
+cli                          OK      pass=35   fail=0   4s
+e2e-gate                     OK      pass=12   fail=0   2s
+lease                        OK      pass=37   fail=0   0s
+mcp                          OK      pass=25   fail=0   1s
+observability                OK      pass=22   fail=0   0s
+perception                   OK      pass=8    fail=0   1s
+pointer-keyboard             OK      pass=26   fail=0   3s
+policy-vault                 OK      pass=14   fail=0   1s
+product02-gate               OK      pass=3    fail=0   35s
+recovery-watchdog            OK      pass=24   fail=0   8s
+replay-hardening             OK      pass=34   fail=0   0s
+sdk-ts                       OK      pass=8    fail=0   1s
+security-files-secrets       OK      pass=38   fail=0   0s
+security-net-injection       OK      pass=22   fail=0   1s
+session                      OK      pass=12   fail=0   1s
+skills                       OK      pass=10   fail=0   1s
+target-verifier              OK      pass=28   fail=0   2s
+traceability                 OK      pass=7    fail=0   0s
+ui-build                     OK      pass=6    fail=0   2s
+vision                       OK      pass=50   fail=0   13s
+
+TS_PASS=552
+TS_FAIL=0
+ARQUIVOS_OK=24
+ARQUIVOS_RUINS=0
+RESUMO=evidence/nomos-browser-final-validation/16-regression/suite-final/resumo.tsv
+### 3/6 E2E independente
+      observado: linhas=39 campos=[timestamp,session,actor,action,target,result,verified,action_id]
+
+E2E_TOTAL=12 E2E_PASS=10 E2E_FAIL=2
+BROWSER_E2E_SUITE=FAIL
+FALHOU E2E-09: ERRO: nenhum pacote de integração NOMOS/Gi existe. Chamadas externas encontradas: Binary file /Users/AI/Projects/nomos-browser/packages/core/src/verifier.ts matches
+/Users/AI/Projects/nomos-browser/packages/core/src/sanitize.ts:242: *   c) chamada JS de saída (`sendBeacon`, `new Image(`, `fetch("http…`).
+/Users/AI/Projects/nomos-browser/packages/core/src/providers/ollama.ts:174: 
+FALHOU E2E-10: ERRO: cascata nao resolveu o alvo visual. status=404 code=TARGET_NOT_FOUND detalhe={"descriptor":{"semantic":"o botao vermelho escrito COMPRAR"},"attempted":["semantic","vision"],"trace":[{"strategy":"semantic","outcome":"miss","probe":"semantic(literal) sobre 19 tipos interativos","candidates":0,"reason":"página sem elementos interativos","duration_ms":12},{"strategy":"vision","outcome":"skipped","probe":"vision(\"o botao vermelho escrito COMPRAR\")","candidates":0,"reason":"ne
+### 4/6 guardas vivos (adversarial)
+ADVERSARIAL_TOTAL=16 BLOQUEADOS=16 PASSARAM=0
+SECURITY_LIVE_GUARDS=PASS
+### 5/6 auditoria
+AUDIT_CAMPOS_FALTANDO=[task, navegador, pagina, actor_provider, policy_decision, recovery, handoff]
+AUDIT_COMPLETE=FAIL
+### 6/6 soak + concorrencia
+CONCORRENCIA: 4 sessões simultâneas x 5 ações
+CONCURRENCY_OK=4/4 em 553ms
+FIM rss=139MB filhos=0 chromium=0 sessoes_vivas=0
+APOS_CLOSE chromium=0 filhos=0
+SOAK_TEST=PASS CONCURRENCY_TEST=PASS
+### hashes finais
+ARQUIVOS=      79
+HASH_CONJUNTO=a4099477d8ea4032b94bff5aeb5ecdbdab02e633027ce1e181cf28078335b458
+### orfaos no fim
+       2
+       0
+REGRESSAO_FIM

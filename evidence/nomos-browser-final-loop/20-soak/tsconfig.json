@@ -1,0 +1,9 @@
+{
+  // O `tsconfig.json` da raiz cobre `packages/`, `tests/` e `spike/` — não
+  // `evidence/`. Sem este arquivo, o instrumento desta fase JAMAIS passaria por
+  // um typechecker, e um instrumento não verificado é a última coisa que se quer
+  // apontando para o produto. Mesmas opções da raiz, outro `include`.
+  "extends": "../../../tsconfig.json",
+  "compilerOptions": { "noEmit": true },
+  "include": ["./*.ts"]
+}

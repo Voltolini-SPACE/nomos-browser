@@ -1,0 +1,33 @@
+✔ 1a. tools/list devolve exatamente as 13 ferramentas do escopo (5.583292ms)
+✔ 1b. toda ferramenta tem inputSchema JSON Schema utilizável (0.2575ms)
+✔ 1c. campos obrigatórios estão declarados onde a API v1 exige (0.1195ms)
+✔ 2a. browser_navigate com session_id explícito faz UM POST em /api/v1/browser.goto (17.184125ms)
+✔ 2b. sem session_id: cria UMA sessão, reutiliza nas chamadas seguintes (4.039083ms)
+✔ 2c. chamadas concorrentes sem session_id não criam duas sessões (3.443541ms)
+✔ 2d. cada ferramenta cai na rota do contrato, com o corpo certo (9.514125ms)
+✔ 3a. runtime com success=false vira isError preservando error.code (0.638292ms)
+✔ 3b. CONTROLE: o mesmo caminho com success=true NÃO marca isError (0.539542ms)
+✔ 3c. runtime inalcançável vira isError explícito, não sucesso vazio (0.310125ms)
+✔ 3d. resposta fora do envelope ActionResponse não é aceita como sucesso (0.624584ms)
+✔ 3e. resposta não-JSON do runtime não vira sucesso (2.980917ms)
+✔ 3f. argumento inválido vira erro de PROTOCOLO e não toca o runtime (0.468791ms)
+✔ 3g. ferramenta desconhecida é erro de protocolo, não silêncio (0.05525ms)
+✔ 4a. o fonte do pacote MCP não menciona o motor de navegador (1.30275ms)
+✔ 4b. o pacote MCP importa apenas o contrato e a stdlib do Node (0.440792ms)
+✔ 4c. package.json declara o binário e não tem dependências (0.07525ms)
+✔ 5a. processo real: initialize + tools/list + tools/call por stdio (167.652875ms)
+✔ 5b. processo real: linha inválida vira -32700 e o servidor continua vivo (109.793084ms)
+✔ 5c. processo real: JSON quebrado na linha devolve -32700 (110.272584ms)
+✔ 5d. stdin fechado logo após o pedido não trunca a resposta (166.118459ms)
+✔ 5e. URL de runtime inválida derruba o arranque em vez de cair no default (112.629584ms)
+✔ 6a. buildRuntimeCall é pura e monta o caminho com o prefixo do contrato (0.171958ms)
+✔ 6b. ToolInputError carrega um ActionErrorCode do contrato (0.08ms)
+✔ 6c. RuntimeClient recusa esquema não-HTTP (0.284125ms)
+ℹ tests 25
+ℹ suites 0
+ℹ pass 25
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 866.888

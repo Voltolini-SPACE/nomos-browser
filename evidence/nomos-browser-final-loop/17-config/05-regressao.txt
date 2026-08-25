@@ -1,0 +1,38 @@
+$ node --test tests/config-schema.test.ts
+ℹ tests 16
+ℹ suites 0
+ℹ pass 16
+ℹ fail 0
+ℹ skipped 0
+
+$ node --test tests/api.test.ts tests/auth.test.ts
+ℹ tests 57
+ℹ suites 0
+ℹ pass 57
+ℹ fail 0
+ℹ skipped 0
+
+$ npx tsc --noEmit -p tsconfig.json
+(sem saida — typecheck limpo)
+
+$ bash scripts/ci-cobertura.sh
+── cobertura da matriz de CI ─────────────────────────────
+  adversarial     5 arquivo(s)
+  cleanroom       9 arquivo(s)
+  core            4 arquivo(s)
+  e2e             2 arquivo(s)
+  fast            8 arquivo(s)
+  integration     7 arquivo(s)
+  providers       4 arquivo(s)
+  recovery        2 arquivo(s)
+  security        6 arquivo(s)
+  arquivos em tests/: 34   declarados na matriz: 34
+
+VISION_IN_CI=YES
+AIPROVIDER_IN_CI=YES
+ALL_TEST_FILES_IN_CI=YES
+CI_COBERTURA=PASS
+
+$ bash scripts/ci.sh all
+CI_PASS=YES
+  (62+ passos; FALHOU=0; PULADO=0; log completo em evidence/nomos-browser-final-loop/17-config/04-ci-all.log)

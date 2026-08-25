@@ -1,0 +1,67 @@
+== clean room em /tmp/nomos-cleanroom.IvxEzo
+== arquivos copiados: 399
+
+== npm ci --include=dev
+
+added 17 packages, and audited 26 packages in 779ms
+
+found 0 vulnerabilities
+
+== workspaces ligados em node_modules/@nomos
+browser
+browser-api
+browser-cli
+browser-core
+browser-mcp
+browser-observability
+browser-skills
+browser-ui
+
+== scripts/ci.sh cleanroom (hermético)
+
+[1m── cleanroom — instalação do zero (chamado por scripts/clean-room.sh) ─────────────────────────────[0m
+test:config-schema                            OK
+test:lease                                    OK
+test:skills                                   OK
+test:traceability                             OK
+test:observability                            OK
+test:replay-hardening                         OK
+test:bench                                    OK
+test:sdk-ts                                   OK
+test:policy-vault                             OK
+typecheck                                     OK
+ci:cobertura-da-matriz                        OK
+pacotes:manifestos-completos                  OK
+config:schema-gerado                          OK
+
+[1m── resultado ─────────────────────────────[0m
+CI_PASS=YES
+
+== scripts/ci.sh fast
+
+[1m── fast — unidade pura + guardas estáticos ─────────────────────────────[0m
+test:bench                                    OK
+test:lease                                    OK
+test:observability                            OK
+test:replay-hardening                         OK
+test:skills                                   OK
+test:traceability                             OK
+test:ui-build                                 OK
+test:config-schema                            OK
+ci:cobertura-da-matriz                        OK
+python:sdk                                    OK
+typecheck                                     OK
+build:ui                                      OK
+marca:selo-declarado                          OK
+marca:sem-hex-no-fonte                        OK
+marca:dist-nao-versionado                     OK
+desacoplamento:mcp-sem-playwright             OK
+deps:versoes-pinadas                          OK
+pacotes:manifestos-completos                  OK
+supervisor:label-propria                      OK
+mcp:lancador-do-manifesto-fala-mcp            OK
+
+[1m── resultado ─────────────────────────────[0m
+CI_PASS=YES
+
+INSTALL_FROM_SCRATCH=PASS  (dir=/tmp/nomos-cleanroom.IvxEzo arquivos=399 workspaces=8)

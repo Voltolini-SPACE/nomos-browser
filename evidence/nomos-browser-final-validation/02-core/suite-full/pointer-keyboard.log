@@ -1,0 +1,40 @@
+▶ PointerEngine
+  ✔ click via backend cdp chega na página com isTrusted=true (212.016666ms)
+  ✔ click via backend playwright chega na página com isTrusted=true (123.378583ms)
+  ✔ controle negativo: clique sintetizado por JS chega isTrusted=false (99.841625ms)
+  ✔ drag via cdp produz mousedown → mousemove(s) → mouseup nessa ordem (249.575542ms)
+  ✔ drag via playwright produz mousedown → mousemove(s) → mouseup nessa ordem (274.0315ms)
+  ✔ scroll via cdp altera scrollTop do contêiner (163.226ms)
+  ✔ scroll via playwright altera scrollTop do contêiner (154.231709ms)
+  ✔ doubleClick gera dblclick e rightClick gera contextmenu (backend cdp) (118.31875ms)
+  ✔ hover posiciona o cursor sobre o elemento (mouseover real) (110.787792ms)
+  ✔ movimento humanizado emite posições intermediárias (FASE 31 precisa delas) (159.571292ms)
+  ✔ interpolatePath: 1 passo é teleporte, N passos aterrissam exatamente no alvo (0.375416ms)
+  ✔ mouseDown/mouseUp compõem um drag manual sem perder o botão segurado (178.473042ms)
+  ✔ coordenada não-finita é rejeitada (fail closed, não NaN silencioso) (78.382ms)
+✔ PointerEngine (2096.652541ms)
+▶ PointerEngine — fallback de backend
+  ✔ fallback registra no resultado qual backend agiu e por quê (90.455083ms)
+  ✔ fallback:"none" falha fechado com InputError tipado (65.148542ms)
+✔ PointerEngine — fallback de backend (155.855ms)
+▶ KeyboardEngine
+  ✔ hotkey CMD+A via cdp seleciona todo o texto do input (96.605084ms)
+  ✔ hotkey CMD+A via playwright seleciona todo o texto do input (98.396875ms)
+  ✔ press("Enter") via cdp dispara submit do form (113.602042ms)
+  ✔ press("Enter") via playwright dispara submit do form (110.594875ms)
+  ✔ type() via cdp digita com eventos reais e NÃO devolve o texto (103.155667ms)
+  ✔ type() via playwright digita com eventos reais e NÃO devolve o texto (109.6785ms)
+  ✔ teclas nomeadas: Backspace, Tab, Escape e setas aplicam efeito real (cdp) (96.731708ms)
+  ✔ down/up mantêm estado de modificador e releaseAll limpa (cdp) (80.769084ms)
+  ✔ mapeamento de tecla é explícito e tecla desconhecida falha fechado (0.285041ms)
+  ✔ controle: sem `commands` nativos, CMD+A chega à página e NÃO seleciona nada (80.950167ms)
+  ✔ comandos nativos de edição do macOS são resolvidos para o combo certo (0.154959ms)
+✔ KeyboardEngine (891.549375ms)
+ℹ tests 26
+ℹ suites 3
+ℹ pass 26
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3828.189083

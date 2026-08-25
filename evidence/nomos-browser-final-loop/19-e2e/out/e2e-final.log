@@ -1,0 +1,107 @@
+── FASE 19 · bateria E2E final, independente, 20 cenários ───────────────
+
+# fixture em http://127.0.0.1:55264
+# D1 em http://127.0.0.1:55267 (pid 19339) sessoes=/tmp/nomos-e2e19-W9e9XL/d1-1qg0eH/sessoes
+[PASS                          ]  1. abrir → localizar → clicar (verificado e entregue)     551ms  http://127.0.0.1:55264/app · INTOCADO · strategy=selector box={"x":8,"y":79.875,"width":64.15625,"height":21}
+[PASS                          ]  2. navegação: goto/back/forward/reload                301ms  "ok" · http://127.0.0.1:55264/pagina-a · PAGINA-A
+[PASS                          ]  3. formulário: preencher, validar de volta, cancelar     644ms  true/true · Ana Ribeiro · ana@exemplo.test
+[PASS                          ]  4. SPA: conteúdo tardio com browser.wait             2854ms  VAZIO · false TARGET_NOT_FOUND · waited_ms=1293
+[PASS                          ]  5. abas: abrir, listar, trocar preservando estado, fechar     444ms  ESTADO-DA-ABA-1 · n=2 ids=pg_31352e53c9fd4738,pg_91f7482b093341f0 · pg_91f7482b093341f0 vs pg_fd287fb419514252
+[PASS                          ]  6. download real para dentro da raiz permitida        171ms  [] · "ok" · /tmp/nomos-e2e19-W9e9XL/download-permitido/nomos-e2e-19.txt
+[PASS                          ]  7. upload com fixture + controle negativo fora da raiz     211ms  SEM-ARQUIVO · "ok" · ARQUIVO:carta.txt:36
+[PASS                          ]  8. recuperação de erro: falha no meio, sessão segue utilizável    3369ms  false · TARGET_NOT_FOUND: alvo não resolvido após 1 estratégia(s): selector · ACTIVE
+[PASS (BLOQUEADO_POR_APROVACAO)]  9. NOMOS → Browser → NOMOS (A0 executa, A2 é barrada)     520ms  nomos-browser tools=13 nivel_padrao=A5 · INTOCADO · A0 → A0_READ_LOCAL
+[PASS (BLOQUEADO_POR_APROVACAO)] 10. Gi → NOMOS → Browser → Gi (A0 executa, A2 é barrada)    1766ms  /Users/AI/Projects/pocket-assistant/backend/gi_nomos/browser.py · INTOCADO · rc=0 stderr=
+[PASS                          ] 11. visão como fallback: alvo em <canvas>, sem DOM interativo   24409ms  qwen2.5vl:3b,moondream:1.8b,qwen3.5:4b-q8_0,embeddinggemma:300m,qwen2.5-coder:7b,nomic-embed-text:latest · [] 
+[PASS                          ] 12. task longa: 14 passos, COMPLETED, checkpoint a cada passo    1710ms  "ok" · COMPLETED · 14/14
+[PASS                          ] 13. task com crash do daemon no meio + resume sem repetir passo    2005ms  signal=SIGKILL code=null · step_index=6 state_em_disco=RUNNING · RECOVERING last_error=RUNTIME_CRASH
+# D2 em http://127.0.0.1:55420 (pid 19560) — duas credenciais distintas emitidas
+[PASS                          ] 14. handoff entre dois donos com credenciais distintas     392ms  A=n5j5i9… B=yDyaRf… · "ok" · DONO-A
+[PASS                          ] 15. takeover humano congela ACT e OBSERVE; release devolve     360ms  200 · 200 control=human status=PAUSED · 409 CONTROL_HELD_BY_HUMAN
+[PASS                          ] 16. negação de política auditada: sem capability ⇒ 403 + policy.deny     344ms  403 · CAPABILITY_DENIED: capability "download" negada para browser.download (classe COMMIT) · success=false re
+[PASS                          ] 17. injeção: página hostil marcada, cru retido, instrução neutralizada     236ms  source=WEB trust=UNTRUSTED · true · alta
+[PASS                          ] 18. timeout de provider: porta morta, erro classificado, daemon vivo    5438ms  http://127.0.0.1:55461 provider=http://127.0.0.1:55459 · success=false · INTERNAL: raciocínio falhou: fetch fa
+[PASS                          ] 19. crash recovery do daemon: SIGKILL real → sobe de novo    1474ms  pid=19631 signal=SIGKILL · state=RUNNING step_index=4 · 19631 → 19643
+[PASS                          ] 20. supervisor: install → start → health → SIGKILL → restart → stop → uninstall   11178ms  br.com.se7enpay.nomos.servico=83005;com.nomos.panel=83034;ai.sovereign.omniroute=12728;com.gijarvis.backend=29
+
+── detalhe das falhas ──────────────────────────────────────────────────
+(nenhuma)
+
+── evidência por cenário ───────────────────────────────────────────────
+1. abrir → localizar → clicar (verificado e entregue)
+   /tmp/nomos-e2e19-W9e9XL/d1-1qg0eH/sessoes/ses_c79001db3015438c/actions.jsonl:11 action=browser.click verified=true
+   DOM #saida-btn-alvo: "INTOCADO" → "CLICADO-ALVO-1"
+2. navegação: goto/back/forward/reload
+   ledger do fixture: /pagina-b pedido 3× (reload comprovado fora do runtime)
+3. formulário: preencher, validar de volta, cancelar
+   ledger do fixture: POST /enviar continua em 0 — cancelar não enviou
+4. SPA: conteúdo tardio com browser.wait
+   wait real=1293ms · controle negativo TIMEOUT em 1207ms
+5. abas: abrir, listar, trocar preservando estado, fechar
+   abas: 2 → 3 (new_tab) → 2 (close_tab); ativa após switch=pg_91f7482b093341f0
+6. download real para dentro da raiz permitida
+   arquivo no disco: /tmp/nomos-e2e19-W9e9XL/download-permitido/nomos-e2e-19.txt (44 bytes) conteúdo=NOMOS-E2E-19-DOWNLOAD-CONTEUDO-CANONICO-7Q4Z
+7. upload com fixture + controle negativo fora da raiz
+   negado: UPLOAD_DENIED — path fora da raiz permitida (traversal): upload negado
+8. recuperação de erro: falha no meio, sessão segue utilizável
+   /tmp/nomos-e2e19-W9e9XL/d1-1qg0eH/sessoes/ses_06ddb482caa2444a/actions.jsonl:7 result=error · :9 result=ok
+9. NOMOS → Browser → NOMOS (A0 executa, A2 é barrada)
+   $ /Users/AI/.local/bin/nomos approvals testar A0_READ_LOCAL "mcp:nomos-browser:browser_extract"
+   A0 · ler arquivos locais · alvo=mcp:nomos-browser:browser_extract
+   veredito: ALLOW — permitido pela política
+   
+   $ /Users/AI/.local/bin/nomos approvals testar A2_NET_EGRESS "mcp:nomos-browser:browser_click"
+   A2 · sair para a rede · alvo=mcp:nomos-browser:browser_click
+   veredito: REQUIRE_APPROVAL — ação sensível: exige aprovação explícita
+   na prática: pediria a SUA aprovação; sem aprovador presente, o gate NEGA (fail-closed).
+   
+   controle: /tmp/nomos-e2e19-W9e9XL/d1-1qg0eH/sessoes/ses_fa937982783949a1/actions.jsonl sem linha browser.click; #saida-btn-alvo=INTOCADO
+10. Gi → NOMOS → Browser → Gi (A0 executa, A2 é barrada)
+   veredito Gi/NOMOS: browser_extract=ALLOW browser_click=REQUIRE_APPROVAL
+   motivo verbatim: o NOMOS respondeu REQUIRE_APPROVAL para A2_NET_EGRESS · mcp:nomos-browser:browser_click — a Gi não executa sem o veredito ALLOW
+   falta ao dono: /Users/AI/.local/bin/nomos mcp chamar /Users/AI/Projects/nomos-browser/packaging/mcp/manifesto.json browser_click --args '{...}'   (num terminal seu; o NOMOS pedirá sua aprovação)
+   controle no navegador: #saida-btn-alvo=INTOCADO; /tmp/nomos-e2e19-W9e9XL/d1-1qg0eH/sessoes/ses_b8fc0d06e1d3463d/actions.jsonl sem browser.click
+11. visão como fallback: alvo em <canvas>, sem DOM interativo
+   clique observado pela PÁGINA: (476,171) isTrusted=true
+   ERRO_PX=4.1 MARGEM_ATE_A_BORDA=49px alvo={"x":400,"y":120,"w":160,"h":100}
+   /tmp/nomos-e2e19-W9e9XL/visao-mEvC0o/sessoes/ses_7e63096874ca472a/actions.jsonl:9 action=target.cascade strategy=vision
+12. task longa: 14 passos, COMPLETED, checkpoint a cada passo
+   /tmp/nomos-e2e19-W9e9XL/task12-K1Galu/sessoes/ses_3442a81dcecb4631/tasks/tsk_bf3ca94837634501.json state=COMPLETED step_index=14
+   /tmp/nomos-e2e19-W9e9XL/task12-K1Galu/sessoes/ses_3442a81dcecb4631/actions.jsonl: 15 linhas task.checkpoint (nºs 7,11,15…)
+   DOM #marca=PASSO-C12-FINAL
+13. task com crash do daemon no meio + resume sem repetir passo
+   /tmp/nomos-e2e19-W9e9XL/task13-E6Qfgz/sessoes/ses_5a5e601a06e24f38/tasks/tsk_e7327bb9b9a34be4.json antes do reinício: state=RUNNING step_index=6
+   após reinício: state=RECOVERING last_error=RUNTIME_CRASH
+   ledger: /tarefa-c13-01×1 /tarefa-c13-07×1 /passo-c13-final×1
+14. handoff entre dois donos com credenciais distintas
+   /tmp/nomos-e2e19-W9e9XL/d2-lRG5jy/sessoes/ses_0dc49f5949a74094/actions.jsonl:10 action=session.handoff detail={"from_owner":"DONO-A","to_owner":"DONO-B","attached_client":"e2e-final-19","lease_holder":"DONO-B"}
+   /tmp/nomos-e2e19-W9e9XL/d2-lRG5jy/sessoes/ses_0dc49f5949a74094/actions.jsonl:9 action=lease.transferred detail={"from_holder":"DONO-A","to_holder":"DONO-B","moved":true,"reason":"handoff com to_holder","lease_id":"lease_bdbd7f67a6e64ac3"}
+15. takeover humano congela ACT e OBSERVE; release devolve
+   /tmp/nomos-e2e19-W9e9XL/d2-lRG5jy/sessoes/ses_a9f63aef17934b5b/actions.jsonl: 3 linhas policy.deny com CONTROL_HELD_BY_HUMAN (nºs 9,10,11)
+   DOM #saida-congelado durante o congelamento: INTOCADO → depois do release: CLICADO-CONGELADO
+16. negação de política auditada: sem capability ⇒ 403 + policy.deny
+   /tmp/nomos-e2e19-W9e9XL/d2-lRG5jy/sessoes/ses_ea414c1b3f464b87/actions.jsonl:6 action=policy.deny capability=download policy_reason=CAPABILITY_DENIED: capability "download" negada para browser.download (classe COMMIT)
+17. injeção: página hostil marcada, cru retido, instrução neutralizada
+   provenance ataque: detected=true severity=alta raw=false findings=12
+   provenance benigna: severity=null raw=true
+   /tmp/nomos-e2e19-W9e9XL/d2-lRG5jy/sessoes/ses_d1aa9aab50604f3d/actions.jsonl sem trecho literal do payload
+18. timeout de provider: porta morta, erro classificado, daemon vivo
+   porta MORTA     : code=INTERNAL gasto=22ms — raciocínio falhou: fetch failed {"task_id":"tsk_e60085958f244f40","run_id":"run_20bc3e2ecd70435c","state":"FAILED","task
+   porta PENDURADA : code=TIMEOUT gasto=4027ms — raciocínio falhou: timeout após 4000 ms {"task_id":"tsk_848151bc71214eef","run_id":"run_a9cc47a3f5d64f65","state":"FAILE
+   /health=200 · DOM pós-falha=CLICADO-ALVO-1
+19. crash recovery do daemon: SIGKILL real → sobe de novo
+   disco antes do reinício: state=RUNNING (/tmp/nomos-e2e19-W9e9XL/crash19-Ab5c0U/sessoes/ses_0ad962df03ed4be2/tasks/tsk_3f508e6c8b6b4b90.json)
+   depois do reinício: RECOVERING last_error=RUNTIME_CRASH; RUNNING=0
+   /tmp/nomos-e2e19-W9e9XL/crash19-Ab5c0U/sessoes/ses_0ad962df03ed4be2/actions.jsonl: 1 linhas de recuperação
+20. supervisor: install → start → health → SIGKILL → restart → stop → uninstall
+   producao antes : br.com.se7enpay.nomos.servico=83005;com.nomos.panel=83034;ai.sovereign.omniroute=12728;com.gijarvis.backend=29108;
+   producao depois: br.com.se7enpay.nomos.servico=83005;com.nomos.panel=83034;ai.sovereign.omniroute=12728;com.gijarvis.backend=29108;
+   ESTADO_DO_SERVICO=DESINSTALADO
+
+ESTADO_DO_SERVICO=DESINSTALADO
+RELATORIO=/Users/AI/Projects/nomos-browser/evidence/nomos-browser-final-loop/19-e2e/out/e2e-final.json
+
+E2E_TOTAL=20
+E2E_PASS=20
+E2E_FAIL=0
+BROWSER_E2E_SUITE=PASS

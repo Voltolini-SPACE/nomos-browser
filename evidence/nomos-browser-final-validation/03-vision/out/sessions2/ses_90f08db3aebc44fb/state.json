@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "session_id": "ses_90f08db3aebc44fb",
+  "owner": "COORD2",
+  "profile": "default",
+  "url": "about:blank",
+  "page_ids": [
+    "pg_5072b27e0611466a"
+  ],
+  "context_id": "ctx_6621ae11c2be49aa",
+  "capabilities": {
+    "navigate": true,
+    "read": true,
+    "click": true,
+    "type": true,
+    "download": false,
+    "upload": false,
+    "send": false,
+    "purchase": false,
+    "payment": false,
+    "delete": false
+  },
+  "cdp_endpoint": null,
+  "browser_pid": 90465,
+  "browser_id": "ctx_6621ae11c2be49aa",
+  "criado_em": "2026-08-24T22:26:49.334Z",
+  "ultima_atividade": "2026-08-24T22:26:49.334Z",
+  "status": "IDLE",
+  "ephemeral": false,
+  "in_flight_action": null
+}

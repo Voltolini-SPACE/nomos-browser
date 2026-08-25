@@ -1,0 +1,28 @@
+/** Reprodutor mínimo: download bloqueado deixa promessa pendente; fechar a sessão derruba o PROCESSO do daemon. */
+import path from "node:path"; import fs from "node:fs"; import { fileURLToPath } from "node:url";
+import { startDaemon } from "../../../packages/api/src/daemon.ts";
+const AQUI = path.dirname(fileURLToPath(import.meta.url));
+const OUT = path.join(AQUI, "out"); const DL = path.join(OUT, "dl2"); fs.mkdirSync(DL, { recursive: true });
+let morreu = ""; 
+process.on("uncaughtException", (e) => { morreu = `uncaughtException: ${e.message.split("\n")[0]}`; console.log(`\n>>> PROCESSO DO DAEMON DERRUBADO: ${morreu}`); console.log("CRASH_POR_DOWNLOAD_BLOQUEADO=SIM"); process.exit(7); });
+process.on("unhandledRejection", (e: any) => { morreu = `unhandledRejection: ${String(e?.message ?? e).split("\n")[0]}`; console.log(`\n>>> PROCESSO DO DAEMON DERRUBADO: ${morreu}`); console.log("CRASH_POR_DOWNLOAD_BLOQUEADO=SIM"); process.exit(7); });
+const d: any = await startDaemon({ port: 0, headless: true, sessions_root: path.join(OUT, "s3"), download_root: DL } as never);
+const BASE = `http://127.0.0.1:${d.port}`; const T = d.token ?? null;
+const post = async (r: string, b: any) => { const x = await fetch(BASE + r, { method: "POST", headers: { "content-type": "application/json", ...(T ? { authorization: `Bearer ${T}` } : {}) }, body: JSON.stringify(b) }); return { status: x.status, env: await x.json().catch(() => null) as any }; };
+const del = async (r: string) => { const x = await fetch(BASE + r, { method: "DELETE", headers: T ? { authorization: `Bearer ${T}` } : {} }); return x.status; };
+const CAPS = { navigate: true, read: true, click: true, type: true, download: true, upload: false, send: false, purchase: false, payment: false, delete: false };
+const s = await post("/api/v1/sessions", { owner: "REPRO", capabilities: CAPS, headless: true });
+const SID = s.env.session_id ?? s.env.id;
+await post("/api/v1/browser.open", { session_id: SID, url: "about:blank" });
+const bloq = await post("/api/v1/browser.download", { session_id: SID, url: "file:///etc/passwd" });
+console.log(`download bloqueado: status=${bloq.status} code=${bloq.env?.error?.code}`);
+console.log("daemon ainda vivo — fechando a sessão...");
+const st = await del(`/api/v1/sessions/${SID}`);
+console.log(`DELETE sessão -> ${st}`);
+await new Promise((r) => setTimeout(r, 2500));
+const h = await fetch(`${BASE}/health`).then((r) => r.status).catch((e) => `ERRO ${e.message}`);
+console.log(`/health apos fechar a sessao -> ${h}`);
+console.log(`CRASH_POR_DOWNLOAD_BLOQUEADO=${morreu === "" ? "NAO" : "SIM"}`);
+await d.close(); await new Promise((r) => setTimeout(r, 1500));
+console.log(`APOS_CLOSE_DO_DAEMON crash=${morreu === "" ? "NAO" : "SIM"}`);
+process.exit(0);

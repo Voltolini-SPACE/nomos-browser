@@ -1,0 +1,3 @@
+$ nomos mcp chamar <manifesto> browser_extract --args {}
+[NOMOS-E002] 'nomos-browser' é experimental — só chamo tools de server registrado. Confie primeiro: nomos mcp confiar <manifesto>
+exit=3

@@ -1,0 +1,157 @@
+{
+  "verdade": {
+    "x": 400,
+    "y": 120,
+    "w": 160,
+    "h": 100,
+    "cx": 480,
+    "cy": 170
+  },
+  "modelo": "qwen2.5vl:3b",
+  "linhas": [
+    {
+      "imagem": "canvas(novo)",
+      "goal": "o botao vermelho escrito COMPRAR",
+      "ms": 12138,
+      "box": {
+        "x": 412,
+        "y": 150,
+        "width": 280,
+        "height": 100
+      },
+      "centro": {
+        "x": 552,
+        "y": 200
+      },
+      "conf": 0.99,
+      "erro_px": 78,
+      "dentro": true,
+      "erro": ""
+    },
+    {
+      "imagem": "canvas(novo)",
+      "goal": "o botao azul escrito COMPRAR",
+      "ms": 859,
+      "box": null,
+      "centro": null,
+      "conf": null,
+      "erro_px": null,
+      "dentro": null,
+      "erro": ""
+    },
+    {
+      "imagem": "canvas(novo)",
+      "goal": "o retangulo vermelho com o texto COMPRAR",
+      "ms": 1893,
+      "box": {
+        "x": 409,
+        "y": 126,
+        "width": 390,
+        "height": 110
+      },
+      "centro": {
+        "x": 604,
+        "y": 181
+      },
+      "conf": 0.99,
+      "erro_px": 124.5,
+      "dentro": false,
+      "erro": ""
+    },
+    {
+      "imagem": "canvas(novo)",
+      "goal": "COMPRAR",
+      "ms": 1896,
+      "box": {
+        "x": 462,
+        "y": 166,
+        "width": 420,
+        "height": 100
+      },
+      "centro": {
+        "x": 672,
+        "y": 216
+      },
+      "conf": 0.99,
+      "erro_px": 197.4,
+      "dentro": false,
+      "erro": ""
+    },
+    {
+      "imagem": "dom(evidencia)",
+      "goal": "o botao vermelho escrito COMPRAR",
+      "ms": 8534,
+      "box": {
+        "x": 409,
+        "y": 150,
+        "width": 200,
+        "height": 100
+      },
+      "centro": {
+        "x": 509,
+        "y": 200
+      },
+      "conf": 0.99,
+      "erro_px": 41.7,
+      "dentro": true,
+      "erro": ""
+    },
+    {
+      "imagem": "dom(evidencia)",
+      "goal": "o botao azul escrito COMPRAR",
+      "ms": 1836,
+      "box": {
+        "x": 409,
+        "y": 150,
+        "width": 200,
+        "height": 100
+      },
+      "centro": {
+        "x": 509,
+        "y": 200
+      },
+      "conf": 0.99,
+      "erro_px": 41.7,
+      "dentro": true,
+      "erro": ""
+    },
+    {
+      "imagem": "dom(evidencia)",
+      "goal": "o retangulo vermelho com o texto COMPRAR",
+      "ms": 2112,
+      "box": {
+        "x": 409,
+        "y": 125,
+        "width": 449,
+        "height": 115
+      },
+      "centro": {
+        "x": 634,
+        "y": 183
+      },
+      "conf": 0.99,
+      "erro_px": 154,
+      "dentro": false,
+      "erro": ""
+    },
+    {
+      "imagem": "dom(evidencia)",
+      "goal": "COMPRAR",
+      "ms": 1911,
+      "box": {
+        "x": 476,
+        "y": 170,
+        "width": 400,
+        "height": 200
+      },
+      "centro": {
+        "x": 676,
+        "y": 270
+      },
+      "conf": 0.99,
+      "erro_px": 220,
+      "dentro": false,
+      "erro": ""
+    }
+  ]
+}

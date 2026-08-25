@@ -1,0 +1,31 @@
+✔ 1-4. runtime sobe, health responde e o agente cria sessão (173.0615ms)
+✔ 5-6. navega e opera a página por DOM (360.478833ms)
+✔ 7. opera por accessibility tree (232.102334ms)
+✔ 8-9. opera por coordenada + mouse, com cursor observável no event bus (578.327042ms)
+✔ 10-12. segunda IA assume a mesma sessão, age, e NOMOS reassume (152.712708ms)
+✔ 13-16. cliente morre, runtime sobrevive, reconecta e o estado é restaurado (8.325958ms)
+✔ capability sensível é negada mesmo com sessão válida (fail closed) (1.187125ms)
+✔ URL interna e esquema perigoso são bloqueados pelo guarda (1.353417ms)
+✔ FASE 32 — takeover congela TUDO, inclusive observação (9.19625ms)
+✔ 17-20. audit log e replay reconstroem a sessão (2.548375ms)
+✔ screenshots foram gravados como evidência da sessão (0.325875ms)
+✔ sessão fecha e some da lista (41.150291ms)
+
+── FLAGS DO GATE (FASE 67) ──
+RUNTIME_INDEPENDENCE_PASS=YES
+DOM_PASS=YES
+ACCESSIBILITY_PASS=YES
+VISION_MOUSE_PASS=PARCIAL(coordenada+mouse; sem VisionProvider)
+MULTI_AI_PASS=PARCIAL(dois donos via API universal; sem 2o provedor LLM real)
+HANDOFF_PASS=YES
+RECOVERY_PASS=PARCIAL(queda de cliente; queda do processo do runtime NÃO coberta)
+AUDIT_PASS=YES
+REPLAY_PASS=YES
+ℹ tests 12
+ℹ suites 0
+ℹ pass 12
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1923.786583

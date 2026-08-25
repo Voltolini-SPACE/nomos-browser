@@ -1,0 +1,73 @@
++ cd /tmp/nomos-cleanroom-1787602943
++ echo '--- CORRECAO: regenerar lock ---'
+--- CORRECAO: regenerar lock ---
++ npm install --package-lock-only
++ tail -5
+
+up to date, audited 16 packages in 523ms
+
+found 0 vulnerabilities
++ git diff --stat package-lock.json
++ tail -3
+ package-lock.json | 46 ++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 46 insertions(+)
++ echo '--- npm ci apos correcao ---'
+--- npm ci apos correcao ---
++ npm ci
++ tail -6
+
+added 7 packages, and audited 11 packages in 462ms
+
+found 0 vulnerabilities
++ echo '--- playwright ---'
+--- playwright ---
++ npx playwright install chromium
++ tail -4
++ echo '--- SMOKE 1: spike ---'
+--- SMOKE 1: spike ---
++ node spike/fase1_spike.ts
++ tail -8
+      "camada": "SCREENSHOT",
+      "descricao": "captura de página inteira produz PNG válido",
+      "esperado": "> 0",
+      "observado": 800,
+      "pass": true
+    }
+  ]
+}
++ echo '--- SMOKE 2: e2e-gate ---'
+--- SMOKE 2: e2e-gate ---
++ node --test tests/e2e-gate.test.ts
++ grep -E '^# (tests|pass|fail)|✖'
++ head -20
++ echo '--- SMOKE 3: ci fast ---'
+--- SMOKE 3: ci fast ---
++ bash scripts/ci.sh fast
++ tail -25
+test:traceability                             OK
+test:observability                            OK
+test:replay-hardening                         OK
+test:bench                                    OK
+test:sdk-ts                                   OK
+test:mcp                                      OK
+test:cli                                      OK
+test:policy-vault                             OK
+test:security-files-secrets                   OK
+test:security-net-injection                   OK
+test:ui-build                                 OK
+python:sdk                                    OK
+typecheck                                     FALHOU
+    
+    [41m                                                                               [0m
+    [41m[37m                This is not the tsc command you are looking for                [0m
+    [41m                                                                               [0m
+    
+    To get access to the TypeScript compiler, [34mtsc[0m, from the command line either:
+    
+    - Use [1mnpm install typescript[0m to first add TypeScript to your project [1mbefore[0m using npx
+    - Use [1myarn[0m to avoid accidentally running code from un-installed packages
+
+[1m── resultado ─────────────────────────────[0m
+CI_PASS=NO  (1 passo(s) falharam)
++ echo CLEANROOM2_FIM
+CLEANROOM2_FIM

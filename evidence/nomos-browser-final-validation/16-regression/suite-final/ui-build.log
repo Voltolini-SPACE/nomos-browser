@@ -1,0 +1,14 @@
+✔ o fonte da UI não contém NENHUM token de marca (contrato §6.3) (1.849667ms)
+✔ resolveBrand usa o resolvedor oficial e reporta rc e oficialidade (517.820167ms)
+✔ marca inexistente falha fechado, não devolve paleta inventada (272.0545ms)
+✔ tokens vêm do cofre com integridade conferida e sem colisão de chave (392.016167ms)
+✔ build injeta os tokens, marca PROPOSTA e não deixa placeholder (398.365333ms)
+✔ dist não é versionado — o artefato com token não pode entrar no git (0.606917ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 6
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1706.14275

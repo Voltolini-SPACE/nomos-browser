@@ -1,0 +1,15 @@
+RAPIDOS        (15): auth lease skills traceability observability replay-hardening bench sdk-ts mcp cli policy-vault security-files-secrets security-net-injection ui-build supervisor
+INTEGRACAO     (10): session perception pointer-keyboard target-verifier click-entrega cascata-percepcao api task-engine ownership watchdog-wired
+E2E            ( 2): e2e-gate product02-gate
+ADVERSARIAIS   ( 5): security-net-injection security-files-secrets recovery-watchdog injection-wired audit-forense
+
+TOTAL_TEST_FILES=33  CITADOS=30
+FORA_DA_CI (3): aiprovider providers-runtime vision
+CITADO_MAS_INEXISTENTE (0): 
+ALL_TEST_FILES_IN_CI=NO
+
+== varredura completa (variaveis + mencoes literais) ==
+literais em ci.sh: ['providers-runtime']
+TOTAL_TEST_FILES=33
+FORA_DA_CI (2): aiprovider vision
+ALL_TEST_FILES_IN_CI=NO

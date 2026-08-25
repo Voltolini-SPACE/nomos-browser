@@ -1,0 +1,16 @@
+✔ observe() encontra o botão conhecido com role e text corretos (328.01975ms)
+✔ box do observe bate com getBoundingClientRect (tolerância 1px) (87.742542ms)
+✔ limit=3 devolve 3 elementos mas declara total_elements e truncated (102.46975ms)
+✔ accessibilityTree() traz o botão com role button (100.948417ms)
+✔ screenshot scope=element devolve PNG com as dimensões reais do elemento (205.288833ms)
+✔ networkLog capta a requisição e Authorization aparece como [REDACTED] (100.393292ms)
+✔ valor de campo de senha nunca entra na Observation (153.051042ms)
+✔ redactUrl redige credencial em query, fragmento e userinfo (0.718ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1793.605417

@@ -1,0 +1,161 @@
+CLEANROOM_DIR=/tmp/nomos-cleanroom-1787602943
++ git clone --depth 1 file:///Users/AI/Projects/nomos-browser /tmp/nomos-cleanroom-1787602943
+Cloning into '/tmp/nomos-cleanroom-1787602943'...
++ cd /tmp/nomos-cleanroom-1787602943
++ ls -la
+total 72
+drwxr-xr-x@  18 AI    wheel    576 Aug 24 17:22 .
+drwxrwxrwt  364 root  wheel  11648 Aug 24 17:22 ..
+drwxr-xr-x@   3 AI    wheel     96 Aug 24 17:22 .claude
+drwxr-xr-x@  13 AI    wheel    416 Aug 24 17:22 .git
+drwxr-xr-x@   3 AI    wheel     96 Aug 24 17:22 .github
+-rw-r--r--@   1 AI    wheel    111 Aug 24 17:22 .gitignore
+-rw-r--r--@   1 AI    wheel   3331 Aug 24 17:22 README.md
+drwxr-xr-x@   5 AI    wheel    160 Aug 24 17:22 checkpoints
+drwxr-xr-x@  10 AI    wheel    320 Aug 24 17:22 docs
+-rw-r--r--@   1 AI    wheel  15822 Aug 24 17:22 package-lock.json
+-rw-r--r--@   1 AI    wheel    641 Aug 24 17:22 package.json
+drwxr-xr-x@  10 AI    wheel    320 Aug 24 17:22 packages
+drwxr-xr-x@   4 AI    wheel    128 Aug 24 17:22 scripts
+drwxr-xr-x@   5 AI    wheel    160 Aug 24 17:22 sdk-python
+drwxr-xr-x@   5 AI    wheel    160 Aug 24 17:22 spike
+drwxr-xr-x@  27 AI    wheel    864 Aug 24 17:22 tests
+-rw-r--r--@   1 AI    wheel   1632 Aug 24 17:22 tsconfig.json
+-rw-r--r--@   1 AI    wheel   1437 Aug 24 17:22 tsconfig.strict.json
++ node -v
+v26.0.0
++ npm ci
++ tail -15
+npm error
+npm error   --workspaces
+npm error     Set to true to run the command in the context of **all** configured
+npm error
+npm error   --include-workspace-root
+npm error     Include the workspace root when workspaces are enabled for a command.
+npm error
+npm error   --install-links
+npm error     When set file: protocol dependencies will be packed and installed as
+npm error
+npm error
+npm error aliases: clean-install, ic, install-clean, isntall-clean
+npm error
+npm error Run "npm help ci" for more info
+npm error A complete log of this run can be found in: /Users/AI/.npm/_logs/2026-08-24T20_22_23_929Z-debug-0.log
++ npx playwright install chromium
++ tail -5
+║                                                                               ║
+║     npm install @playwright/test                                              ║
+║     npx playwright install                                                    ║
+║                                                                               ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
++ echo '--- SMOKE: spike de controle real ---'
+--- SMOKE: spike de controle real ---
++ node spike/fase1_spike.ts
++ tail -20
+node:internal/modules/package_json_reader:301
+  throw new ERR_MODULE_NOT_FOUND(packageName, fileURLToPath(base), null);
+        ^
+
+Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'playwright' imported from /private/tmp/nomos-cleanroom-1787602943/spike/fase1_spike.ts
+    at Object.getPackageJSONURL (node:internal/modules/package_json_reader:301:9)
+    at packageResolve (node:internal/modules/esm/resolve:764:81)
+    at moduleResolve (node:internal/modules/esm/resolve:855:18)
+    at defaultResolve (node:internal/modules/esm/resolve:988:11)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:700:20)
+    at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:717:38)
+    at ModuleLoader.resolveSync (node:internal/modules/esm/loader:749:52)
+    at #resolve (node:internal/modules/esm/loader:682:17)
+    at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:602:35)
+    at ModuleJob.syncLink (node:internal/modules/esm/module_job:162:33) {
+  code: 'ERR_MODULE_NOT_FOUND'
+}
+
+Node.js v26.0.0
++ echo '--- SMOKE: gate e2e ---'
+--- SMOKE: gate e2e ---
++ node --test tests/e2e-gate.test.ts
++ tail -30
+Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'ws' imported from /private/tmp/nomos-cleanroom-1787602943/tests/e2e-gate.test.ts
+    at Object.getPackageJSONURL (node:internal/modules/package_json_reader:301:9)
+    at packageResolve (node:internal/modules/esm/resolve:764:81)
+    at moduleResolve (node:internal/modules/esm/resolve:855:18)
+    at defaultResolve (node:internal/modules/esm/resolve:988:11)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:700:20)
+    at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:717:38)
+    at ModuleLoader.resolveSync (node:internal/modules/esm/loader:749:52)
+    at #resolve (node:internal/modules/esm/loader:682:17)
+    at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:602:35)
+    at ModuleJob.syncLink (node:internal/modules/esm/module_job:162:33) {
+  code: 'ERR_MODULE_NOT_FOUND'
+}
+
+Node.js v26.0.0
+✖ tests/e2e-gate.test.ts (126.994917ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 131.960958
+
+✖ failing tests:
+
+test at tests/e2e-gate.test.ts:1:1
+✖ tests/e2e-gate.test.ts (126.994917ms)
+  'test failed'
++ echo '--- CI fast ---'
+--- CI fast ---
++ bash scripts/ci.sh fast
++ tail -30
+    ✖ tests/security-files-secrets.test.ts (128.59225ms)
+      'test failed'
+test:security-net-injection                   FALHOU
+    ℹ pass 0
+    ℹ fail 1
+    ℹ cancelled 0
+    ℹ skipped 0
+    ℹ todo 0
+    ℹ duration_ms 135.728458
+    
+    ✖ failing tests:
+    
+    test at tests/security-net-injection.test.ts:1:1
+    ✖ tests/security-net-injection.test.ts (130.3475ms)
+      'test failed'
+test:ui-build                                 OK
+python:sdk                                    OK
+typecheck                                     FALHOU
+    
+    [41m                                                                               [0m
+    [41m[37m                This is not the tsc command you are looking for                [0m
+    [41m                                                                               [0m
+    
+    To get access to the TypeScript compiler, [34mtsc[0m, from the command line either:
+    
+    - Use [1mnpm install typescript[0m to first add TypeScript to your project [1mbefore[0m using npx
+    - Use [1myarn[0m to avoid accidentally running code from un-installed packages
+
+[1m── resultado ─────────────────────────────[0m
+CI_PASS=NO  (6 passo(s) falharam)
++ echo '--- CI guards ---'
+--- CI guards ---
++ bash scripts/ci.sh guards
++ tail -30
+
+[1m── guards — marca, segredos, desacoplamento ─────────────────────────────[0m
+build:ui                                      OK
+marca:sem-hex-no-fonte                        OK
+marca:dist-nao-versionado                     OK
+marca:selo-declarado                          OK
+segredo:nada-no-versionado                    OK
+desacoplamento:mcp-sem-playwright             OK
+deps:versoes-pinadas                          OK
+rede:bind-loopback-por-default                OK
+auth:ligada-por-default                       OK
+
+[1m── resultado ─────────────────────────────[0m
+CI_PASS=YES
++ echo CLEANROOM_FIM
+CLEANROOM_FIM

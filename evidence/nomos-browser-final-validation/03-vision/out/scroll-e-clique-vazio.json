@@ -1,0 +1,42 @@
+{
+  "scroll_resposta": {
+    "scrolled": {
+      "dx": 0,
+      "dy": 600
+    },
+    "at": {
+      "x": 0,
+      "y": 0
+    },
+    "backend": "cdp",
+    "detail": {}
+  },
+  "a4_box_apos_assentar": {
+    "x": 60,
+    "y": 100,
+    "width": 100,
+    "height": 100
+  },
+  "a4_click_success": true,
+  "a4_evento": {
+    "clientX": 110,
+    "clientY": 150,
+    "isTrusted": true,
+    "scrollY": 600
+  },
+  "a4_erro_px": 0,
+  "clique_em_area_vazia_success": true,
+  "clique_em_area_vazia_status": 200,
+  "clique_em_area_vazia_verified": false,
+  "clique_em_area_vazia_erro": null,
+  "log_apos_clique_vazio": "{\"id\":\"a4\",\"clientX\":110,\"clientY\":150,\"pageX\":110,\"pageY\":750,\"isTrusted\":true,\"rect\":{\"x",
+  "a5_box": {
+    "x": 600,
+    "y": 900,
+    "width": 180,
+    "height": 50
+  },
+  "a5_fora_do_viewport": true,
+  "a5_click_success": true,
+  "a5_recebeu_evento": true
+}

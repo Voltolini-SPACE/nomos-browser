@@ -1,0 +1,30 @@
+▶ FASE 19 — CapabilityEngine
+  ✔ 1. ferramenta desconhecida é NEGADA (fail closed) (1.034625ms)
+  ✔ 1b. chave herdada de Object.prototype não vira ferramenta válida (0.13725ms)
+  ✔ 2. política restricted nega browser.upload e permite browser.observe (1.102542ms)
+  ✔ 2b. observe nega click/type; full só por chamada explícita (0.422334ms)
+  ✔ 2c. capabilities de JSON só concedem com `true` em propriedade própria (0.091ms)
+  ✔ 3. agente A com capability custom não afeta agente B (0.1765ms)
+✔ FASE 19 — CapabilityEngine (3.977625ms)
+▶ FASE 40 — guarda de URL
+  ✔ 4. file:// e metadata link-local são bloqueados (0.75975ms)
+  ✔ 4b. esquemas perigosos e formas ofuscadas de loopback (1.030459ms)
+✔ FASE 40 — guarda de URL (1.925709ms)
+▶ FASE 21/22 — guarda de path
+  ✔ rejeita traversal, symlink de fuga e raiz não configurada (0.584792ms)
+✔ FASE 21/22 — guarda de path (2.389542ms)
+▶ FASE 18 — Vault
+  ✔ 5. http://127.0.0.1:PORTA/ passa COM allow_internal (e falha sem ele) (0.219875ms)
+  ✔ vault grava em profiles/<perfil>/vault.json com modo 0600 (0.911292ms)
+  ✔ vault com permissão larga é RECUSADO, não corrigido em silêncio (1.012375ms)
+  ✔ 6. injeta o segredo na página REAL e o retorno NÃO contém o valor (1092.33275ms)
+  ✔ 7. assertNoSecretLeak lança quando o segredo está no texto (2.272208ms)
+✔ FASE 18 — Vault (1132.218125ms)
+ℹ tests 14
+ℹ suites 4
+ℹ pass 14
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1680.053166

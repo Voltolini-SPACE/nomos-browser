@@ -1,0 +1,56 @@
+▶ replay-verify · controle negativo (bundle íntegro precisa passar)
+  ✔ 1. bundle escrito pelo SessionRecorder REAL sai integro:true, sem um problema sequer (9.302084ms)
+  ✔ 2. molde deste arquivo, sem defeito injetado, também sai integro:true (3.5015ms)
+  ✔ 3. ação resolvida SÓ pela trilha de auditoria (sem evento de conclusão) não é in-flight (1.808542ms)
+✔ replay-verify · controle negativo (bundle íntegro precisa passar) (16.400667ms)
+▶ replay-verify · corrupção de arquivo
+  ✔ 4. linha JSONL corrompida é apontada por ARQUIVO e LINHA, sem perder as boas (1.910625ms)
+  ✔ 5. corrupção em actions.jsonl e network.jsonl é atribuída ao arquivo certo (1.78675ms)
+  ✔ 6. bundle truncado (última linha íntegra, mas sem newline final) é reportado (2.167291ms)
+  ✔ 7. bundle truncado no meio do registro acumula TRUNCADO + CORROMPIDO (1.676208ms)
+  ✔ 8. o relatório NÃO carrega o conteúdo da linha corrompida — só sob incluir_bruto (3.3385ms)
+✔ replay-verify · corrupção de arquivo (11.128708ms)
+▶ replay-verify · screenshots
+  ✔ 9. screenshot no índice e ausente do disco vira SCREENSHOT_AUSENTE (2.113542ms)
+  ✔ 10. arquivo no disco fora do índice vira SCREENSHOT_ORFAO (1.86675ms)
+  ✔ 11. PNG ilegível é detectado pelo decodificador, não pela extensão (1.633709ms)
+  ✔ 12. índice que declara dimensão diferente do arquivo é pego (1.815334ms)
+  ✔ 12b. PNG cortado logo após o cabeçalho: o índice o denuncia pelo TAMANHO (2.548584ms)
+  ✔ 12c. índice forjado de forma coerente só cai com decodificar_pixels (3.15025ms)
+  ✔ 12d. índice malformado vira problema, não derruba o verificador (1.379083ms)
+  ✔ 12e. índice que OMITE a dimensão não é acusado de divergir (1.601583ms)
+  ✔ 13. registro que cita screenshot_ref desconhecido do índice é reportado (1.591667ms)
+✔ replay-verify · screenshots (17.982708ms)
+▶ replay-verify · tempo
+  ✔ 14. timestamp que retrocede dentro da fonte é TIMESTAMP_FORA_DE_ORDEM (1.642125ms)
+  ✔ 15. timestamp ilegível não vira 1970: sai TIMESTAMP_INVALIDO (1.569ms)
+  ✔ 16. empate de timestamp é DITO, é aviso (não corrupção) e o desempate é estável (2.170292ms)
+  ✔ 17. lacuna temporal grande é aviso e o limiar é configurável (3.472ms)
+✔ replay-verify · tempo (8.971458ms)
+▶ replay-verify · ownership e ações em voo
+  ✔ 18. troca de ator sem evento que a explique é reportada (1.645917ms)
+  ✔ 19. controle negativo: a MESMA troca com session.handoff no intervalo não acusa nada (1.511417ms)
+  ✔ 20. handoff FORA da janela não conta como explicação (1.685917ms)
+  ✔ 21. ação iniciada sem fim sai UNKNOWN_OUTCOME — nunca 'ok', nunca 'falhou' (1.493667ms)
+  ✔ 22. action.started sem action_id é in-flight não-correlacionável, não é sucesso (1.777083ms)
+✔ replay-verify · ownership e ações em voo (8.246125ms)
+▶ replay-verify · fechamento da sessão e contagens
+  ✔ 23. result.json ausente: a sessão nunca fechou (1.625667ms)
+  ✔ 24. result.json ilegível não vira 'sem resultado' mudo (2.687042ms)
+  ✔ 25. linha apagada depois do fato: o bundle parece íntegro e SÓ a contagem denuncia (1.575167ms)
+  ✔ 26. sobra de registro é aviso, não erro (outro escritor na mesma sessão) (1.576875ms)
+  ✔ 27. fonte ausente é declarada como aviso, sem virar zero silencioso (1.195166ms)
+✔ replay-verify · fechamento da sessão e contagens (8.784208ms)
+▶ replay-verify · conduta do verificador
+  ✔ 28. sessão inexistente é dita, não confundida com sessão vazia (0.266417ms)
+  ✔ 29. session_id que vira caminho é recusado, não sanitizado (0.29ms)
+  ✔ 30. bundle com vários defeitos: todos aparecem, nada é consertado e o relatório é estável (3.621916ms)
+✔ replay-verify · conduta do verificador (4.259792ms)
+ℹ tests 34
+ℹ suites 7
+ℹ pass 34
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 235.473292

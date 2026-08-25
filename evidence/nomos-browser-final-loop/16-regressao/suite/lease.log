@@ -1,0 +1,65 @@
+▶ FASE 9 — LeaseManager: aquisição e reentrância
+  ✔ concede lease exclusivo e autoriza o dono a agir (4.641875ms)
+  ✔ modo default é exclusive e ttl default é o do manager (0.15025ms)
+  ✔ reentrância: o mesmo holder re-adquire sem se auto-bloquear e mantém o lease_id (0.711708ms)
+  ✔ renew estende a partir de agora; renew por outro holder ou lease_id errado é negado (0.322917ms)
+✔ FASE 9 — LeaseManager: aquisição e reentrância (6.53925ms)
+▶ FASE 9 — ausência de corrida (com discriminador)
+  ✔ as operações de arbitragem são SÍNCRONAS — não há await entre verificar e tomar (0.132125ms)
+  ✔ 64 acquires concorrentes => EXATAMENTE UM vence, e os 63 recebem CONTROL_NOT_OWNED (0.652541ms)
+  ✔ DISCRIMINADOR: o mesmo harness pega a corrida numa implementação com await no meio (2.965542ms)
+✔ FASE 9 — ausência de corrida (com discriminador) (3.87675ms)
+▶ FASE 9 — TTL: o lease não fica preso se o dono somem
+  ✔ A perde por TTL, B adquire, e A com lease velho é negada por lease obsoleto (0.29725ms)
+  ✔ expiração é exatamente no prazo, não antes (0.0965ms)
+  ✔ sweep() reaproveita o mesmo caminho e é chamável à mão (0.878916ms)
+  ✔ relógio quebrado aborta a arbitragem em vez de arbitrar errado (0.262542ms)
+✔ FASE 9 — TTL: o lease não fica preso se o dono somem (1.681375ms)
+▶ FASE 9 — release
+  ✔ release por quem NÃO é dono é negado e não solta o lease do dono real (0.223834ms)
+  ✔ release com lease_id obsoleto do próprio holder é negado (0.189417ms)
+  ✔ release exige lease_id — soltar por nome seria derrubar o lease novo com o velho (0.087084ms)
+  ✔ releaseAll revoga tudo da sessão e forget só passa com a sessão vazia (0.206917ms)
+✔ FASE 9 — release (0.831167ms)
+▶ FASE 9 — transfer atômico
+  ✔ transfer troca o dono num único turno: nenhum instante observado com dois donos (0.394416ms)
+  ✔ intruso concorrente NÃO entra durante o transfer (0.199458ms)
+[lease] hook onEvent lançou em control.taken: assinante quebrado
+[lease] hook onEvent lançou em action.failed: assinante quebrado
+  ✔ DISCRIMINADOR: transfer ingênuo (release + await + acquire) entrega a sessão ao intruso (3.91325ms)
+  ✔ transfer por quem não detém, com lease_id obsoleto, ou para si mesmo é negado (0.142666ms)
+  ✔ transfer com outros holders shared na sessão é negado (não seria atômico) (0.074292ms)
+✔ FASE 9 — transfer atômico (4.817167ms)
+▶ FASE 9 — sequência da missão
+  ✔ A tem lease → B clica e leva CONTROL_NOT_OWNED → A libera → B adquire → B age (0.159959ms)
+✔ FASE 9 — sequência da missão (0.183125ms)
+▶ FASE 9 — modos exclusive / shared
+  ✔ shared coexiste para OBSERVE; agir exige exclusive (0.1165ms)
+  ✔ exclusive bloqueia shared e shared bloqueia exclusive (0.052958ms)
+  ✔ holder único pode promover shared→exclusive; com outro shared ativo, não (0.064625ms)
+  ✔ exclusive satisfaz OBSERVE; a tabela de modos vem de ACTION_CLASS do contrato (0.069917ms)
+✔ FASE 9 — modos exclusive / shared (0.3425ms)
+▶ FASE 9 — fail closed
+  ✔ sessão sem lease nenhum é negada por padrão (0.060125ms)
+  ✔ allow_unleased é ato explícito e continua recusando lease_id aposentado (0.0795ms)
+  ✔ check sem classe assume ACT — consultar de menos não pode render mais permissão (0.036875ms)
+  ✔ entrada inválida não concede nada e não lança (0.122833ms)
+  ✔ entrada inválida em check/release/renew/transfer também não lança nem concede (0.081125ms)
+  ✔ construtor recusa TTL default/teto inválidos (0.092375ms)
+  ✔ assertControl lança LeaseError com o código do contrato e o nome próprio preservado (0.134208ms)
+  ✔ o lease devolvido é congelado — o portador não estica o próprio prazo (0.092166ms)
+✔ FASE 9 — fail closed (0.764834ms)
+▶ FASE 9 — observabilidade
+  ✔ emite control.taken / control.returned / session.handoff e marca a expiração (0.105459ms)
+  ✔ negação de controle é registrada — recusa de segurança não some por omissão (0.044708ms)
+  ✔ hook que lança não derruba a arbitragem nem solta o lease de ninguém (0.35875ms)
+  ✔ snapshot descreve o estado sem permitir mexer nele (0.064ms)
+✔ FASE 9 — observabilidade (0.6095ms)
+ℹ tests 37
+ℹ suites 9
+ℹ pass 37
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 154.166625

@@ -1,0 +1,21 @@
+✔ 9. controle negativo do teste: alvo trivial dentro do viewport passa (591.580041ms)
+✔ 1. alvo ACIMA do viewport: rola de volta, clica, erro 0px (350.079458ms)
+✔ 2. alvo ABAIXO do viewport: rola e clica, erro 0px (339.403208ms)
+✔ 3. fora HORIZONTALMENTE em conteiner lateral: o correto e CLICAR, nao recusar (407.712875ms)
+✔ 4. header GRUDADO: rola o suficiente para descobrir e clica (341.727041ms)
+✔ 5. coberto por overlay fixo: TARGET_NOT_ACTIONABLE e o overlay e nomeado (156.493542ms)
+✔ 6. removido do DOM DURANTE a rolagem: TARGET_NOT_ACTIONABLE, nunca sucesso (1222.015458ms)
+✔ 7a. SPA em movimento PERPETUO: recusa; nunca clica em coordenada velha (2050.840375ms)
+✔ 7b. SPA que ASSENTA: espera, remede e acerta com erro 0px (514.407958ms)
+✔ 8. deviceScaleFactor 2: coordenada continua exata (211.684167ms)
+✔ 10a. click_delivery_check:false — coordenada vazia nao traz prova nenhuma (43.122458ms)
+✔ 10b. mesma fixture: com checagem = CLICK_NOT_DELIVERED; sem checagem = sucesso falso (325.014875ms)
+✔ 11. isTrusted===true em todo clique entregue, e a trilha registra a mira (313.993875ms)
+ℹ tests 13
+ℹ suites 0
+ℹ pass 13
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 7469.056208

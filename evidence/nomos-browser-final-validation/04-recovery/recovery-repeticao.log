@@ -1,0 +1,66 @@
+usage: tr [-Ccsu] string1 string2
+       tr [-Ccu] -d string1
+       tr [-Ccu] -s string1
+       tr [-Ccu] -ds string1 string2
+ORFAOS_ANTES=
+=== RODADA 1 recovery-watchdog ===
+ℹ tests 24
+ℹ pass 24
+ℹ fail 0
+rc=0
+=== RODADA 1 product02-gate (FASE 14 SIGKILL) ===
+RECOVERY_PASS=YES
+ℹ tests 3
+ℹ pass 3
+ℹ fail 0
+usage: tr [-Ccsu] string1 string2
+       tr [-Ccu] -d string1
+       tr [-Ccu] -s string1
+       tr [-Ccu] -ds string1 string2
+ORFAOS_DEPOIS_R1=
+usage: tr [-Ccsu] string1 string2
+       tr [-Ccu] -d string1
+       tr [-Ccu] -s string1
+       tr [-Ccu] -ds string1 string2
+DAEMONS_ORFAOS_R1=
+=== RODADA 2 recovery-watchdog ===
+ℹ tests 24
+ℹ pass 24
+ℹ fail 0
+rc=0
+=== RODADA 2 product02-gate (FASE 14 SIGKILL) ===
+RECOVERY_PASS=YES
+ℹ tests 3
+ℹ pass 3
+ℹ fail 0
+usage: tr [-Ccsu] string1 string2
+       tr [-Ccu] -d string1
+       tr [-Ccu] -s string1
+       tr [-Ccu] -ds string1 string2
+ORFAOS_DEPOIS_R2=
+usage: tr [-Ccsu] string1 string2
+       tr [-Ccu] -d string1
+       tr [-Ccu] -s string1
+       tr [-Ccu] -ds string1 string2
+DAEMONS_ORFAOS_R2=
+=== RODADA 3 recovery-watchdog ===
+ℹ tests 24
+ℹ pass 24
+ℹ fail 0
+rc=0
+=== RODADA 3 product02-gate (FASE 14 SIGKILL) ===
+RECOVERY_PASS=YES
+ℹ tests 3
+ℹ pass 3
+ℹ fail 0
+usage: tr [-Ccsu] string1 string2
+       tr [-Ccu] -d string1
+       tr [-Ccu] -s string1
+       tr [-Ccu] -ds string1 string2
+ORFAOS_DEPOIS_R3=
+usage: tr [-Ccsu] string1 string2
+       tr [-Ccu] -d string1
+       tr [-Ccu] -s string1
+       tr [-Ccu] -ds string1 string2
+DAEMONS_ORFAOS_R3=
+RECOVERY_FIM

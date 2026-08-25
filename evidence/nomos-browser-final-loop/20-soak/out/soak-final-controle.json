@@ -1,0 +1,237 @@
+{
+  "gerado_em": "2026-08-25T06:00:05.562Z",
+  "duracao_total_ms": 101767,
+  "maquina": {
+    "plataforma": "darwin",
+    "node": "v26.0.0",
+    "cpus": 10
+  },
+  "dimensionamento": {
+    "mem_disponivel_gb": 4.37,
+    "mem_livre_pct": 70,
+    "mb_por_sessao": 339,
+    "rss_base_daemon_mb": 183,
+    "sonda_viva": {
+      "filhos": 5,
+      "chromium": 5,
+      "rss_total_mb": 519
+    },
+    "reserva_producao_gb": 1.6,
+    "conc_pedida": 10,
+    "conc_escolhida": 8,
+    "ciclos_pedidos": 100,
+    "ciclos_escolhidos": 100,
+    "motivo": "REDUZIDO: cabem 8 sessões no orçamento de 2.77 GB (4.37 GB disponíveis − 1.6 GB reservados para a produção) a 339 MB por sessão medidos nesta máquina"
+  },
+  "abortado_por_memoria": "",
+  "ciclos_executados": 100,
+  "falhas": [],
+  "retas": {
+    "rss_daemon": {
+      "n": 50,
+      "inclinacao": -0.03567827130852341,
+      "intercepto": 219.07370948379352,
+      "r2": 0.11857646977202085,
+      "primeiro": 217,
+      "ultimo": 217,
+      "delta": 0
+    },
+    "rss_total_processo": {
+      "n": 50,
+      "inclinacao": -0.03567827130852341,
+      "intercepto": 219.07370948379352,
+      "r2": 0.11857646977202085,
+      "primeiro": 217,
+      "ultimo": 217,
+      "delta": 0
+    },
+    "fds_abertos": {
+      "n": 50,
+      "inclinacao": -0.005762304921968787,
+      "intercepto": 45.23505402160864,
+      "r2": 0.007202881152461038,
+      "primeiro": 46,
+      "ultimo": 46,
+      "delta": 0
+    },
+    "processos_filhos": {
+      "n": 50,
+      "inclinacao": 0,
+      "intercepto": 0,
+      "r2": 1,
+      "primeiro": 0,
+      "ultimo": 0,
+      "delta": 0
+    },
+    "chromium_vivos": {
+      "n": 50,
+      "inclinacao": 0,
+      "intercepto": 0,
+      "r2": 1,
+      "primeiro": 0,
+      "ultimo": 0,
+      "delta": 0
+    },
+    "sessoes_vivas": {
+      "n": 50,
+      "inclinacao": 0,
+      "intercepto": 0,
+      "r2": 1,
+      "primeiro": 0,
+      "ultimo": 0,
+      "delta": 0
+    },
+    "paginas_abertas": {
+      "n": 50,
+      "inclinacao": 0,
+      "intercepto": 0,
+      "r2": 1,
+      "primeiro": 0,
+      "ultimo": 0,
+      "delta": 0
+    },
+    "leases": {
+      "n": 50,
+      "inclinacao": 0,
+      "intercepto": 0,
+      "r2": 1,
+      "primeiro": 0,
+      "ultimo": 0,
+      "delta": 0
+    },
+    "tasks_ativas": {
+      "n": 50,
+      "inclinacao": 0,
+      "intercepto": 0,
+      "r2": 1,
+      "primeiro": 0,
+      "ultimo": 0,
+      "delta": 0
+    }
+  },
+  "limiares": {
+    "mb_por_ciclo": 0.2,
+    "r2": 0.3
+  },
+  "suspeitas": [],
+  "visoes": [],
+  "concorrencia": {
+    "alto": {
+      "experimento": "alto",
+      "max_workers": 0,
+      "sessoes_pedidas": 0,
+      "aceitas": 0,
+      "recusadas": 0,
+      "codigos": {},
+      "passos_ok": 0,
+      "passos_total": 0,
+      "pico_workers": 0,
+      "pico_em_voo": 0,
+      "antes": {},
+      "depois": {},
+      "veredito": "FAIL",
+      "notas": [
+        "não executado: execução de CONTROLE (SOAK_PULAR_CONC=1)"
+      ]
+    },
+    "baixo": {
+      "experimento": "baixo",
+      "max_workers": 0,
+      "sessoes_pedidas": 0,
+      "aceitas": 0,
+      "recusadas": 0,
+      "codigos": {},
+      "passos_ok": 0,
+      "passos_total": 0,
+      "pico_workers": 0,
+      "pico_em_voo": 0,
+      "antes": {},
+      "depois": {},
+      "veredito": "FAIL",
+      "notas": [
+        "não executado: execução de CONTROLE (SOAK_PULAR_CONC=1)"
+      ]
+    },
+    "fila": {
+      "concurrency": 0,
+      "max_queue": 0,
+      "disparadas": 0,
+      "atendidas": 0,
+      "recusadas": 0,
+      "pico_running": 0,
+      "pico_waiting": 0,
+      "linhas_auditadas": 0,
+      "url_final": "",
+      "sessoes_no_fim": 0,
+      "notas": [
+        "não executado: execução de CONTROLE (SOAK_PULAR_CONC=1)"
+      ]
+    }
+  },
+  "latencias": {
+    "soak": [
+      "  browser.extract            n= 1023  p50=     5ms  p95=     23ms  p99=     27ms  max=     37ms",
+      "  browser.tabs               n=  300  p50=     2ms  p95=      2ms  p99=      3ms  max=      5ms",
+      "  lease.get                  n=  126  p50=     0ms  p95=      1ms  p99=      1ms  max=      1ms",
+      "  browser.open               n=  121  p50=    46ms  p95=     48ms  p99=     52ms  max=     53ms",
+      "  sessions.list              n=  105  p50=     1ms  p95=      1ms  p99=      1ms  max=     12ms",
+      "  tasks.list                 n=  105  p50=     3ms  p95=      4ms  p99=      5ms  max=      6ms",
+      "  sessions.create            n=  101  p50=    95ms  p95=    102ms  p99=    112ms  max=    127ms",
+      "  sessions.delete            n=  101  p50=    27ms  p95=     39ms  p99=     48ms  max=     59ms",
+      "  browser.find               n=  100  p50=   113ms  p95=    114ms  p99=    115ms  max=    117ms",
+      "  browser.click              n=  100  p50=   140ms  p95=    164ms  p99=    165ms  max=    166ms",
+      "  browser.type               n=  100  p50=   131ms  p95=    134ms  p99=    147ms  max=    148ms",
+      "  browser.scroll             n=  100  p50=    12ms  p95=     18ms  p99=     19ms  max=     20ms",
+      "  browser.new_tab            n=  100  p50=    55ms  p95=     64ms  p99=     65ms  max=     68ms",
+      "  browser.switch_tab         n=  100  p50=     1ms  p95=      1ms  p99=      1ms  max=      1ms",
+      "  browser.screenshot         n=  100  p50=    15ms  p95=     20ms  p99=     21ms  max=     22ms",
+      "  browser.close_tab          n=  100  p50=     2ms  p95=      2ms  p99=      3ms  max=      3ms",
+      "  browser.download           n=   10  p50=     6ms  p95=     11ms  p99=     11ms  max=     11ms",
+      "  browser.upload             n=   10  p50=    23ms  p95=     25ms  p99=     25ms  max=     25ms",
+      "  browser.task               n=   10  p50=   608ms  p95=    629ms  p99=    629ms  max=    629ms"
+    ],
+    "conc_alto": [],
+    "conc_baixo": [],
+    "conc_fila": []
+  },
+  "erros_por_codigo": {
+    "soak": {},
+    "conc_alto": {},
+    "conc_baixo": {},
+    "conc_fila": {}
+  },
+  "residuo": {
+    "processos": [],
+    "sessoes_ao_fechar": [
+      {
+        "daemon": "soak",
+        "vivas": 0
+      }
+    ],
+    "leases_fantasma": [],
+    "tasks_running_api": []
+  },
+  "integridade": {
+    "arquivos_json": 222,
+    "linhas_jsonl": 5815,
+    "quebrados": [],
+    "tasks_running": [],
+    "sessoes_em_disco": 103,
+    "sessoes_nao_fechadas": []
+  },
+  "producao": {
+    "antes": "ai.sovereign.omniroute=12728 br.com.se7enpay.nomos.servico=83005 com.nomos.panel=83034",
+    "depois": "ai.sovereign.omniroute=12728 br.com.se7enpay.nomos.servico=83005 com.nomos.panel=83034",
+    "painel_antes": "p33027",
+    "painel_depois": "p33027"
+  },
+  "memoria": {
+    "inicio_gb": 4.37,
+    "fim_gb": 5.01
+  },
+  "veredito": {
+    "soak": "PASS",
+    "concorrencia": "FAIL",
+    "memoria": "YES"
+  }
+}

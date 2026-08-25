@@ -1,0 +1,7 @@
+PROVIDER_FAIL      qwen3.5:4b-q8_0      health=10ms frio=7688ms quente=6544ms timeout=OK:TIMEOUT cancel=OK:ABORTED
+PROVIDER_PASS      qwen2.5-coder:7b     health=1ms frio=5446ms quente=4183ms timeout=OK:TIMEOUT cancel=OK:ABORTED
+PROVIDER_DEGRADED  qwen2.5vl:3b         locate=11906ms achou=false conf=- 
+PROVIDER_PASS      moondream:1.8b       locate=3452ms achou=true conf=0 
+
+PROVIDERS=4 PASS=2 DEGRADED=1 FAIL=1
+LLM_PROVIDER_DEGRADATION_HANDLED=PASS

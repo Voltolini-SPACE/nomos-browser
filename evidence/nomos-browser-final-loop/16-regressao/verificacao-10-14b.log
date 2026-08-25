@@ -1,0 +1,83 @@
+### ci.sh all
+test:sdk-ts                                   OK
+test:mcp                                      OK
+test:cli                                      OK
+test:policy-vault                             OK
+test:security-files-secrets                   OK
+test:security-net-injection                   OK
+test:ui-build                                 OK
+test:supervisor                               OK
+python:sdk                                    OK
+typecheck                                     OK
+
+[1m── guards — marca, segredos, desacoplamento ─────────────────────────────[0m
+build:ui                                      OK
+marca:sem-hex-no-fonte                        OK
+marca:dist-nao-versionado                     OK
+marca:selo-declarado                          OK
+segredo:nada-no-versionado                    OK
+desacoplamento:mcp-sem-playwright             OK
+deps:versoes-pinadas                          OK
+rede:bind-loopback-por-default                OK
+lease:fechado-por-default                     OK
+watchdog:ligado-por-default                   OK
+seguranca:t7-fechado                          OK
+supervisor:label-propria                      OK
+auth:ligada-por-default                       OK
+
+[1m── integration — daemon e Chromium reais ─────────────────────────────[0m
+test:session                                  OK
+test:perception                               OK
+test:pointer-keyboard                         OK
+test:target-verifier                          OK
+test:click-entrega                            OK
+test:cascata-percepcao                        OK
+test:api                                      OK
+test:task-engine                              OK
+test:ownership                                OK
+test:watchdog-wired                           OK
+
+[1m── adversarial — segurança e falha ─────────────────────────────[0m
+test:security-net-injection                   OK
+test:security-files-secrets                   OK
+test:recovery-watchdog                        OK
+test:injection-wired                          OK
+test:audit-forense                            OK
+seguranca:bateria-completa                    OK
+seguranca:guardas-vivos                       OK
+
+[1m── e2e — gates ponta a ponta ─────────────────────────────[0m
+test:e2e-gate                                 OK
+test:product02-gate                           OK
+
+[1m── providers — modelos ligados ao runtime (FASE 5) ─────────────────────────────[0m
+memoria:disponivel-antes                      6.78 GB (livre 71%)
+test:providers-runtime                        OK
+memoria:nenhum-modelo-residente               OK
+memoria:disponivel-depois                     6.91 GB (livre 72%)
+producao:sobreviveu-intacta                   OK
+
+[1m── resultado ─────────────────────────────[0m
+CI_PASS=YES
+### task e2e
+TASK_CHECKPOINT=PASS
+TASK_RETRY=PASS
+TASK_RESUME=PASS
+TASK_IDEMPOTENCY=PASS
+TASK_CANCEL=PASS
+TASK_CRASH_RECOVERY=PASS
+TASK_CLEANUP=PASS
+TASK_ENGINE=PASS
+### security bateria
+ADVERSARIAL_TOTAL=53
+OPEN_SECURITY_P1=0
+SECURITY_SUITE=PASS
+### e2e independente
+E2E_TOTAL=12 E2E_PASS=10 E2E_FAIL=2
+BROWSER_E2E_SUITE=FAIL
+### visao
+ERRO_PX=4.1 (dx=4.0 dy=1.0) DENTRO_DO_ALVO=SIM
+E2E_VISAO=PASS  strategy=vision erro=4.1px isTrusted=true
+### residuais
+daemons=       0 chromium=       0
+FIM

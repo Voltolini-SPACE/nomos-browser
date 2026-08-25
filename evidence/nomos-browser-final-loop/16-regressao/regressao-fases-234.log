@@ -1,0 +1,130 @@
+### A) ci.sh all
+
+[1m── fast — unidade pura ─────────────────────────────[0m
+test:auth                                     OK
+test:lease                                    OK
+test:skills                                   OK
+test:traceability                             OK
+test:observability                            OK
+test:replay-hardening                         OK
+test:bench                                    OK
+test:sdk-ts                                   OK
+test:mcp                                      OK
+test:cli                                      OK
+test:policy-vault                             OK
+test:security-files-secrets                   OK
+test:security-net-injection                   OK
+test:ui-build                                 OK
+python:sdk                                    OK
+typecheck                                     OK
+
+[1m── guards — marca, segredos, desacoplamento ─────────────────────────────[0m
+build:ui                                      OK
+marca:sem-hex-no-fonte                        OK
+marca:dist-nao-versionado                     OK
+marca:selo-declarado                          OK
+segredo:nada-no-versionado                    OK
+desacoplamento:mcp-sem-playwright             OK
+deps:versoes-pinadas                          OK
+rede:bind-loopback-por-default                OK
+auth:ligada-por-default                       OK
+
+[1m── integration — daemon e Chromium reais ─────────────────────────────[0m
+test:session                                  OK
+test:perception                               OK
+test:pointer-keyboard                         OK
+test:target-verifier                          OK
+test:click-entrega                            OK
+test:api                                      OK
+
+[1m── adversarial — segurança e falha ─────────────────────────────[0m
+test:security-net-injection                   OK
+test:security-files-secrets                   OK
+test:recovery-watchdog                        OK
+test:injection-wired                          OK
+test:audit-forense                            OK
+
+[1m── e2e — gates ponta a ponta ─────────────────────────────[0m
+test:e2e-gate                                 OK
+test:product02-gate                           OK
+
+[1m── resultado ─────────────────────────────[0m
+CI_PASS=YES
+### B) run-suite completo
+aiprovider                   OK      pass=41   fail=0   48s
+api                          OK      pass=32   fail=0   4s
+audit-forense                OK      pass=12   fail=0   1s
+auth                         OK      pass=21   fail=0   0s
+bench                        OK      pass=37   fail=0   1s
+cli                          OK      pass=35   fail=0   5s
+click-entrega                OK      pass=13   fail=0   8s
+e2e-gate                     OK      pass=12   fail=0   2s
+injection-wired              OK      pass=16   fail=0   1s
+lease                        OK      pass=37   fail=0   0s
+mcp                          OK      pass=25   fail=0   1s
+observability                OK      pass=22   fail=0   0s
+perception                   OK      pass=8    fail=0   1s
+pointer-keyboard             OK      pass=26   fail=0   3s
+policy-vault                 OK      pass=14   fail=0   1s
+product02-gate               OK      pass=3    fail=0   46s
+recovery-watchdog            OK      pass=24   fail=0   8s
+replay-hardening             OK      pass=34   fail=0   0s
+sdk-ts                       OK      pass=8    fail=0   0s
+security-files-secrets       OK      pass=38   fail=0   0s
+security-net-injection       OK      pass=22   fail=0   2s
+session                      OK      pass=12   fail=0   1s
+skills                       OK      pass=10   fail=0   0s
+target-verifier              OK      pass=28   fail=0   2s
+traceability                 OK      pass=7    fail=0   0s
+ui-build                     OK      pass=6    fail=0   2s
+vision                       OK      pass=50   fail=0   16s
+
+TS_PASS=593
+TS_FAIL=0
+ARQUIVOS_OK=27
+ARQUIVOS_RUINS=0
+RESUMO=evidence/nomos-browser-final-loop/16-regressao/suite/resumo.tsv
+### C) E2E independente da validacao anterior
+PASS  E2E-01  abrir site, localizar elemento, clicar, validar  (507ms)
+FAIL  E2E-02  navegar por resultados e extrair informação  (177ms)
+PASS  E2E-03  preencher formulário, validar campos, cancelar  (3483ms)
+PASS  E2E-04  SPA com conteúdo tardio  (878ms)
+PASS  E2E-05  multi-aba: abrir, listar, trocar, fechar  (115ms)
+PASS  E2E-06  download real para dentro da raiz permitida  (172ms)
+PASS  E2E-07  upload de arquivo de fixture  (82ms)
+PASS  E2E-07b  upload fora da raiz é negado (controle negativo)  (4ms)
+PASS  E2E-08  falha no meio da tarefa e continuidade da sessão  (3237ms)
+FAIL  E2E-09  caminho NOMOS/Gi → runtime → resultado  (76ms)
+FAIL  E2E-10  visão quando DOM/acessibilidade não bastam  (34ms)
+PASS  E2E-AUD  trilha auditável da bateria inteira  (0ms)
+E2E_TOTAL=12 E2E_PASS=9 E2E_FAIL=3
+BROWSER_E2E_SUITE=FAIL
+### D) verificacao anti-injecao independente
+audit sem trecho literal: OK  detail={"injection_detected":true,"severity":"alta","findings":3,"trust":"UNTRUSTED","raw_withheld":false,"categorias":["instrucao","exfiltracao"]}
+
+CASOS=14 OK=14 FALHAS=0
+ATAQUES_DETECTADOS_ALTA=8/8
+FALSE_POSITIVE_CONTROL=6/6
+POLICY_MODES=PASS
+AUDIT_NO_LITERAL=PASS
+INJECTION_PROTECTION_WIRED=PASS
+### E) auditoria (script original)
+AUDIT_CAMPOS_FALTANDO=[]
+AUDIT_COMPLETE=PASS
+### F) coordenadas
+VISION_COORDINATE_PASS=100%  ERRO_MEDIO=0px  ERRO_MAX=0px
+VISION_ENGINE_CAPABILITY=PASS
+### G) guardas vivos
+ADVERSARIAL_TOTAL=16 BLOQUEADOS=16 PASSARAM=0
+SECURITY_LIVE_GUARDS=PASS
+### H) orfaos
+usage: tr [-Ccsu] string1 string2
+       tr [-Ccu] -d string1
+       tr [-Ccu] -s string1
+       tr [-Ccu] -ds string1 string2
+usage: tr [-Ccsu] string1 string2
+       tr [-Ccu] -d string1
+       tr [-Ccu] -s string1
+       tr [-Ccu] -ds string1 string2
+watchdog-child= daemons=
+REGRESSAO_234_FIM

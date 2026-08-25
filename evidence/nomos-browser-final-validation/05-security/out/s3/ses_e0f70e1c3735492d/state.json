@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "session_id": "ses_e0f70e1c3735492d",
+  "owner": "REPRO",
+  "profile": "default",
+  "url": "about:blank",
+  "page_ids": [
+    "pg_f2d7f83804894a1e"
+  ],
+  "context_id": "ctx_6a68ab76c25743a8",
+  "capabilities": {
+    "navigate": true,
+    "read": true,
+    "click": true,
+    "type": true,
+    "download": true,
+    "upload": false,
+    "send": false,
+    "purchase": false,
+    "payment": false,
+    "delete": false
+  },
+  "cdp_endpoint": null,
+  "browser_pid": 42045,
+  "browser_id": "ctx_6a68ab76c25743a8",
+  "criado_em": "2026-08-24T20:38:21.018Z",
+  "ultima_atividade": "2026-08-24T20:38:21.091Z",
+  "status": "CLOSED",
+  "ephemeral": false,
+  "in_flight_action": null
+}

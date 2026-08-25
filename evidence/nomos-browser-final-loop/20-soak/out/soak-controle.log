@@ -1,0 +1,140 @@
+── FASE 20 · soak pesado e concorrência ────────────────────────────────
+# produção antes : ai.sovereign.omniroute=12728 br.com.se7enpay.nomos.servico=83005 com.nomos.panel=83034
+# painel :8795   : p33027
+# memória antes  : 4.24 GB disponíveis · 70% livre (macOS)
+# fixture em http://127.0.0.1:63500
+# daemon do soak em http://127.0.0.1:63501 (pid 34779)
+
+── dimensionamento (medido, não assumido) ──────────────────────────────
+  memória disponível : 4.37 GB (70% livre pelo macOS)
+  custo por sessão   : 339 MB (Chromium persistente + helpers, MEDIDO abrindo e fechando uma)
+  RSS base do daemon : 183 MB sem sessão alguma
+  sonda ENXERGA      : com 1 sessão aberta viu 5 filhos, 5 Chromium, 519 MB de árvore
+  reserva p/ produção: 1.6 GB
+  concorrência       : pedida 10 → escolhida 8
+  motivo             : REDUZIDO: cabem 8 sessões no orçamento de 2.77 GB (4.37 GB disponíveis − 1.6 GB reservados para a produção) a 339 MB por sessão medidos nesta máquina
+  ciclos             : 100
+
+── 20.1 · soak sequencial de 100 ciclos ─────────────────────────────
+  ciclo   1     858ms  rss_d= 200MB  rss_tot=  200MB  fds=  44  filhos=  0  chr=  0  sess=0  pag=0  lease=0  task=0  mem=4.61GB  28/28
+  ciclo  10    1616ms  rss_d= 220MB  rss_tot=  220MB  fds=  46  filhos=  0  chr=  0  sess=0  pag=0  lease=0  task=0  mem=4.71GB  45/45  download=nomos-soak-20.txt:36B upload=ARQUIVO:carta-soak.txt:37 injecao=det:true/sev:alta task=COMPLETED:6passos task.cleanup=abas:4/lease:1/fila:1+0
+  ciclo  20    1591ms  rss_d= 228MB  rss_tot=  228MB  fds=  46  filhos=  0  chr=  0  sess=0  pag=0  lease=0  task=0  mem=4.79GB  45/45  download=nomos-soak-20.txt:36B upload=ARQUIVO:carta-soak.txt:37 injecao=det:true/sev:alta task=COMPLETED:6passos task.cleanup=abas:4/lease:1/fila:1+0
+  ciclo  30    1596ms  rss_d= 229MB  rss_tot=  229MB  fds=  46  filhos=  0  chr=  0  sess=0  pag=0  lease=0  task=0  mem=4.81GB  45/45  download=nomos-soak-20.txt:36B upload=ARQUIVO:carta-soak.txt:37 injecao=det:true/sev:alta task=COMPLETED:6passos task.cleanup=abas:4/lease:1/fila:1+0
+  ciclo  40    1600ms  rss_d= 228MB  rss_tot=  228MB  fds=  46  filhos=  0  chr=  0  sess=0  pag=0  lease=0  task=0  mem=4.83GB  45/45  download=nomos-soak-20.txt:36B upload=ARQUIVO:carta-soak.txt:37 injecao=det:true/sev:alta task=COMPLETED:6passos task.cleanup=abas:4/lease:1/fila:1+0
+  ciclo  50    1550ms  rss_d= 221MB  rss_tot=  221MB  fds=  46  filhos=  0  chr=  0  sess=0  pag=0  lease=0  task=0  mem=4.80GB  45/45  download=nomos-soak-20.txt:36B upload=ARQUIVO:carta-soak.txt:37 injecao=det:true/sev:alta task=COMPLETED:6passos task.cleanup=abas:4/lease:1/fila:1+0
+  ciclo  60    1596ms  rss_d= 218MB  rss_tot=  218MB  fds=  46  filhos=  0  chr=  0  sess=0  pag=0  lease=0  task=0  mem=4.82GB  45/45  download=nomos-soak-20.txt:36B upload=ARQUIVO:carta-soak.txt:37 injecao=det:true/sev:alta task=COMPLETED:6passos task.cleanup=abas:4/lease:1/fila:1+0
+  ciclo  70    1619ms  rss_d= 216MB  rss_tot=  216MB  fds=  46  filhos=  0  chr=  0  sess=0  pag=0  lease=0  task=0  mem=4.85GB  45/45  download=nomos-soak-20.txt:36B upload=ARQUIVO:carta-soak.txt:37 injecao=det:true/sev:alta task=COMPLETED:6passos task.cleanup=abas:4/lease:1/fila:1+0
+  ciclo  80    1660ms  rss_d= 217MB  rss_tot=  217MB  fds=  46  filhos=  0  chr=  0  sess=0  pag=0  lease=0  task=0  mem=4.89GB  45/45  download=nomos-soak-20.txt:36B upload=ARQUIVO:carta-soak.txt:37 injecao=det:true/sev:alta task=COMPLETED:6passos task.cleanup=abas:4/lease:1/fila:1+0
+  ciclo  90    1657ms  rss_d= 218MB  rss_tot=  218MB  fds=  46  filhos=  0  chr=  0  sess=0  pag=0  lease=0  task=0  mem=5.02GB  45/45  download=nomos-soak-20.txt:36B upload=ARQUIVO:carta-soak.txt:37 injecao=det:true/sev:alta task=COMPLETED:6passos task.cleanup=abas:4/lease:1/fila:1+0
+  ciclo 100    1626ms  rss_d= 217MB  rss_tot=  217MB  fds=  46  filhos=  0  chr=  0  sess=0  pag=0  lease=0  task=0  mem=5.04GB  45/45  download=nomos-soak-20.txt:36B upload=ARQUIVO:carta-soak.txt:37 injecao=det:true/sev:alta task=COMPLETED:6passos task.cleanup=abas:4/lease:1/fila:1+0
+  estado final do daemon do soak: sessões=0 páginas=0 leases=0 tasks_RUNNING=0 chromium=0 filhos=0
+
+── 20.2 · concorrência ─────────────────────────────────────────────────
+  (PULADA: SOAK_PULAR_CONC=1 — esta é a execução de CONTROLE da série de memória)
+  regime ALTO : 8 sessões simultâneas com max_workers=8
+    aceitas=0/0 recusadas=0 passos=0/0 pico_workers=0 pico_em_voo=0 ⇒ FAIL
+    · não executado: execução de CONTROLE (SOAK_PULAR_CONC=1)
+  regime BAIXO: 8 sessões simultâneas com max_workers=3 (aperto de propósito)
+    aceitas=0/0 (esperado 3) recusadas=0 códigos={} passos=0/0 ⇒ FAIL
+    · não executado: execução de CONTROLE (SOAK_PULAR_CONC=1)
+  regime FILA : uma sessão, max_concurrency=1 max_queue=1, 8 ações simultâneas
+    atendidas=0 recusadas=0 fila_do_daemon: running_max=0 waiting_max=0 linhas de auditoria da recusa=0 ⇒ FAIL
+    · não executado: execução de CONTROLE (SOAK_PULAR_CONC=1)
+
+── série de RSS por bucket de 10 ciclos (MB) ────────────────────────────
+  rss_daemon (só o processo Node do runtime)
+  ciclos   1– 10  min   200  méd   213.6  max   220 MB  [────────────────────|──────────             ]
+  ciclos  11– 20  min   221  méd   223.6  max   228 MB  [                               ────|─────── ]
+  ciclos  21– 30  min   224  méd   227.0  max   229 MB  [                                    ────|───]
+  ciclos  31– 40  min   225  méd   228.3  max   229 MB  [                                     ─────|─]
+  ciclos  41– 50  min   220  méd   220.4  max   221 MB  [                              |─            ]
+  ciclos  51– 60  min   215  méd   216.9  max   218 MB  [                      ───|──                ]
+  ciclos  61– 70  min   213  méd   217.1  max   219 MB  [                   ──────|───               ]
+  ciclos  71– 80  min   212  méd   215.7  max   217 MB  [                  ─────|──                  ]
+  ciclos  81– 90  min   217  méd   217.1  max   218 MB  [                         |──                ]
+  ciclos  91–100  min   213  méd   215.1  max   218 MB  [                   ───|─────                ]
+  rss_total_processo (Node + TODA a descendência: Chromium, helpers, crashpad)
+  ciclos   1– 10  min   200  méd   213.6  max   220 MB  [────────────────────|──────────             ]
+  ciclos  11– 20  min   221  méd   223.6  max   228 MB  [                               ────|─────── ]
+  ciclos  21– 30  min   224  méd   227.0  max   229 MB  [                                    ────|───]
+  ciclos  31– 40  min   225  méd   228.3  max   229 MB  [                                     ─────|─]
+  ciclos  41– 50  min   220  méd   220.4  max   221 MB  [                              |─            ]
+  ciclos  51– 60  min   215  méd   216.9  max   218 MB  [                      ───|──                ]
+  ciclos  61– 70  min   213  méd   217.1  max   219 MB  [                   ──────|───               ]
+  ciclos  71– 80  min   212  méd   215.7  max   217 MB  [                  ─────|──                  ]
+  ciclos  81– 90  min   217  méd   217.1  max   218 MB  [                         |──                ]
+  ciclos  91–100  min   213  méd   215.1  max   218 MB  [                   ───|─────                ]
+
+── reta ajustada na SEGUNDA METADE da série ─────────────────────────────
+  rss_daemon           n= 50  inclinação=  -0.0357 MB/ciclo  R²= 0.1186  primeiro=   217  último=   217  Δ=    0.0
+  rss_total_processo   n= 50  inclinação=  -0.0357 MB/ciclo  R²= 0.1186  primeiro=   217  último=   217  Δ=    0.0
+  fds_abertos          n= 50  inclinação=  -0.0058 un/ciclo  R²= 0.0072  primeiro=    46  último=    46  Δ=    0.0
+  processos_filhos     n= 50  inclinação=   0.0000 un/ciclo  R²= 1.0000  primeiro=     0  último=     0  Δ=    0.0
+  chromium_vivos       n= 50  inclinação=   0.0000 un/ciclo  R²= 1.0000  primeiro=     0  último=     0  Δ=    0.0
+  sessoes_vivas        n= 50  inclinação=   0.0000 un/ciclo  R²= 1.0000  primeiro=     0  último=     0  Δ=    0.0
+  paginas_abertas      n= 50  inclinação=   0.0000 un/ciclo  R²= 1.0000  primeiro=     0  último=     0  Δ=    0.0
+  leases               n= 50  inclinação=   0.0000 un/ciclo  R²= 1.0000  primeiro=     0  último=     0  Δ=    0.0
+  tasks_ativas         n= 50  inclinação=   0.0000 un/ciclo  R²= 1.0000  primeiro=     0  último=     0  Δ=    0.0
+  suspeitas de crescimento (inclinação>limiar E R²≥0.3): nenhuma
+
+── latência por operação ───────────────────────────────────────────────
+  [soak sequencial]
+  browser.extract            n= 1023  p50=     5ms  p95=     23ms  p99=     27ms  max=     37ms
+  browser.tabs               n=  300  p50=     2ms  p95=      2ms  p99=      3ms  max=      5ms
+  lease.get                  n=  126  p50=     0ms  p95=      1ms  p99=      1ms  max=      1ms
+  browser.open               n=  121  p50=    46ms  p95=     48ms  p99=     52ms  max=     53ms
+  sessions.list              n=  105  p50=     1ms  p95=      1ms  p99=      1ms  max=     12ms
+  tasks.list                 n=  105  p50=     3ms  p95=      4ms  p99=      5ms  max=      6ms
+  sessions.create            n=  101  p50=    95ms  p95=    102ms  p99=    112ms  max=    127ms
+  sessions.delete            n=  101  p50=    27ms  p95=     39ms  p99=     48ms  max=     59ms
+  browser.find               n=  100  p50=   113ms  p95=    114ms  p99=    115ms  max=    117ms
+  browser.click              n=  100  p50=   140ms  p95=    164ms  p99=    165ms  max=    166ms
+  browser.type               n=  100  p50=   131ms  p95=    134ms  p99=    147ms  max=    148ms
+  browser.scroll             n=  100  p50=    12ms  p95=     18ms  p99=     19ms  max=     20ms
+  browser.new_tab            n=  100  p50=    55ms  p95=     64ms  p99=     65ms  max=     68ms
+  browser.switch_tab         n=  100  p50=     1ms  p95=      1ms  p99=      1ms  max=      1ms
+  browser.screenshot         n=  100  p50=    15ms  p95=     20ms  p99=     21ms  max=     22ms
+  browser.close_tab          n=  100  p50=     2ms  p95=      2ms  p99=      3ms  max=      3ms
+  browser.download           n=   10  p50=     6ms  p95=     11ms  p99=     11ms  max=     11ms
+  browser.upload             n=   10  p50=    23ms  p95=     25ms  p99=     25ms  max=     25ms
+  browser.task               n=   10  p50=   608ms  p95=    629ms  p99=    629ms  max=    629ms
+  [concorrência · regime ALTO]
+  [concorrência · regime BAIXO]
+  [concorrência · fila por sessão]
+
+── erros por código ────────────────────────────────────────────────────
+  soak         (nenhum)
+  conc_alto    (nenhum)
+  conc_baixo   (nenhum)
+  conc_fila    (nenhum)
+
+── resíduo e integridade ───────────────────────────────────────────────
+  processos remanescentes desta execução : 0
+  sessões vivas no encerramento de cada daemon: [{"daemon":"soak","vivas":0}]
+  tasks RUNNING pela API no fim do soak : 0
+  tasks RUNNING em disco (todos os daemons): 0
+  leases fantasma (sessão fechada com dono): 0
+  arquivos .json lidos e parseados : 222
+  linhas .jsonl lidas e parseadas  : 5815
+  arquivos QUEBRADOS               : 0
+  snapshots de sessão não-CLOSED   : 0
+
+── máquina ─────────────────────────────────────────────────────────────
+  produção antes : ai.sovereign.omniroute=12728 br.com.se7enpay.nomos.servico=83005 com.nomos.panel=83034
+  produção depois: ai.sovereign.omniroute=12728 br.com.se7enpay.nomos.servico=83005 com.nomos.panel=83034
+  produção intacta (mesmos PIDs): SIM
+  painel :8795 antes/depois: p33027 / p33027 ⇒ INTACTO
+  memória: 4.37 GB → 5.01 GB disponíveis
+  modelos residentes no fim: []
+
+SERIE=/Users/AI/Projects/nomos-browser/evidence/nomos-browser-final-loop/20-soak/out/soak-serie-controle.jsonl
+CONCORRENCIA=/Users/AI/Projects/nomos-browser/evidence/nomos-browser-final-loop/20-soak/out/concorrencia-controle.jsonl
+RELATORIO=/Users/AI/Projects/nomos-browser/evidence/nomos-browser-final-loop/20-soak/out/soak-final-controle.json
+CICLOS_EXECUTADOS=100/100 (pedidos 100)
+SESSOES_SIMULTANEAS=8 (pedidas 10)
+
+SOAK_100_CYCLES=PASS
+CONCURRENCY_10_SESSIONS=FAIL
+MEMORY_STABLE=YES   rss_daemon=-0.0357 MB/ciclo R²=0.1186 · rss_total=-0.0357 MB/ciclo R²=0.1186
+PROCESS_RESIDUAL=0
+SESSION_RESIDUAL=0

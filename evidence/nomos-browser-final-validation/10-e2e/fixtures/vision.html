@@ -1,0 +1,11 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Alvo sem DOM util</title>
+<style>body{margin:0;background:#fff}canvas{display:block}</style></head><body>
+<canvas id="c" width="1280" height="800"></canvas>
+<div id="clicado">nada</div>
+<script>
+const c=document.getElementById('c'),x=c.getContext('2d');
+x.fillStyle='#ffffff';x.fillRect(0,0,1280,800);
+x.fillStyle='rgb(220,40,40)';x.fillRect(400,120,160,100);
+x.fillStyle='#fff';x.font='20px system-ui';x.fillText('COMPRAR',430,175);
+c.addEventListener('click',e=>{document.getElementById('clicado').textContent='clique em '+Math.round(e.offsetX)+','+Math.round(e.offsetY)+' isTrusted='+e.isTrusted;});
+</script></body></html>

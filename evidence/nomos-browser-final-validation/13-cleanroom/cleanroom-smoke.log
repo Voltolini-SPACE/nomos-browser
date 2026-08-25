@@ -1,0 +1,77 @@
+=== e2e-gate ===
+✔ capability sensível é negada mesmo com sessão válida (fail closed) (1.1135ms)
+✔ URL interna e esquema perigoso são bloqueados pelo guarda (1.08675ms)
+✔ FASE 32 — takeover congela TUDO, inclusive observação (12.177375ms)
+✔ 17-20. audit log e replay reconstroem a sessão (1.687375ms)
+✔ screenshots foram gravados como evidência da sessão (0.272333ms)
+✔ sessão fecha e some da lista (31.208375ms)
+
+── FLAGS DO GATE (FASE 67) ──
+RUNTIME_INDEPENDENCE_PASS=YES
+DOM_PASS=YES
+ACCESSIBILITY_PASS=YES
+VISION_MOUSE_PASS=PARCIAL(coordenada+mouse; sem VisionProvider)
+MULTI_AI_PASS=PARCIAL(dois donos via API universal; sem 2o provedor LLM real)
+HANDOFF_PASS=YES
+RECOVERY_PASS=PARCIAL(queda de cliente; queda do processo do runtime NÃO coberta)
+AUDIT_PASS=YES
+REPLAY_PASS=YES
+ℹ tests 12
+ℹ suites 0
+ℹ pass 12
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1219.883541
+=== ci fast ===
+
+[1m── fast — unidade pura ─────────────────────────────[0m
+test:auth                                     OK
+test:lease                                    OK
+test:skills                                   OK
+test:traceability                             OK
+test:observability                            OK
+test:replay-hardening                         OK
+test:bench                                    OK
+test:sdk-ts                                   OK
+test:mcp                                      OK
+test:cli                                      OK
+test:policy-vault                             OK
+test:security-files-secrets                   OK
+test:security-net-injection                   OK
+test:ui-build                                 OK
+python:sdk                                    OK
+typecheck                                     OK
+
+[1m── resultado ─────────────────────────────[0m
+CI_PASS=YES
+=== ci integration ===
+
+[1m── integration — daemon e Chromium reais ─────────────────────────────[0m
+test:session                                  OK
+test:perception                               OK
+test:pointer-keyboard                         OK
+test:target-verifier                          OK
+test:api                                      OK
+
+[1m── resultado ─────────────────────────────[0m
+CI_PASS=YES
+=== ci e2e ===
+
+[1m── e2e — gates ponta a ponta ─────────────────────────────[0m
+test:e2e-gate                                 OK
+test:product02-gate                           OK
+
+[1m── resultado ─────────────────────────────[0m
+CI_PASS=YES
+=== ci adversarial ===
+
+[1m── adversarial — segurança e falha ─────────────────────────────[0m
+test:security-net-injection                   OK
+test:security-files-secrets                   OK
+test:recovery-watchdog                        OK
+
+[1m── resultado ─────────────────────────────[0m
+CI_PASS=YES
+SMOKE_FIM

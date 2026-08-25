@@ -1,0 +1,2 @@
+  PID  PPID STARTED                       ELAPSED COMMAND
+ 4187     1 Mon Aug 24 12:00:33 2026     04:58:41 /opt/homebrew/Cellar/node/26.0.0/bin/node /Users/AI/Projects/nomos-browser/tests/fixtures/watchdog-child.ts

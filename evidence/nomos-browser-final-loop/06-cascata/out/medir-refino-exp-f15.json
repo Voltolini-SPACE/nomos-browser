@@ -1,0 +1,151 @@
+{
+  "quando": "2026-08-25T00:12:28.955Z",
+  "modelo": "qwen2.5vl:3b",
+  "dpr": 1,
+  "fator": 1.5,
+  "goal": "o botao vermelho escrito COMPRAR",
+  "centro": {
+    "x": 480,
+    "y": 170
+  },
+  "linhas": [
+    {
+      "tamanho": "medio",
+      "alvo": {
+        "x": 400,
+        "y": 120,
+        "w": 160,
+        "h": 100
+      },
+      "refine_passes": 1,
+      "execucao": 1,
+      "ok": true,
+      "strategy": "vision",
+      "box": {
+        "x": 412,
+        "y": 150,
+        "width": 280,
+        "height": 100
+      },
+      "centro": {
+        "x": 552,
+        "y": 200
+      },
+      "erro_px": 78,
+      "dentro_do_alvo": true,
+      "ms": 20405,
+      "inferencias": 2,
+      "refino": "rejeitado",
+      "motivo": "caixa refinada não cabe na região recortada",
+      "deslocamento_px": 0,
+      "area_ratio_p1_p2": 1,
+      "erro": ""
+    },
+    {
+      "tamanho": "medio",
+      "alvo": {
+        "x": 400,
+        "y": 120,
+        "w": 160,
+        "h": 100
+      },
+      "refine_passes": 1,
+      "execucao": 2,
+      "ok": true,
+      "strategy": "vision",
+      "box": {
+        "x": 454,
+        "y": 235,
+        "width": 300,
+        "height": 150
+      },
+      "centro": {
+        "x": 604,
+        "y": 310
+      },
+      "erro_px": 187,
+      "dentro_do_alvo": false,
+      "ms": 45210,
+      "inferencias": 2,
+      "refino": "usado",
+      "motivo": null,
+      "deslocamento_px": 108.78,
+      "area_ratio_p1_p2": 0.667,
+      "erro": ""
+    },
+    {
+      "tamanho": "medio",
+      "alvo": {
+        "x": 400,
+        "y": 120,
+        "w": 160,
+        "h": 100
+      },
+      "refine_passes": 2,
+      "execucao": 1,
+      "ok": true,
+      "strategy": "vision",
+      "box": {
+        "x": 421,
+        "y": 155,
+        "width": 330,
+        "height": 150
+      },
+      "centro": {
+        "x": 586,
+        "y": 230
+      },
+      "erro_px": 121.8,
+      "dentro_do_alvo": false,
+      "ms": 15824,
+      "inferencias": 3,
+      "refino": "usado",
+      "motivo": null,
+      "deslocamento_px": 28.6,
+      "area_ratio_p1_p2": 0.606,
+      "erro": ""
+    },
+    {
+      "tamanho": "medio",
+      "alvo": {
+        "x": 400,
+        "y": 120,
+        "w": 160,
+        "h": 100
+      },
+      "refine_passes": 2,
+      "execucao": 2,
+      "ok": true,
+      "strategy": "vision",
+      "box": {
+        "x": 412,
+        "y": 150,
+        "width": 280,
+        "height": 100
+      },
+      "centro": {
+        "x": 552,
+        "y": 200
+      },
+      "erro_px": 78,
+      "dentro_do_alvo": true,
+      "ms": 17085,
+      "inferencias": 2,
+      "refino": "rejeitado",
+      "motivo": "caixa refinada não cabe na região recortada",
+      "deslocamento_px": 0,
+      "area_ratio_p1_p2": 1,
+      "erro": ""
+    }
+  ],
+  "veredito": [
+    {
+      "tamanho": "medio",
+      "erro_sem_refino": null,
+      "erro_com_refino": 187,
+      "dentro_sem": 0,
+      "dentro_com": 1,
+      "total": 2
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+# daemon real em http://127.0.0.1:59022
+[PASS] 1. descoberta — 13 tools, categoria vinda do MANIFESTO registrado — manifesto=/Users/AI/Projects/nomos-browser/packaging/mcp/manifesto.json impressao=d267002feb6f9e4a… registrado_no_nomos=False
+[PASS] 2. consulta — o veredito de CADA tool veio do NOMOS, não daqui — ALLOW=browser_extract,browser_find,browser_observe,browser_screenshot,browser_tabs | REQUIRE_APPROVAL=8
+[PASS] 2b. fail-closed — tool que o manifesto NÃO declara cai em A5, nunca A0 — browser_tool_que_nao_existe → A5_CODE_EXEC
+[PASS] 3. consulta A0 — browser_tabs roda headless, sem incomodar o dono — veredito_NOMOS=ALLOW categoria=A0_READ_LOCAL status=EXECUTADO via=mcp-stdio session_id=ses_0ff744394592433b
+[PASS] 4. navegação A2 — NOMOS exige o dono e a Gi NÃO executa — veredito_NOMOS=REQUIRE_APPROVAL categoria=A2_NET_EGRESS status=BLOQUEADO_POR_APROVACAO via=-
+[PASS] 4b. controle — o navegador NÃO se moveu: nenhuma navegação vazou o gate — aba continua em about:blank=True fixture_presente=False
+[PASS] 5. clique A2 — bloqueado por política, com o motivo do NOMOS — veredito_NOMOS=REQUIRE_APPROVAL categoria=A2_NET_EGRESS status=BLOQUEADO_POR_APROVACAO via=-
+[PASS] 6. formulário A2 — bloqueado por política (digitação é egresso) — veredito_NOMOS=REQUIRE_APPROVAL categoria=A2_NET_EGRESS status=BLOQUEADO_POR_APROVACAO via=-
+[PASS] 6b. a recusa carrega o comando EXATO que falta ao dono — /Users/AI/.local/bin/nomos mcp chamar /Users/AI/Projects/nomos-browser/packaging/mcp/manifesto.json browser_ty
+[PASS] 7. extração A0 — Gi → NOMOS → MCP → API v1 → Chromium → resultado — veredito_NOMOS=ALLOW categoria=A0_READ_LOCAL status=EXECUTADO via=mcp-stdio envelope=True
+[PASS] 8. visão A0 — captura real da página aberta, referência de volta — veredito_NOMOS=ALLOW categoria=A0_READ_LOCAL status=EXECUTADO via=mcp-stdio ref=True
+[PASS] 9. erro — argumento inválido vira falha explícita, não sucesso vazio — status=INDISPONIVEL motivo=browser_extract: argumento(s) desconhecido(s): formatoo. Aceitos: target, format
+[PASS] 9b. controle — o MESMO caminho com argumento válido deu ok — extract_valido.ok=True extract_invalido.ok=False
+[PASS] 10. cancelamento — chamada abandonada derruba o conector e vira CANCELADO — veredito_NOMOS=ALLOW categoria=A0_READ_LOCAL status=CANCELADO via=mcp-stdio motivo=chamada cancelada por quem pediu; subprocesso do conector derrubado
+[PASS] 11. integração — cada chamada é um processo NOVO e a sessão continua — session_id 1ª=ses_0ff744394592433b · última=ses_0ff744394592433b
+[PASS] 12. integração — registrar() usa a categoria DO MANIFESTO no dispatcher — {"navegador_ler": "A0", "navegador_abas": "A0", "navegador_ver": "A0", "navegador_abrir": "A2"}
+[PASS] 12b. integração — despacho real pela Gi devolve o veredito junto do resultado — tool=navegador_abas → EXECUTADO / ALLOW
+[PASS] 12c. integração — a tool A2 pela Gi para no gate do NOMOS, não no navegador — tool=navegador_abrir → BLOQUEADO_POR_APROVACAO
+
+# A2/A5 aparecem como BLOQUEADO_POR_APROVACAO porque o dono ainda não
+# aprovou — esse É o comportamento correto: o NOMOS é a autoridade.
+casos_com_falha=0
+GI_BROWSER_DISCOVERY=PASS
+GI_BROWSER_ACTION=BLOQUEADO_POR_APROVACAO
+GI_BROWSER_RESULT=PASS
+GI_BROWSER_VISION=PASS
+GI_BROWSER_INTEGRATION=PASS

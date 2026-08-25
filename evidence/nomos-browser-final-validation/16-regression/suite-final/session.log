@@ -1,0 +1,20 @@
+✔ capabilities nascem restritas e só true literal concede (fail closed) (6.355542ms)
+✔ perfis persistentes moram em <repo>/profiles/<perfil> (0.345167ms)
+✔ 1. dois perfis diferentes NÃO compartilham cookie (275.248875ms)
+✔ 2. detach mantém a sessão VIVA e preserva a URL; attach devolve o mesmo estado (8.647084ms)
+✔ 3. handoff troca o dono preservando URL, abas, task e cookies (6.956167ms)
+✔ 4. estourar max_workers devolve BACKPRESSURE_REJECTED (sem fila infinita) (157.111166ms)
+✔ idle_timeout recicla órfã ociosa, mas poupa sessão com cliente atado (2.439459ms)
+✔ takeover congela o agente; release exige reobservação antes de ACTIVE (6.904041ms)
+✔ transição de estado inválida lança erro claro (0.199833ms)
+✔ capability sensível é fail closed (0.135875ms)
+✔ perfil sandbox é efêmero: dir temporário, apagado no close (131.098ms)
+✔ encerramento: nenhum Chromium vaza (36.669333ms)
+ℹ tests 12
+ℹ suites 0
+ℹ pass 12
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 953.759125

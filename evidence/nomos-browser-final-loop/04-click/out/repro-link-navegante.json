@@ -1,0 +1,58 @@
+{
+  "LINK_NAVEGA": {
+    "status": 200,
+    "success": true,
+    "error_code": null,
+    "message": null,
+    "delivery_verified": true,
+    "delivery_evidence": "navegacao",
+    "actionable": true,
+    "elemento_no_ponto": "a#link",
+    "elemento_que_recebeu": null,
+    "url_antes": "http://127.0.0.1:52957/origem.html",
+    "url_depois": "http://127.0.0.1:52957/destino.html"
+  },
+  "url_da_aba_ativa_apos_link": "http://127.0.0.1:52957/destino.html",
+  "chegou_no_destino": true,
+  "LINK_ANCORA": {
+    "status": 200,
+    "success": true,
+    "error_code": null,
+    "message": null,
+    "delivery_verified": true,
+    "delivery_evidence": "listener",
+    "actionable": true,
+    "elemento_no_ponto": "a#ancora",
+    "elemento_que_recebeu": "a#ancora",
+    "url_antes": "http://127.0.0.1:52957/origem.html",
+    "url_depois": "http://127.0.0.1:52957/origem.html#fim"
+  },
+  "LINK_BLANK": {
+    "status": 200,
+    "success": true,
+    "error_code": null,
+    "message": null,
+    "delivery_verified": true,
+    "delivery_evidence": "nova_aba",
+    "actionable": true,
+    "elemento_no_ponto": "a#blank",
+    "elemento_que_recebeu": "a#blank",
+    "url_antes": "http://127.0.0.1:52957/origem.html",
+    "url_depois": "http://127.0.0.1:52957/origem.html"
+  },
+  "abas_apos_blank": 2,
+  "VAZIO_SEM_NAV": {
+    "status": 200,
+    "success": true,
+    "error_code": null,
+    "message": null,
+    "delivery_verified": true,
+    "delivery_evidence": "listener",
+    "actionable": true,
+    "elemento_no_ponto": "html",
+    "elemento_que_recebeu": "html",
+    "url_antes": "http://127.0.0.1:52957/parada.html",
+    "url_depois": "http://127.0.0.1:52957/parada.html"
+  },
+  "VEREDITO": "PASS"
+}

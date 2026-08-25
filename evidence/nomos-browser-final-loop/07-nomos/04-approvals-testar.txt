@@ -1,0 +1,16 @@
+$ nomos approvals testar A0_READ_LOCAL "mcp:nomos-browser:browser_extract"
+A0 · ler arquivos locais · alvo=mcp:nomos-browser:browser_extract
+veredito: ALLOW — permitido pela política
+exit=0
+
+$ nomos approvals testar A2_NET_EGRESS "mcp:nomos-browser:browser_navigate"
+A2 · sair para a rede · alvo=mcp:nomos-browser:browser_navigate
+veredito: REQUIRE_APPROVAL — ação sensível: exige aprovação explícita
+na prática: pediria a SUA aprovação; sem aprovador presente, o gate NEGA (fail-closed).
+exit=0
+
+$ nomos approvals testar A5_CODE_EXEC "mcp:nomos-browser:browser_task"
+A5 · executar código · alvo=mcp:nomos-browser:browser_task
+veredito: REQUIRE_APPROVAL — ação sensível: exige aprovação explícita
+na prática: pediria a SUA aprovação; sem aprovador presente, o gate NEGA (fail-closed).
+exit=0

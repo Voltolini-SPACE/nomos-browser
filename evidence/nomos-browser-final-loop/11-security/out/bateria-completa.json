@@ -1,0 +1,376 @@
+{
+  "gerado_em": "2026-08-25T05:14:52.495Z",
+  "vetores": [
+    {
+      "grupo": "REST_AUTH",
+      "nome": "sem credencial",
+      "tipo": "bloqueio",
+      "observado": "status=401 code=CAPABILITY_DENIED",
+      "ok": true
+    },
+    {
+      "grupo": "REST_AUTH",
+      "nome": "credencial inventada",
+      "tipo": "bloqueio",
+      "observado": "status=401 failure=INVALID_CREDENTIAL",
+      "ok": true
+    },
+    {
+      "grupo": "REST_AUTH",
+      "nome": "replay de credencial REVOGADA",
+      "tipo": "bloqueio",
+      "observado": "status=401 failure=REVOKED_CREDENTIAL",
+      "ok": true
+    },
+    {
+      "grupo": "REST_AUTH",
+      "nome": "replay de credencial EXPIRADA",
+      "tipo": "bloqueio",
+      "observado": "status=401 failure=EXPIRED_CREDENTIAL",
+      "ok": true
+    },
+    {
+      "grupo": "REST_AUTH",
+      "nome": "UI (/) sem credencial",
+      "tipo": "bloqueio",
+      "observado": "status=401",
+      "ok": true
+    },
+    {
+      "grupo": "REST_AUTH",
+      "nome": "screenshots sem credencial",
+      "tipo": "bloqueio",
+      "observado": "status=401",
+      "ok": true
+    },
+    {
+      "grupo": "WEBSOCKET_AUTH",
+      "nome": "upgrade sem credencial",
+      "tipo": "bloqueio",
+      "observado": "desfecho=recusado status=401 (HTTP 401)",
+      "ok": true
+    },
+    {
+      "grupo": "WEBSOCKET_AUTH",
+      "nome": "upgrade com credencial inválida",
+      "tipo": "bloqueio",
+      "observado": "desfecho=recusado status=401",
+      "ok": true
+    },
+    {
+      "grupo": "WEBSOCKET_AUTH",
+      "nome": "upgrade com credencial REVOGADA",
+      "tipo": "bloqueio",
+      "observado": "desfecho=recusado status=401",
+      "ok": true
+    },
+    {
+      "grupo": "WEBSOCKET_AUTH",
+      "nome": "querystring ?token= inválido",
+      "tipo": "bloqueio",
+      "observado": "desfecho=recusado status=401",
+      "ok": true
+    },
+    {
+      "grupo": "WEBSOCKET_AUTH",
+      "nome": "credencial válida por HEADER conecta",
+      "tipo": "permitido",
+      "observado": "desfecho=aberto status=101 (conexão estabelecida)",
+      "ok": true
+    },
+    {
+      "grupo": "WEBSOCKET_AUTH",
+      "nome": "credencial válida por ?token= conecta",
+      "tipo": "permitido",
+      "observado": "desfecho=aberto status=101",
+      "ok": true
+    },
+    {
+      "grupo": "MCP_AUTHORIZATION",
+      "nome": "servidor MCP sem NOMOS_BROWSER_TOKEN",
+      "tipo": "bloqueio",
+      "observado": "isError=true sessoes_antes=1 depois=1",
+      "ok": true
+    },
+    {
+      "grupo": "MCP_AUTHORIZATION",
+      "nome": "MCP com credencial de ESCOPO INSUFICIENTE",
+      "tipo": "bloqueio",
+      "observado": "isError=true NOMOS_BROWSER_ERROR code=MCP_SCOPE_DENIED contract_code=CAPABILITY_DENIED required_scope=INPUT",
+      "ok": true
+    },
+    {
+      "grupo": "MCP_AUTHORIZATION",
+      "nome": "whoami revela poderes, nunca o segredo",
+      "tipo": "permitido",
+      "observado": "subject=agente scopes=OBSERVE|NAVIGATE|INPUT|CONTROL segredo_no_corpo=false",
+      "ok": true
+    },
+    {
+      "grupo": "SSRF_PROTECTION",
+      "nome": "metadata da nuvem 169.254.169.254",
+      "tipo": "bloqueio",
+      "observado": "status=403 code=POLICY_BLOCKED",
+      "ok": true
+    },
+    {
+      "grupo": "SSRF_PROTECTION",
+      "nome": "RFC1918 10.0.0.1",
+      "tipo": "bloqueio",
+      "observado": "status=403 code=POLICY_BLOCKED",
+      "ok": true
+    },
+    {
+      "grupo": "SSRF_PROTECTION",
+      "nome": "RFC1918 192.168.0.1",
+      "tipo": "bloqueio",
+      "observado": "status=403 code=POLICY_BLOCKED",
+      "ok": true
+    },
+    {
+      "grupo": "SSRF_PROTECTION",
+      "nome": "loopback explícito",
+      "tipo": "bloqueio",
+      "observado": "status=403 code=POLICY_BLOCKED",
+      "ok": true
+    },
+    {
+      "grupo": "SSRF_PROTECTION",
+      "nome": "mDNS .local",
+      "tipo": "bloqueio",
+      "observado": "status=403 code=POLICY_BLOCKED",
+      "ok": true
+    },
+    {
+      "grupo": "SSRF_PROTECTION",
+      "nome": "file:///etc/passwd",
+      "tipo": "bloqueio",
+      "observado": "status=403 code=POLICY_BLOCKED",
+      "ok": true
+    },
+    {
+      "grupo": "SSRF_PROTECTION",
+      "nome": "javascript: URL",
+      "tipo": "bloqueio",
+      "observado": "status=403 code=POLICY_BLOCKED",
+      "ok": true
+    },
+    {
+      "grupo": "SSRF_PROTECTION",
+      "nome": "data: URL",
+      "tipo": "bloqueio",
+      "observado": "status=403 code=POLICY_BLOCKED",
+      "ok": true
+    },
+    {
+      "grupo": "SSRF_PROTECTION",
+      "nome": "chrome://settings",
+      "tipo": "bloqueio",
+      "observado": "status=403 code=POLICY_BLOCKED",
+      "ok": true
+    },
+    {
+      "grupo": "SSRF_PROTECTION",
+      "nome": "devtools://",
+      "tipo": "bloqueio",
+      "observado": "status=403 code=POLICY_BLOCKED",
+      "ok": true
+    },
+    {
+      "grupo": "FILESYSTEM_PROTECTION",
+      "nome": "upload com traversal",
+      "tipo": "bloqueio",
+      "observado": "status=403 code=UPLOAD_DENIED",
+      "ok": true
+    },
+    {
+      "grupo": "FILESYSTEM_PROTECTION",
+      "nome": "upload com caminho absoluto fora da raiz",
+      "tipo": "bloqueio",
+      "observado": "status=403 code=UPLOAD_DENIED",
+      "ok": true
+    },
+    {
+      "grupo": "FILESYSTEM_PROTECTION",
+      "nome": "upload por SYMLINK que aponta para fora da raiz",
+      "tipo": "bloqueio",
+      "observado": "status=403 code=UPLOAD_DENIED",
+      "ok": true
+    },
+    {
+      "grupo": "FILESYSTEM_PROTECTION",
+      "nome": "upload com BYTE NULO no caminho",
+      "tipo": "bloqueio",
+      "observado": "status=403 code=UPLOAD_DENIED",
+      "ok": true
+    },
+    {
+      "grupo": "FILESYSTEM_PROTECTION",
+      "nome": "download de file://",
+      "tipo": "bloqueio",
+      "observado": "status=403 code=POLICY_BLOCKED",
+      "ok": true
+    },
+    {
+      "grupo": "FILESYSTEM_PROTECTION",
+      "nome": "screenshot com traversal na rota",
+      "tipo": "bloqueio",
+      "observado": "status=404",
+      "ok": true
+    },
+    {
+      "grupo": "CAPABILITY_ENFORCEMENT",
+      "nome": "ação sem capability (send) é negada",
+      "tipo": "bloqueio",
+      "observado": "status=404 code=INVALID_REQUEST",
+      "ok": true
+    },
+    {
+      "grupo": "CAPABILITY_ENFORCEMENT",
+      "nome": "ferramenta fora do contrato é negada",
+      "tipo": "bloqueio",
+      "observado": "status=404 code=INVALID_REQUEST",
+      "ok": true
+    },
+    {
+      "grupo": "CAPABILITY_ENFORCEMENT",
+      "nome": "capability não se concede pelo CORPO do pedido",
+      "tipo": "bloqueio",
+      "observado": "status=404 code=INVALID_REQUEST",
+      "ok": true
+    },
+    {
+      "grupo": "CAPABILITY_ENFORCEMENT",
+      "nome": "escopo insuficiente no token (observador clica)",
+      "tipo": "bloqueio",
+      "observado": "status=403 failure=SCOPE_DENIED exigido=INPUT",
+      "ok": true
+    },
+    {
+      "grupo": "CAPABILITY_ENFORCEMENT",
+      "nome": "escalada: takeover exige ADMIN, agente não tem",
+      "tipo": "bloqueio",
+      "observado": "status=403 failure=SCOPE_DENIED",
+      "ok": true
+    },
+    {
+      "grupo": "CAPABILITY_ENFORCEMENT",
+      "nome": "escalada: delegar identidade exige ADMIN",
+      "tipo": "bloqueio",
+      "observado": "status=403",
+      "ok": true
+    },
+    {
+      "grupo": "SESSION_ISOLATION",
+      "nome": "token amarrado a OUTRA sessão não toca esta",
+      "tipo": "bloqueio",
+      "observado": "status=403 failure=SESSION_NOT_OWNED",
+      "ok": true
+    },
+    {
+      "grupo": "SESSION_ISOLATION",
+      "nome": "arbitragem barra segunda identidade na sessão",
+      "tipo": "bloqueio",
+      "observado": "status=409 lease=CONTROL_NOT_OWNED dono=daemon-root",
+      "ok": true
+    },
+    {
+      "grupo": "SESSION_ISOLATION",
+      "nome": "sessão inexistente responde 404, não 409",
+      "tipo": "bloqueio",
+      "observado": "status=404 code=SESSION_NOT_FOUND",
+      "ok": true
+    },
+    {
+      "grupo": "INPUT_HARDENING",
+      "nome": "corpo que não é JSON",
+      "tipo": "bloqueio",
+      "observado": "status=400 code=INVALID_REQUEST",
+      "ok": true
+    },
+    {
+      "grupo": "INPUT_HARDENING",
+      "nome": "corpo JSON que não é objeto",
+      "tipo": "bloqueio",
+      "observado": "status=400 code=INVALID_REQUEST",
+      "ok": true
+    },
+    {
+      "grupo": "INPUT_HARDENING",
+      "nome": "corpo maior que max_body_bytes (4096)",
+      "tipo": "bloqueio",
+      "observado": "status=400 code=INVALID_REQUEST enviados=12335",
+      "ok": true
+    },
+    {
+      "grupo": "INPUT_HARDENING",
+      "nome": "URL absurdamente longa",
+      "tipo": "bloqueio",
+      "observado": "status=400",
+      "ok": true
+    },
+    {
+      "grupo": "INPUT_HARDENING",
+      "nome": "rota inexistente sai no ENVELOPE, não em HTML de stack",
+      "tipo": "bloqueio",
+      "observado": "status=404 envelope=true",
+      "ok": true
+    },
+    {
+      "grupo": "INPUT_HARDENING",
+      "nome": "método errado devolve 405 com allow",
+      "tipo": "bloqueio",
+      "observado": "status=405",
+      "ok": true
+    },
+    {
+      "grupo": "SECRET_LEAK_TEST",
+      "nome": "nenhum token na trilha de auditoria em disco",
+      "tipo": "bloqueio",
+      "observado": "trilha limpa",
+      "ok": true
+    },
+    {
+      "grupo": "SECRET_LEAK_TEST",
+      "nome": "nenhum token em corpo de resposta ou de erro",
+      "tipo": "bloqueio",
+      "observado": "41 corpos limpos",
+      "ok": true
+    },
+    {
+      "grupo": "SECRET_LEAK_TEST",
+      "nome": "nenhum token no fluxo de eventos do WebSocket",
+      "tipo": "bloqueio",
+      "observado": "3 eventos, 0 com segredo",
+      "ok": true
+    },
+    {
+      "grupo": "SECRET_LEAK_TEST",
+      "nome": "arquivo de token do daemon é 0600",
+      "tipo": "bloqueio",
+      "observado": "modo=600",
+      "ok": true
+    },
+    {
+      "grupo": "CONTROLES_POSITIVOS",
+      "nome": "credencial válida + dono do lease AGE",
+      "tipo": "permitido",
+      "observado": "status=200 success=true",
+      "ok": true
+    },
+    {
+      "grupo": "CONTROLES_POSITIVOS",
+      "nome": "capability CONCEDIDA passa (o verbo antes negado)",
+      "tipo": "permitido",
+      "observado": "status=404 code=INVALID_REQUEST",
+      "ok": true
+    },
+    {
+      "grupo": "CONTROLES_POSITIVOS",
+      "nome": "observador LÊ o que lhe cabe",
+      "tipo": "permitido",
+      "observado": "status=200",
+      "ok": true
+    }
+  ]
+}

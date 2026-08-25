@@ -1,0 +1,7 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>SPA de Teste</title></head><body>
+<h1>SPA</h1><div id="app">carregando...</div>
+<button id="ir" onclick="rota('perfil')">Ir para perfil</button>
+<script>
+function rota(r){ history.pushState({},'', '#'+r); setTimeout(()=>{document.getElementById('app').textContent='rota: '+r+' | conteudo tardio NOMOS-SPA-OK';},700); }
+setTimeout(()=>{document.getElementById('app').textContent='rota: home';},400);
+</script></body></html>

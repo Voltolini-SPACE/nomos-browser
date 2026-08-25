@@ -1,0 +1,66 @@
+=== IDENTIDADE ===
+2026-08-24T21:24:49Z
+REPO=/Users/AI/Projects/nomos-browser
+BRANCH=main
+HEAD=ab235d4f22ce3833a9857c2f6e86a4ac3373f503
+TAGS=[]
+REMOTES=[]
+=== WORKING TREE ===
+ M package-lock.json
+ M packages/api/src/handlers.ts
+?? evidence/
+?? scripts/lib-memoria.sh
+=== DIFF ===
+ package-lock.json            | 46 ++++++++++++++++++++++++++++++++++++++++++++
+ packages/api/src/handlers.ts |  8 ++++++++
+ 2 files changed, 54 insertions(+)
+=== DIFF handlers.ts ===
+diff --git a/packages/api/src/handlers.ts b/packages/api/src/handlers.ts
+index 3d6781d..1eea20f 100644
+--- a/packages/api/src/handlers.ts
++++ b/packages/api/src/handlers.ts
+@@ -915,6 +915,14 @@ const handleDownload: ActionHandler = async (svc, req) => {
+   }
+ 
+   const waiter: Promise<Download> = page.waitForEvent("download", { timeout: num(req.body, "timeout_ms", 30_000)! });
++  // O waiter nasce ANTES do urlGuard, porque o evento pode chegar durante a
++  // navegação. Se o guarda recusar a URL (ou qualquer passo abaixo lançar),
++  // ninguém mais espera por ele — e o `page.waitForEvent` rejeita sozinho quando
++  // a página/contexto fecha. Sem este handler, essa rejeição é `unhandled` e
++  // DERRUBA O PROCESSO do daemon inteiro, levando junto todas as outras sessões.
++  // Anexar o handler aqui não consome a rejeição do `await waiter` abaixo:
++  // aquele caminho continua caindo no try/catch que devolve TIMEOUT.
++  waiter.catch(() => undefined);
+   svc.emit("download.started", req.session_id, req.action_id, { via: url !== null ? "url" : "target" }, "agent");
+ 
+   if (url !== null) {
+=== RECURSOS ===
+vm.swapusage: total = 12288.00M  used = 10992.44M  free = 1295.56M  (encrypted)
+/dev/disk3s1s1   460Gi    12Gi    47Gi    20%    455k  497M    0%   /
+=== PROCESSOS ===
+daemons=0 chromium=0 orfaos=2
+=== PORTAS NOMOS ===
+       0
+=== SERVICOS ===
+62290	0	com.se7enpay.metabase-war-room-live
+83005	-9	br.com.se7enpay.nomos.servico
+-	0	com.se7enpay.command-center.mom-canonical-check
+-	0	com.se7enpay.longrun
+12728	0	ai.sovereign.omniroute
+83034	-9	com.nomos.panel
+-	0	com.se7enpay.metabase-war-room
+-	0	com.pantheon.se7enpay-vps-offsite-backup
+-	0	com.pantheon.se7enpay-offsite-b2
+1032	0	com.se7enpay.command-center
+1048	0	com.se7enpay.resumo
+-	0	com.se7enpay.crmsync
+-	0	com.se7enpay.tpv.watchdog
+-	0	com.se7enpay.tpv.mom.canonical
+=== PROVIDERS ===
+NAME                       ID              SIZE      MODIFIED     
+qwen2.5vl:3b               fb90415cde1e    3.2 GB    7 hours ago     
+moondream:1.8b             55fc3abd3867    1.7 GB    7 hours ago     
+qwen3.5:4b-q8_0            8722f47c2791    5.3 GB    19 hours ago    
+embeddinggemma:300m        85462619ee72    621 MB    2 days ago      
+qwen2.5-coder:7b           dae161e27b0e    4.7 GB    2 days ago      
+nomic-embed-text:latest    0a109f422b47    274 MB    2 months ago    

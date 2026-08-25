@@ -1,0 +1,404 @@
+{
+  "gerado_em": "2026-08-25T06:12:26.276Z",
+  "duracao_total_ms": 211295,
+  "maquina": {
+    "plataforma": "darwin",
+    "node": "v26.0.0",
+    "cpus": 10
+  },
+  "dimensionamento": {
+    "mem_disponivel_gb": 5.13,
+    "mem_livre_pct": 68,
+    "mb_por_sessao": 339,
+    "rss_base_daemon_mb": 182,
+    "sonda_viva": {
+      "filhos": 5,
+      "chromium": 5,
+      "rss_total_mb": 519
+    },
+    "reserva_producao_gb": 1.6,
+    "conc_pedida": 10,
+    "conc_escolhida": 10,
+    "ciclos_pedidos": 100,
+    "ciclos_escolhidos": 100,
+    "motivo": "cabem 10 sessões no orçamento de 3.53 GB a 339 MB cada — as 10 pedidas cabem"
+  },
+  "abortado_por_memoria": "",
+  "ciclos_executados": 100,
+  "falhas": [],
+  "retas": {
+    "rss_daemon": {
+      "n": 50,
+      "inclinacao": 0.048835534213685486,
+      "intercepto": 95.89291716686674,
+      "r2": 0.004145596484188996,
+      "primeiro": 80,
+      "ultimo": 59,
+      "delta": -21
+    },
+    "rss_total_processo": {
+      "n": 50,
+      "inclinacao": 0.048835534213685486,
+      "intercepto": 95.89291716686674,
+      "r2": 0.004145596484188996,
+      "primeiro": 80,
+      "ultimo": 59,
+      "delta": -21
+    },
+    "fds_abertos": {
+      "n": 50,
+      "inclinacao": 0.0053781512605042,
+      "intercepto": 44.273949579831935,
+      "r2": 0.0070237050043898686,
+      "primeiro": 44,
+      "ultimo": 45,
+      "delta": 1
+    },
+    "processos_filhos": {
+      "n": 50,
+      "inclinacao": 0,
+      "intercepto": 0,
+      "r2": 1,
+      "primeiro": 0,
+      "ultimo": 0,
+      "delta": 0
+    },
+    "chromium_vivos": {
+      "n": 50,
+      "inclinacao": 0,
+      "intercepto": 0,
+      "r2": 1,
+      "primeiro": 0,
+      "ultimo": 0,
+      "delta": 0
+    },
+    "sessoes_vivas": {
+      "n": 50,
+      "inclinacao": 0,
+      "intercepto": 0,
+      "r2": 1,
+      "primeiro": 0,
+      "ultimo": 0,
+      "delta": 0
+    },
+    "paginas_abertas": {
+      "n": 50,
+      "inclinacao": 0,
+      "intercepto": 0,
+      "r2": 1,
+      "primeiro": 0,
+      "ultimo": 0,
+      "delta": 0
+    },
+    "leases": {
+      "n": 50,
+      "inclinacao": 0,
+      "intercepto": 0,
+      "r2": 1,
+      "primeiro": 0,
+      "ultimo": 0,
+      "delta": 0
+    },
+    "tasks_ativas": {
+      "n": 50,
+      "inclinacao": 0,
+      "intercepto": 0,
+      "r2": 1,
+      "primeiro": 0,
+      "ultimo": 0,
+      "delta": 0
+    }
+  },
+  "limiares": {
+    "mb_por_ciclo": 0.2,
+    "r2": 0.3
+  },
+  "suspeitas": [],
+  "visoes": [
+    {
+      "ciclo": 25,
+      "resultado": "OK",
+      "clique": {
+        "x": 476,
+        "y": 171
+      },
+      "erro_px": 4.12,
+      "memoria_antes_gb": 5.08
+    },
+    {
+      "ciclo": 50,
+      "resultado": "OK",
+      "clique": {
+        "x": 476,
+        "y": 171
+      },
+      "erro_px": 4.12,
+      "memoria_antes_gb": 4.24
+    },
+    {
+      "ciclo": 75,
+      "resultado": "OK",
+      "clique": {
+        "x": 476,
+        "y": 171
+      },
+      "erro_px": 4.12,
+      "memoria_antes_gb": 4.22
+    },
+    {
+      "ciclo": 100,
+      "resultado": "OK",
+      "clique": {
+        "x": 476,
+        "y": 171
+      },
+      "erro_px": 4.12,
+      "memoria_antes_gb": 4.59
+    }
+  ],
+  "concorrencia": {
+    "alto": {
+      "experimento": "alto",
+      "max_workers": 10,
+      "sessoes_pedidas": 10,
+      "aceitas": 10,
+      "recusadas": 0,
+      "codigos": {
+        "OK": 10
+      },
+      "passos_ok": 130,
+      "passos_total": 130,
+      "pico_workers": 10,
+      "pico_em_voo": 10,
+      "antes": {
+        "rss_daemon": 178,
+        "rss_total_processo": 178,
+        "fds_abertos": 44,
+        "processos_filhos": 0,
+        "chromium_vivos": 0,
+        "sessoes_vivas": 0,
+        "paginas_abertas": 0,
+        "leases": 0,
+        "tasks_ativas": 0,
+        "fila_running": 0,
+        "fila_waiting": 0,
+        "fila_fonte": "cliente:pico_em_voo",
+        "memoria_disponivel_gb": 6.07
+      },
+      "depois": {
+        "rss_daemon": 238,
+        "rss_total_processo": 238,
+        "fds_abertos": 51,
+        "processos_filhos": 0,
+        "chromium_vivos": 0,
+        "sessoes_vivas": 0,
+        "paginas_abertas": 0,
+        "leases": 0,
+        "tasks_ativas": 0,
+        "fila_running": 10,
+        "fila_waiting": 0,
+        "fila_fonte": "cliente:pico_em_voo",
+        "memoria_disponivel_gb": 5.77
+      },
+      "veredito": "PASS",
+      "notas": [
+        "max_workers pedido=10 efetivo=10",
+        "sessões ainda listadas depois de todos fecharem: 0"
+      ]
+    },
+    "baixo": {
+      "experimento": "baixo",
+      "max_workers": 3,
+      "sessoes_pedidas": 10,
+      "aceitas": 3,
+      "recusadas": 7,
+      "codigos": {
+        "OK": 3,
+        "BACKPRESSURE_REJECTED": 7
+      },
+      "passos_ok": 39,
+      "passos_total": 39,
+      "pico_workers": 3,
+      "pico_em_voo": 3,
+      "antes": {
+        "rss_daemon": 182,
+        "rss_total_processo": 182,
+        "fds_abertos": 44,
+        "processos_filhos": 0,
+        "chromium_vivos": 0,
+        "sessoes_vivas": 0,
+        "paginas_abertas": 0,
+        "leases": 0,
+        "tasks_ativas": 0,
+        "fila_running": 0,
+        "fila_waiting": 0,
+        "fila_fonte": "cliente:pico_em_voo",
+        "memoria_disponivel_gb": 5.78
+      },
+      "depois": {
+        "rss_daemon": 207,
+        "rss_total_processo": 207,
+        "fds_abertos": 51,
+        "processos_filhos": 0,
+        "chromium_vivos": 0,
+        "sessoes_vivas": 0,
+        "paginas_abertas": 0,
+        "leases": 0,
+        "tasks_ativas": 0,
+        "fila_running": 3,
+        "fila_waiting": 0,
+        "fila_fonte": "cliente:pico_em_voo",
+        "memoria_disponivel_gb": 5.72
+      },
+      "veredito": "PASS",
+      "notas": [
+        "max_workers pedido=3 efetivo=3",
+        "sessões ainda listadas depois de todos fecharem: 0"
+      ]
+    },
+    "fila": {
+      "concurrency": 1,
+      "max_queue": 1,
+      "disparadas": 8,
+      "atendidas": 2,
+      "recusadas": 6,
+      "pico_running": 1,
+      "pico_waiting": 1,
+      "linhas_auditadas": 6,
+      "url_final": "http://127.0.0.1:58525/pagina-pos-pressao",
+      "sessoes_no_fim": 0,
+      "notas": [
+        "429 detail: running=1 waiting=1 max_queue=1 concurrency=1",
+        "429 detail: running=1 waiting=1 max_queue=1 concurrency=1",
+        "429 detail: running=1 waiting=1 max_queue=1 concurrency=1",
+        "429 detail: running=1 waiting=1 max_queue=1 concurrency=1",
+        "429 detail: running=1 waiting=1 max_queue=1 concurrency=1",
+        "429 detail: running=1 waiting=1 max_queue=1 concurrency=1",
+        "depois da pressão a sessão navega e o DOM responde: PAGINA-POS-PRESSAO"
+      ]
+    }
+  },
+  "latencias": {
+    "soak": [
+      "  browser.extract            n= 1029  p50=     5ms  p95=     24ms  p99=     31ms  max=     42ms",
+      "  browser.tabs               n=  300  p50=     2ms  p95=      2ms  p99=      4ms  max=      6ms",
+      "  lease.get                  n=  206  p50=     0ms  p95=      1ms  p99=      1ms  max=      2ms",
+      "  browser.open               n=  125  p50=    46ms  p95=     50ms  p99=     54ms  max=     54ms",
+      "  sessions.list              n=  105  p50=     1ms  p95=      2ms  p99=      8ms  max=     11ms",
+      "  tasks.list                 n=  105  p50=     3ms  p95=      5ms  p99=      9ms  max=     11ms",
+      "  sessions.create            n=  105  p50=    97ms  p95=    119ms  p99=    135ms  max=    139ms",
+      "  sessions.delete            n=  105  p50=    27ms  p95=     45ms  p99=     52ms  max=     77ms",
+      "  browser.find               n=  104  p50=   113ms  p95=    116ms  p99=   3024ms  max=   3025ms",
+      "  browser.click              n=  100  p50=   142ms  p95=    164ms  p99=    166ms  max=    172ms",
+      "  browser.type               n=  100  p50=   132ms  p95=    135ms  p99=    143ms  max=    149ms",
+      "  browser.scroll             n=  100  p50=    10ms  p95=     15ms  p99=     17ms  max=     18ms",
+      "  browser.new_tab            n=  100  p50=    54ms  p95=     60ms  p99=     63ms  max=     77ms",
+      "  browser.switch_tab         n=  100  p50=     1ms  p95=      1ms  p99=      2ms  max=      2ms",
+      "  browser.screenshot         n=  100  p50=    17ms  p95=     20ms  p99=     21ms  max=     22ms",
+      "  browser.close_tab          n=  100  p50=     2ms  p95=      3ms  p99=      3ms  max=      3ms",
+      "  browser.download           n=   10  p50=     6ms  p95=      7ms  p99=      7ms  max=      7ms",
+      "  browser.upload             n=   10  p50=    24ms  p95=     26ms  p99=     26ms  max=     26ms",
+      "  browser.task               n=   10  p50=   615ms  p95=    635ms  p99=    635ms  max=    635ms",
+      "  browser.find(visao)        n=    4  p50= 12986ms  p95=  14503ms  p99=  14503ms  max=  14503ms",
+      "  browser.click(visao)       n=    4  p50=  1739ms  p95=   1804ms  p99=   1804ms  max=   1804ms"
+    ],
+    "conc_alto": [
+      "  browser.extract            n=   40  p50=    48ms  p95=     75ms  p99=     79ms  max=     79ms",
+      "  browser.tabs               n=   20  p50=     7ms  p95=     12ms  p99=     14ms  max=     14ms",
+      "  sessions.create            n=   10  p50=   543ms  p95=    557ms  p99=    557ms  max=    557ms",
+      "  browser.open               n=   10  p50=   169ms  p95=    174ms  p99=    174ms  max=    174ms",
+      "  browser.click              n=   10  p50=   264ms  p95=    267ms  p99=    267ms  max=    267ms",
+      "  browser.type               n=   10  p50=   204ms  p95=    206ms  p99=    206ms  max=    206ms",
+      "  browser.screenshot         n=   10  p50=    34ms  p95=     39ms  p99=     39ms  max=     39ms",
+      "  browser.new_tab            n=   10  p50=   126ms  p95=    151ms  p99=    151ms  max=    151ms",
+      "  browser.close_tab          n=   10  p50=    17ms  p95=     28ms  p99=     28ms  max=     28ms",
+      "  sessions.delete            n=   10  p50=   115ms  p95=    161ms  p99=    161ms  max=    161ms",
+      "  health                     n=    5  p50=     1ms  p95=      2ms  p99=      2ms  max=      2ms",
+      "  sessions.list              n=    4  p50=     1ms  p95=      4ms  p99=      4ms  max=      4ms",
+      "  tasks.list                 n=    2  p50=     1ms  p95=      1ms  p99=      1ms  max=      1ms"
+    ],
+    "conc_baixo": [
+      "  browser.extract            n=   12  p50=    25ms  p95=     37ms  p99=     37ms  max=     37ms",
+      "  sessions.create            n=   10  p50=    15ms  p95=    192ms  p99=    192ms  max=    192ms",
+      "  browser.tabs               n=    6  p50=     3ms  p95=      3ms  p99=      3ms  max=      3ms",
+      "  sessions.list              n=    4  p50=     0ms  p95=      4ms  p99=      4ms  max=      4ms",
+      "  health                     n=    3  p50=     1ms  p95=      1ms  p99=      1ms  max=      1ms",
+      "  browser.open               n=    3  p50=    68ms  p95=     71ms  p99=     71ms  max=     71ms",
+      "  browser.click              n=    3  p50=   158ms  p95=    187ms  p99=    187ms  max=    187ms",
+      "  browser.type               n=    3  p50=   143ms  p95=    143ms  p99=    143ms  max=    143ms",
+      "  browser.screenshot         n=    3  p50=    23ms  p95=     23ms  p99=     23ms  max=     23ms",
+      "  browser.new_tab            n=    3  p50=    65ms  p95=     65ms  p99=     65ms  max=     65ms",
+      "  browser.close_tab          n=    3  p50=     5ms  p95=      5ms  p99=      5ms  max=      5ms",
+      "  sessions.delete            n=    3  p50=    51ms  p95=     54ms  p99=     54ms  max=     54ms",
+      "  tasks.list                 n=    2  p50=     1ms  p95=      1ms  p99=      1ms  max=      1ms"
+    ],
+    "conc_fila": [
+      "  browser.goto(fila)         n=    8  p50=     5ms  p95=   5042ms  p99=   5042ms  max=   5042ms",
+      "  sessions.list              n=    2  p50=     0ms  p95=      1ms  p99=      1ms  max=      1ms",
+      "  sessions.create            n=    1  p50=   119ms  p95=    119ms  p99=    119ms  max=    119ms",
+      "  browser.open               n=    1  p50=    48ms  p95=     48ms  p99=     48ms  max=     48ms",
+      "  browser.goto               n=    1  p50=    15ms  p95=     15ms  p99=     15ms  max=     15ms",
+      "  browser.extract            n=    1  p50=    41ms  p95=     41ms  p99=     41ms  max=     41ms",
+      "  sessions.delete            n=    1  p50=    42ms  p95=     42ms  p99=     42ms  max=     42ms"
+    ]
+  },
+  "erros_por_codigo": {
+    "soak": {
+      "TARGET_NOT_FOUND": 4
+    },
+    "conc_alto": {},
+    "conc_baixo": {
+      "BACKPRESSURE_REJECTED": 7
+    },
+    "conc_fila": {
+      "BACKPRESSURE_REJECTED": 6
+    }
+  },
+  "residuo": {
+    "processos": [],
+    "sessoes_ao_fechar": [
+      {
+        "daemon": "soak",
+        "vivas": 0
+      },
+      {
+        "daemon": "conc-alto",
+        "vivas": 0
+      },
+      {
+        "daemon": "conc-baixo",
+        "vivas": 0
+      },
+      {
+        "daemon": "conc-fila",
+        "vivas": 0
+      }
+    ],
+    "leases_fantasma": [],
+    "leases_conferidos": 105,
+    "tasks_running_api": []
+  },
+  "integridade": {
+    "arquivos_json": 258,
+    "linhas_jsonl": 6348,
+    "quebrados": [],
+    "tasks_running": [],
+    "sessoes_em_disco": 124,
+    "sessoes_nao_fechadas": []
+  },
+  "producao": {
+    "antes": "ai.sovereign.omniroute=12728 br.com.se7enpay.nomos.servico=83005 com.nomos.panel=83034",
+    "depois": "ai.sovereign.omniroute=12728 br.com.se7enpay.nomos.servico=83005 com.nomos.panel=83034",
+    "painel_antes": "p33027",
+    "painel_depois": "p33027"
+  },
+  "memoria": {
+    "inicio_gb": 5.13,
+    "fim_gb": 5.25
+  },
+  "veredito": {
+    "soak": "PASS",
+    "concorrencia": "PASS",
+    "memoria": "YES"
+  }
+}

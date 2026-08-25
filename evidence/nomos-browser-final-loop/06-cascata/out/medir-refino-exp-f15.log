@@ -1,0 +1,14 @@
+modelo=qwen2.5vl:3b  dpr=1  fator=1.5  passes=[1,2]  execucoes=2
+residentes_antes=[qwen2.5vl:3b]
+medio    160x100     passes=1 exec=1 erro= 78.0px DENTRO=SIM inf=2  20405ms refino=rejeitado (caixa refinada não cabe na região recortada)
+medio    160x100     passes=1 exec=2 erro=187.0px DENTRO=NAO inf=2  45210ms refino=usado
+medio    160x100     passes=2 exec=1 erro=121.8px DENTRO=NAO inf=3  15824ms refino=usado
+medio    160x100     passes=2 exec=2 erro= 78.0px DENTRO=SIM inf=2  17085ms refino=rejeitado (caixa refinada não cabe na região recortada)
+
+RESUMO  (mediana das 3 execuções; 'estável' = execuções 2 e 3 idênticas)
+tamanho   passes  erro_med  dentro   inferencias  estavel
+medio     1          187px    1/2             2  NAO
+medio     2        121.8px    1/2           3/2  NAO
+
+VEREDITO medio    sem_refino=nullpx (0/2 dentro)  com_refino=187px (1/2 dentro)
+residentes_depois=[]

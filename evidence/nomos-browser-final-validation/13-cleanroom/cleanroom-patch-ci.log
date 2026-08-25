@@ -1,0 +1,50 @@
+=== CI ALL com o patch ===
+
+[1m── fast — unidade pura ─────────────────────────────[0m
+test:auth                                     OK
+test:lease                                    OK
+test:skills                                   OK
+test:traceability                             OK
+test:observability                            OK
+test:replay-hardening                         OK
+test:bench                                    OK
+test:sdk-ts                                   OK
+test:mcp                                      OK
+test:cli                                      OK
+test:policy-vault                             OK
+test:security-files-secrets                   OK
+test:security-net-injection                   OK
+test:ui-build                                 OK
+python:sdk                                    OK
+typecheck                                     OK
+
+[1m── guards — marca, segredos, desacoplamento ─────────────────────────────[0m
+build:ui                                      OK
+marca:sem-hex-no-fonte                        OK
+marca:dist-nao-versionado                     OK
+marca:selo-declarado                          OK
+segredo:nada-no-versionado                    OK
+desacoplamento:mcp-sem-playwright             OK
+deps:versoes-pinadas                          OK
+rede:bind-loopback-por-default                OK
+auth:ligada-por-default                       OK
+
+[1m── integration — daemon e Chromium reais ─────────────────────────────[0m
+test:session                                  OK
+test:perception                               OK
+test:pointer-keyboard                         OK
+test:target-verifier                          OK
+test:api                                      OK
+
+[1m── adversarial — segurança e falha ─────────────────────────────[0m
+test:security-net-injection                   OK
+test:security-files-secrets                   OK
+test:recovery-watchdog                        OK
+
+[1m── e2e — gates ponta a ponta ─────────────────────────────[0m
+test:e2e-gate                                 OK
+test:product02-gate                           OK
+
+[1m── resultado ─────────────────────────────[0m
+CI_PASS=YES
+PATCH_CI_FIM

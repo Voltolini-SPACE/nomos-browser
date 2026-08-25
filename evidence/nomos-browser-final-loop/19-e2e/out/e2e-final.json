@@ -1,0 +1,1429 @@
+{
+  "gerado_em": "2026-08-25T05:10:40.224Z",
+  "duracao_total_ms": 59061,
+  "maquina": {
+    "plataforma": "darwin",
+    "node": "v26.0.0"
+  },
+  "estado_do_servico": "DESINSTALADO",
+  "total": 20,
+  "pass": 20,
+  "fail": 0,
+  "suite": "PASS",
+  "cenarios": [
+    {
+      "n": 1,
+      "cenario": "abrir → localizar → clicar (verificado e entregue)",
+      "comando": "browser.open → browser.find → browser.click{verification:TEXT_CHANGED}",
+      "esperado": "clique resolvido, ENTREGUE ao alvo (delivery_verified=true), verificado, e o <div> dedicado muda de INTOCADO para CLICADO-ALVO-1",
+      "observado": "http://127.0.0.1:55264/app · INTOCADO · strategy=selector box={\"x\":8,\"y\":79.875,\"width\":64.15625,\"height\":21}",
+      "classe": "",
+      "evidencia": [
+        "/tmp/nomos-e2e19-W9e9XL/d1-1qg0eH/sessoes/ses_c79001db3015438c/actions.jsonl:11 action=browser.click verified=true",
+        "DOM #saida-btn-alvo: \"INTOCADO\" → \"CLICADO-ALVO-1\""
+      ],
+      "checagens": [
+        {
+          "ok": true,
+          "o_que": "browser.open abriu a fixture",
+          "observado": "http://127.0.0.1:55264/app"
+        },
+        {
+          "ok": true,
+          "o_que": "controle negativo: o <div> dedicado começa INTOCADO",
+          "observado": "INTOCADO"
+        },
+        {
+          "ok": true,
+          "o_que": "browser.find localizou o alvo",
+          "observado": "strategy=selector box={\"x\":8,\"y\":79.875,\"width\":64.15625,\"height\":21}"
+        },
+        {
+          "ok": true,
+          "o_que": "browser.click respondeu sucesso",
+          "observado": "\"ok\""
+        },
+        {
+          "ok": true,
+          "o_que": "delivery_verified=true (o evento CHEGOU ao alvo)",
+          "observado": "true"
+        },
+        {
+          "ok": true,
+          "o_que": "verification.verified=true com kind TEXT_CHANGED",
+          "observado": "TEXT_CHANGED conf=1"
+        },
+        {
+          "ok": true,
+          "o_que": "o <div> DEDICADO do alvo mudou no DOM",
+          "observado": "CLICADO-ALVO-1"
+        },
+        {
+          "ok": true,
+          "o_que": "controle negativo: o <div> do OUTRO alvo continua intocado",
+          "observado": "INTOCADO"
+        },
+        {
+          "ok": true,
+          "o_que": "trilha registra browser.click verificado",
+          "observado": "linha 11 verified=true"
+        }
+      ],
+      "duracao_ms": 551,
+      "veredito": "PASS",
+      "erro": null
+    },
+    {
+      "n": 2,
+      "cenario": "navegação: goto/back/forward/reload",
+      "comando": "browser.goto ×2 → browser.back → browser.forward → browser.reload",
+      "esperado": "cada passo conferido DUAS vezes: pela URL do runtime e pelo conteúdo do #marca lido do DOM; reload comprovado por nova requisição no ledger do servidor",
+      "observado": "\"ok\" · http://127.0.0.1:55264/pagina-a · PAGINA-A",
+      "classe": "",
+      "evidencia": [
+        "ledger do fixture: /pagina-b pedido 3× (reload comprovado fora do runtime)"
+      ],
+      "checagens": [
+        {
+          "ok": true,
+          "o_que": "goto A respondeu sucesso",
+          "observado": "\"ok\""
+        },
+        {
+          "ok": true,
+          "o_que": "goto A: URL do runtime é /pagina-a",
+          "observado": "http://127.0.0.1:55264/pagina-a"
+        },
+        {
+          "ok": true,
+          "o_que": "goto A: o CONTEÚDO do DOM é PAGINA-A",
+          "observado": "PAGINA-A"
+        },
+        {
+          "ok": true,
+          "o_que": "goto B respondeu sucesso",
+          "observado": "\"ok\""
+        },
+        {
+          "ok": true,
+          "o_que": "goto B: URL do runtime é /pagina-b",
+          "observado": "http://127.0.0.1:55264/pagina-b"
+        },
+        {
+          "ok": true,
+          "o_que": "goto B: o CONTEÚDO do DOM é PAGINA-B",
+          "observado": "PAGINA-B"
+        },
+        {
+          "ok": true,
+          "o_que": "back respondeu sucesso",
+          "observado": "\"ok\""
+        },
+        {
+          "ok": true,
+          "o_que": "back: URL do runtime é /pagina-a",
+          "observado": "http://127.0.0.1:55264/pagina-a"
+        },
+        {
+          "ok": true,
+          "o_que": "back: o CONTEÚDO do DOM é PAGINA-A",
+          "observado": "PAGINA-A"
+        },
+        {
+          "ok": true,
+          "o_que": "forward respondeu sucesso",
+          "observado": "\"ok\""
+        },
+        {
+          "ok": true,
+          "o_que": "forward: URL do runtime é /pagina-b",
+          "observado": "http://127.0.0.1:55264/pagina-b"
+        },
+        {
+          "ok": true,
+          "o_que": "forward: o CONTEÚDO do DOM é PAGINA-B",
+          "observado": "PAGINA-B"
+        },
+        {
+          "ok": true,
+          "o_que": "reload respondeu sucesso",
+          "observado": "\"ok\""
+        },
+        {
+          "ok": true,
+          "o_que": "reload: URL do runtime é /pagina-b",
+          "observado": "http://127.0.0.1:55264/pagina-b"
+        },
+        {
+          "ok": true,
+          "o_que": "reload: o CONTEÚDO do DOM é PAGINA-B",
+          "observado": "PAGINA-B"
+        },
+        {
+          "ok": true,
+          "o_que": "reload buscou a página DE NOVO no servidor (ledger do fixture)",
+          "observado": "/pagina-b: 2 → 3"
+        }
+      ],
+      "duracao_ms": 301,
+      "veredito": "PASS",
+      "erro": null
+    },
+    {
+      "n": 3,
+      "cenario": "formulário: preencher, validar de volta, cancelar",
+      "comando": "browser.type ×2 → browser.extract{format:value} → browser.click #btn-cancelar",
+      "esperado": "valores lidos de volta do próprio campo, ecos dedicados batendo, e cancelamento sem NENHUM POST /enviar no servidor",
+      "observado": "true/true · Ana Ribeiro · ana@exemplo.test",
+      "classe": "",
+      "evidencia": [
+        "ledger do fixture: POST /enviar continua em 0 — cancelar não enviou"
+      ],
+      "checagens": [
+        {
+          "ok": true,
+          "o_que": "browser.type respondeu sucesso nos dois campos",
+          "observado": "true/true"
+        },
+        {
+          "ok": true,
+          "o_que": "valor LIDO DE VOLTA do campo nome",
+          "observado": "Ana Ribeiro"
+        },
+        {
+          "ok": true,
+          "o_que": "valor LIDO DE VOLTA do campo email",
+          "observado": "ana@exemplo.test"
+        },
+        {
+          "ok": true,
+          "o_que": "os ecos DEDICADOS de cada campo refletem a digitação (evento real)",
+          "observado": "Ana Ribeiro | ana@exemplo.test"
+        },
+        {
+          "ok": true,
+          "o_que": "clique em Cancelar respondeu sucesso",
+          "observado": "\"ok\""
+        },
+        {
+          "ok": true,
+          "o_que": "o <div> dedicado do cancelamento mudou",
+          "observado": "CANCELADO-SEM-ENVIAR"
+        },
+        {
+          "ok": true,
+          "o_que": "os campos foram limpos pelo cancelamento",
+          "observado": "\"\""
+        },
+        {
+          "ok": true,
+          "o_que": "o <div> dedicado do envio continua NAO-ENVIADO",
+          "observado": "NAO-ENVIADO"
+        },
+        {
+          "ok": true,
+          "o_que": "controle no SERVIDOR: nenhum POST /enviar chegou",
+          "observado": "0 → 0"
+        }
+      ],
+      "duracao_ms": 644,
+      "veredito": "PASS",
+      "erro": null
+    },
+    {
+      "n": 4,
+      "cenario": "SPA: conteúdo tardio com browser.wait",
+      "comando": "browser.click #btn-carregar → browser.wait{condition:element_visible,value:#tardio}",
+      "esperado": "o nó não existe antes; wait espera por CONDIÇÃO e o satisfaz; controle negativo: wait por nó que nunca aparece estoura TIMEOUT",
+      "observado": "VAZIO · false TARGET_NOT_FOUND · waited_ms=1293",
+      "classe": "",
+      "evidencia": [
+        "wait real=1293ms · controle negativo TIMEOUT em 1207ms"
+      ],
+      "checagens": [
+        {
+          "ok": true,
+          "o_que": "controle negativo: a área tardia começa VAZIO",
+          "observado": "VAZIO"
+        },
+        {
+          "ok": true,
+          "o_que": "controle negativo: #tardio ainda NÃO existe no DOM",
+          "observado": "false TARGET_NOT_FOUND"
+        },
+        {
+          "ok": true,
+          "o_que": "browser.wait satisfez a condição verificável",
+          "observado": "waited_ms=1293"
+        },
+        {
+          "ok": true,
+          "o_que": "a espera foi REAL (o conteúdo era mesmo tardio)",
+          "observado": "1293ms"
+        },
+        {
+          "ok": true,
+          "o_que": "o conteúdo tardio está no DOM e é legível",
+          "observado": "TARDIO-OK"
+        },
+        {
+          "ok": true,
+          "o_que": "controle negativo: wait por nó inexistente estoura TIMEOUT",
+          "observado": "TIMEOUT em 1207ms"
+        }
+      ],
+      "duracao_ms": 2854,
+      "veredito": "PASS",
+      "erro": null
+    },
+    {
+      "n": 5,
+      "cenario": "abas: abrir, listar, trocar preservando estado, fechar",
+      "comando": "browser.new_tab → browser.tabs → browser.switch_tab → browser.close_tab",
+      "esperado": "a aba 1 preserva o texto digitado depois de ida e volta; a listagem cresce e encolhe em exatamente uma aba, e a fechada some por IDENTIDADE",
+      "observado": "ESTADO-DA-ABA-1 · n=2 ids=pg_31352e53c9fd4738,pg_91f7482b093341f0 · pg_91f7482b093341f0 vs pg_fd287fb419514252",
+      "classe": "",
+      "evidencia": [
+        "abas: 2 → 3 (new_tab) → 2 (close_tab); ativa após switch=pg_91f7482b093341f0"
+      ],
+      "checagens": [
+        {
+          "ok": true,
+          "o_que": "estado gravado na aba 1 (eco dedicado)",
+          "observado": "ESTADO-DA-ABA-1"
+        },
+        {
+          "ok": true,
+          "o_que": "a aba do open aparece na listagem",
+          "observado": "n=2 ids=pg_31352e53c9fd4738,pg_91f7482b093341f0"
+        },
+        {
+          "ok": true,
+          "o_que": "nova aba nasceu com page_id próprio",
+          "observado": "pg_91f7482b093341f0 vs pg_fd287fb419514252"
+        },
+        {
+          "ok": true,
+          "o_que": "a listagem cresceu em EXATAMENTE uma aba",
+          "observado": "2 → 3"
+        },
+        {
+          "ok": true,
+          "o_que": "as duas abas do cenário estão listadas",
+          "observado": "ids=pg_31352e53c9fd4738,pg_91f7482b093341f0,pg_fd287fb419514252"
+        },
+        {
+          "ok": true,
+          "o_que": "a aba nova é a ativa",
+          "observado": "[{\"id\":\"pg_31352e53c9fd4738\",\"active\":false},{\"id\":\"pg_91f7482b093341f0\",\"active\":false},{\"id\":\"pg_fd287fb419514252\",\"active\":true}]"
+        },
+        {
+          "ok": true,
+          "o_que": "há exatamente UMA aba ativa",
+          "observado": "ativas=1"
+        },
+        {
+          "ok": true,
+          "o_que": "a aba ativa é mesmo a segunda (conteúdo do DOM)",
+          "observado": "ABA-2"
+        },
+        {
+          "ok": true,
+          "o_que": "browser.switch_tab voltou para a aba 1",
+          "observado": "pg_91f7482b093341f0"
+        },
+        {
+          "ok": true,
+          "o_que": "o ESTADO da aba 1 sobreviveu à troca",
+          "observado": "ESTADO-DA-ABA-1"
+        },
+        {
+          "ok": true,
+          "o_que": "a troca mudou de fato a aba ativa",
+          "observado": "pg_91f7482b093341f0"
+        },
+        {
+          "ok": true,
+          "o_que": "browser.close_tab respondeu sucesso",
+          "observado": "\"ok\""
+        },
+        {
+          "ok": true,
+          "o_que": "a listagem encolheu em EXATAMENTE uma aba",
+          "observado": "3 → 2"
+        },
+        {
+          "ok": true,
+          "o_que": "a aba fechada sumiu da listagem",
+          "observado": "ids=pg_31352e53c9fd4738,pg_91f7482b093341f0"
+        },
+        {
+          "ok": true,
+          "o_que": "a aba 1 continua lá",
+          "observado": "ids=pg_31352e53c9fd4738,pg_91f7482b093341f0"
+        },
+        {
+          "ok": true,
+          "o_que": "e o estado dela sobreviveu ao fechamento da outra",
+          "observado": "ESTADO-DA-ABA-1"
+        }
+      ],
+      "duracao_ms": 444,
+      "veredito": "PASS",
+      "erro": null
+    },
+    {
+      "n": 6,
+      "cenario": "download real para dentro da raiz permitida",
+      "comando": "browser.download{url} com download_root configurado",
+      "esperado": "arquivo existe no disco DENTRO da raiz, e seu conteúdo é byte a byte o que o servidor mandou",
+      "observado": "[] · \"ok\" · /tmp/nomos-e2e19-W9e9XL/download-permitido/nomos-e2e-19.txt",
+      "classe": "",
+      "evidencia": [
+        "arquivo no disco: /tmp/nomos-e2e19-W9e9XL/download-permitido/nomos-e2e-19.txt (44 bytes) conteúdo=NOMOS-E2E-19-DOWNLOAD-CONTEUDO-CANONICO-7Q4Z"
+      ],
+      "checagens": [
+        {
+          "ok": true,
+          "o_que": "controle: a raiz de download começa vazia",
+          "observado": "[]"
+        },
+        {
+          "ok": true,
+          "o_que": "browser.download respondeu sucesso",
+          "observado": "\"ok\""
+        },
+        {
+          "ok": true,
+          "o_que": "o destino está DENTRO da raiz permitida",
+          "observado": "/tmp/nomos-e2e19-W9e9XL/download-permitido/nomos-e2e-19.txt"
+        },
+        {
+          "ok": true,
+          "o_que": "o arquivo existe no disco",
+          "observado": "/tmp/nomos-e2e19-W9e9XL/download-permitido/nomos-e2e-19.txt"
+        },
+        {
+          "ok": true,
+          "o_que": "o CONTEÚDO do arquivo é exatamente o que o servidor enviou",
+          "observado": "44 bytes: NOMOS-E2E-19-DOWNLOAD-CONTEUDO-CANONICO-7Q4Z"
+        },
+        {
+          "ok": true,
+          "o_que": "o nome do arquivo veio do Content-Disposition",
+          "observado": "nomos-e2e-19.txt"
+        }
+      ],
+      "duracao_ms": 171,
+      "veredito": "PASS",
+      "erro": null
+    },
+    {
+      "n": 7,
+      "cenario": "upload com fixture + controle negativo fora da raiz",
+      "comando": "browser.upload{path dentro da raiz} e browser.upload{path fora}",
+      "esperado": "dentro: o <input type=file> da página passa a ver o arquivo (div dedicado). Fora: UPLOAD_DENIED e o input CONTINUA vazio",
+      "observado": "SEM-ARQUIVO · \"ok\" · ARQUIVO:carta.txt:36",
+      "classe": "",
+      "evidencia": [
+        "negado: UPLOAD_DENIED — path fora da raiz permitida (traversal): upload negado"
+      ],
+      "checagens": [
+        {
+          "ok": true,
+          "o_que": "controle: o <div> dedicado do upload começa SEM-ARQUIVO",
+          "observado": "SEM-ARQUIVO"
+        },
+        {
+          "ok": true,
+          "o_que": "browser.upload dentro da raiz respondeu sucesso",
+          "observado": "\"ok\""
+        },
+        {
+          "ok": true,
+          "o_que": "a PÁGINA vê o arquivo, com nome e tamanho corretos",
+          "observado": "ARQUIVO:carta.txt:36"
+        },
+        {
+          "ok": true,
+          "o_que": "upload fora da raiz falhou",
+          "observado": "false"
+        },
+        {
+          "ok": true,
+          "o_que": "o código do contrato é UPLOAD_DENIED",
+          "observado": "UPLOAD_DENIED: path fora da raiz permitida (traversal): upload negado"
+        },
+        {
+          "ok": true,
+          "o_que": "o input NÃO recebeu o arquivo proibido (o <div> não mudou)",
+          "observado": "ARQUIVO:carta.txt:36"
+        }
+      ],
+      "duracao_ms": 211,
+      "veredito": "PASS",
+      "erro": null
+    },
+    {
+      "n": 8,
+      "cenario": "recuperação de erro: falha no meio, sessão segue utilizável",
+      "comando": "browser.click alvo inexistente (falha) → browser.click alvo real (sucesso) na MESMA sessão",
+      "esperado": "erro classificado, sessão continua ACTIVE e a ação seguinte produz efeito no DOM",
+      "observado": "false · TARGET_NOT_FOUND: alvo não resolvido após 1 estratégia(s): selector · ACTIVE",
+      "classe": "",
+      "evidencia": [
+        "/tmp/nomos-e2e19-W9e9XL/d1-1qg0eH/sessoes/ses_06ddb482caa2444a/actions.jsonl:7 result=error · :9 result=ok"
+      ],
+      "checagens": [
+        {
+          "ok": true,
+          "o_que": "a ação do meio realmente FALHOU",
+          "observado": "false"
+        },
+        {
+          "ok": true,
+          "o_que": "a falha veio classificada pelo contrato",
+          "observado": "TARGET_NOT_FOUND: alvo não resolvido após 1 estratégia(s): selector"
+        },
+        {
+          "ok": true,
+          "o_que": "a sessão continua ACTIVE depois da falha",
+          "observado": "ACTIVE"
+        },
+        {
+          "ok": true,
+          "o_que": "a ação SEGUINTE funcionou e foi entregue",
+          "observado": "success=true entregue=true"
+        },
+        {
+          "ok": true,
+          "o_que": "o DOM prova que a sessão seguiu utilizável",
+          "observado": "CLICADO-ALVO-2"
+        },
+        {
+          "ok": true,
+          "o_que": "a trilha guarda a falha E a recuperação, nesta ordem",
+          "observado": "erro na linha 7, sucesso na linha 9"
+        }
+      ],
+      "duracao_ms": 3369,
+      "veredito": "PASS",
+      "erro": null
+    },
+    {
+      "n": 9,
+      "cenario": "NOMOS → Browser → NOMOS (A0 executa, A2 é barrada)",
+      "comando": "/Users/AI/.local/bin/nomos approvals testar <CATEGORIA> \"mcp:nomos-browser:<tool>\" + servidor.mjs por stdio (protocolo 2024-11-05)",
+      "esperado": "A0 com veredito ALLOW: o loop roda de verdade até o Chromium e volta. A2 com REQUIRE_APPROVAL: NÃO executa, registra BLOQUEADO_POR_APROVACAO e o navegador não se move",
+      "observado": "nomos-browser tools=13 nivel_padrao=A5 · INTOCADO · A0 → A0_READ_LOCAL",
+      "classe": "BLOQUEADO_POR_APROVACAO",
+      "evidencia": [
+        "$ /Users/AI/.local/bin/nomos approvals testar A0_READ_LOCAL \"mcp:nomos-browser:browser_extract\"",
+        "A0 · ler arquivos locais · alvo=mcp:nomos-browser:browser_extract",
+        "veredito: ALLOW — permitido pela política",
+        "",
+        "$ /Users/AI/.local/bin/nomos approvals testar A2_NET_EGRESS \"mcp:nomos-browser:browser_click\"",
+        "A2 · sair para a rede · alvo=mcp:nomos-browser:browser_click",
+        "veredito: REQUIRE_APPROVAL — ação sensível: exige aprovação explícita",
+        "na prática: pediria a SUA aprovação; sem aprovador presente, o gate NEGA (fail-closed).",
+        "",
+        "controle: /tmp/nomos-e2e19-W9e9XL/d1-1qg0eH/sessoes/ses_fa937982783949a1/actions.jsonl sem linha browser.click; #saida-btn-alvo=INTOCADO"
+      ],
+      "checagens": [
+        {
+          "ok": true,
+          "o_que": "manifesto canônico carregado",
+          "observado": "nomos-browser tools=13 nivel_padrao=A5"
+        },
+        {
+          "ok": true,
+          "o_que": "controle: o <div> dedicado começa INTOCADO",
+          "observado": "INTOCADO"
+        },
+        {
+          "ok": true,
+          "o_que": "a categoria veio do MANIFESTO, não desta bateria",
+          "observado": "A0 → A0_READ_LOCAL"
+        },
+        {
+          "ok": true,
+          "o_que": "veredito REAL do NOMOS para a tool A0",
+          "observado": "ALLOW"
+        },
+        {
+          "ok": true,
+          "o_que": "browser_extract (A0) executou pelo transporte do NOMOS",
+          "observado": "isError=false"
+        },
+        {
+          "ok": true,
+          "o_que": "handshake stdio com o servidor canônico e as 13 tools",
+          "observado": "server=nomos-browser-mcp tools=13"
+        },
+        {
+          "ok": true,
+          "o_que": "o loop voltou com o CONTEÚDO REAL da página do Chromium",
+          "observado": "route=browser.extract session_id=ses_fa937982783949a1 http=200 action_id=act_mt87h9t8_40 state=ACTIVE duration_ms=5 { \"c"
+        },
+        {
+          "ok": true,
+          "o_que": "a resposta é da sessão preparada (mesmo session_id)",
+          "observado": "session_id=ses_fa937982783949a1"
+        },
+        {
+          "ok": true,
+          "o_que": "a categoria da tool A2 veio do MANIFESTO",
+          "observado": "A2 → A2_NET_EGRESS"
+        },
+        {
+          "ok": true,
+          "o_que": "veredito REAL do NOMOS para a tool A2",
+          "observado": "REQUIRE_APPROVAL"
+        },
+        {
+          "ok": true,
+          "o_que": "o navegador NÃO se moveu: nenhuma ação A2 vazou o gate",
+          "observado": "INTOCADO"
+        },
+        {
+          "ok": true,
+          "o_que": "a trilha da sessão não tem NENHUM browser.click",
+          "observado": "0 linhas de clique"
+        }
+      ],
+      "duracao_ms": 520,
+      "veredito": "PASS",
+      "erro": null
+    },
+    {
+      "n": 10,
+      "cenario": "Gi → NOMOS → Browser → Gi (A0 executa, A2 é barrada)",
+      "comando": "python3 (processo próprio) usando backend/gi_nomos/browser.py do pocket-assistant",
+      "esperado": "A0 EXECUTADO com conteúdo real; A2 BLOQUEADO_POR_APROVACAO; e o próprio navegador prova que a Gi não executou nada",
+      "observado": "/Users/AI/Projects/pocket-assistant/backend/gi_nomos/browser.py · INTOCADO · rc=0 stderr=",
+      "classe": "BLOQUEADO_POR_APROVACAO",
+      "evidencia": [
+        "veredito Gi/NOMOS: browser_extract=ALLOW browser_click=REQUIRE_APPROVAL",
+        "motivo verbatim: o NOMOS respondeu REQUIRE_APPROVAL para A2_NET_EGRESS · mcp:nomos-browser:browser_click — a Gi não executa sem o veredito ALLOW",
+        "falta ao dono: /Users/AI/.local/bin/nomos mcp chamar /Users/AI/Projects/nomos-browser/packaging/mcp/manifesto.json browser_click --args '{...}'   (num terminal seu; o NOMOS pedirá sua aprovação)",
+        "controle no navegador: #saida-btn-alvo=INTOCADO; /tmp/nomos-e2e19-W9e9XL/d1-1qg0eH/sessoes/ses_b8fc0d06e1d3463d/actions.jsonl sem browser.click"
+      ],
+      "checagens": [
+        {
+          "ok": true,
+          "o_que": "o módulo real da Gi existe",
+          "observado": "/Users/AI/Projects/pocket-assistant/backend/gi_nomos/browser.py"
+        },
+        {
+          "ok": true,
+          "o_que": "controle: o <div> dedicado começa INTOCADO",
+          "observado": "INTOCADO"
+        },
+        {
+          "ok": true,
+          "o_que": "o processo Python da Gi respondeu",
+          "observado": "rc=0 stderr="
+        },
+        {
+          "ok": true,
+          "o_que": "a Gi rodou sem exceção",
+          "observado": "sem erro"
+        },
+        {
+          "ok": true,
+          "o_que": "a Gi classifica pelo MANIFESTO registrado",
+          "observado": "tools=13 extract=A0_READ_LOCAL click=A2_NET_EGRESS"
+        },
+        {
+          "ok": true,
+          "o_que": "veredito do NOMOS consultado PELA Gi para a tool A0",
+          "observado": "ALLOW"
+        },
+        {
+          "ok": true,
+          "o_que": "veredito do NOMOS consultado PELA Gi para a tool A2",
+          "observado": "REQUIRE_APPROVAL"
+        },
+        {
+          "ok": true,
+          "o_que": "A0: a Gi EXECUTOU o loop completo",
+          "observado": "status=EXECUTADO veredito=ALLOW"
+        },
+        {
+          "ok": true,
+          "o_que": "A0: o resultado traz o conteúdo REAL do Chromium",
+          "observado": "route=browser.extract session_id=ses_b8fc0d06e1d3463d http=200 action_id=act_mt87hb42_4a state=ACTIVE duration"
+        },
+        {
+          "ok": true,
+          "o_que": "A0: a Gi operou na sessão preparada",
+          "observado": "ses_b8fc0d06e1d3463d vs ses_b8fc0d06e1d3463d"
+        },
+        {
+          "ok": true,
+          "o_que": "A2: a Gi NÃO executou — BLOQUEADO_POR_APROVACAO",
+          "observado": "status=BLOQUEADO_POR_APROVACAO veredito=REQUIRE_APPROVAL"
+        },
+        {
+          "ok": true,
+          "o_que": "A2: a Gi não devolveu resultado nenhum da ação",
+          "observado": "\"\""
+        },
+        {
+          "ok": true,
+          "o_que": "conferido no navegador: nada aconteceu na página",
+          "observado": "INTOCADO"
+        },
+        {
+          "ok": true,
+          "o_que": "a trilha da sessão não tem NENHUM browser.click",
+          "observado": "0 linhas"
+        }
+      ],
+      "duracao_ms": 1766,
+      "veredito": "PASS",
+      "erro": null
+    },
+    {
+      "n": 11,
+      "cenario": "visão como fallback: alvo em <canvas>, sem DOM interativo",
+      "comando": "daemon com vision_provider=ollama:qwen2.5vl:3b → browser.find{semantic} → browser.click{semantic}",
+      "esperado": "a cascata chega em `vision`, o clique cai DENTRO do retângulo conhecido, isTrusted=true e o erro é medido em px contra a verdade da página",
+      "observado": "qwen2.5vl:3b,moondream:1.8b,qwen3.5:4b-q8_0,embeddinggemma:300m,qwen2.5-coder:7b,nomic-embed-text:latest · [] · \"ok\"",
+      "classe": "",
+      "evidencia": [
+        "clique observado pela PÁGINA: (476,171) isTrusted=true",
+        "ERRO_PX=4.1 MARGEM_ATE_A_BORDA=49px alvo={\"x\":400,\"y\":120,\"w\":160,\"h\":100}",
+        "/tmp/nomos-e2e19-W9e9XL/visao-mEvC0o/sessoes/ses_7e63096874ca472a/actions.jsonl:9 action=target.cascade strategy=vision"
+      ],
+      "checagens": [
+        {
+          "ok": true,
+          "o_que": "o backend tem o modelo qwen2.5vl:3b",
+          "observado": "qwen2.5vl:3b,moondream:1.8b,qwen3.5:4b-q8_0,embeddinggemma:300m,qwen2.5-coder:7b,nomic-embed-text:latest"
+        },
+        {
+          "ok": true,
+          "o_que": "higiene de memória: nenhum modelo residente antes",
+          "observado": "[]"
+        },
+        {
+          "ok": true,
+          "o_que": "fixture do canvas aberta",
+          "observado": "\"ok\""
+        },
+        {
+          "ok": true,
+          "o_que": "controle: a página NÃO tem <button> nenhum (só pixel)",
+          "observado": "TARGET_NOT_FOUND"
+        },
+        {
+          "ok": true,
+          "o_que": "browser.find resolveu o alvo",
+          "observado": "\"ok\""
+        },
+        {
+          "ok": true,
+          "o_que": "a cascata chegou no degrau `vision`",
+          "observado": "strategy=vision attempted=[semantic → vision]"
+        },
+        {
+          "ok": true,
+          "o_que": "browser.click por visão respondeu sucesso",
+          "observado": "\"ok\""
+        },
+        {
+          "ok": true,
+          "o_que": "o canvas registrou um clique de verdade",
+          "observado": "clique em 476,171 isTrusted=true"
+        },
+        {
+          "ok": true,
+          "o_que": "o clique caiu DENTRO do alvo (verdade da fixture, não relatório do runtime)",
+          "observado": "(476,171) alvo={\"x\":400,\"y\":120,\"w\":160,\"h\":100} margem=49px"
+        },
+        {
+          "ok": true,
+          "o_que": "isTrusted=true — evento do navegador, não sintético",
+          "observado": "isTrusted=true"
+        },
+        {
+          "ok": true,
+          "o_que": "erro em px medido contra o centro conhecido",
+          "observado": "ERRO_PX=4.1"
+        },
+        {
+          "ok": true,
+          "o_que": "a resolução por visão deixou linha na trilha",
+          "observado": "linha 9"
+        },
+        {
+          "ok": true,
+          "o_que": "higiene de memória: nenhum modelo residente depois",
+          "observado": "[]"
+        }
+      ],
+      "duracao_ms": 24409,
+      "veredito": "PASS",
+      "erro": null
+    },
+    {
+      "n": 12,
+      "cenario": "task longa: 14 passos, COMPLETED, checkpoint a cada passo",
+      "comando": "POST /api/v1/browser.task com plano de 14 passos (daemon filho, agente determinístico)",
+      "esperado": "estado final COMPLETED, 14 checkpoints em disco E 14 linhas `task.checkpoint` na trilha; efeito final conferido no DOM",
+      "observado": "\"ok\" · COMPLETED · 14/14",
+      "classe": "",
+      "evidencia": [
+        "/tmp/nomos-e2e19-W9e9XL/task12-K1Galu/sessoes/ses_3442a81dcecb4631/tasks/tsk_bf3ca94837634501.json state=COMPLETED step_index=14",
+        "/tmp/nomos-e2e19-W9e9XL/task12-K1Galu/sessoes/ses_3442a81dcecb4631/actions.jsonl: 15 linhas task.checkpoint (nºs 7,11,15…)",
+        "DOM #marca=PASSO-C12-FINAL"
+      ],
+      "checagens": [
+        {
+          "ok": true,
+          "o_que": "browser.task respondeu sucesso",
+          "observado": "\"ok\""
+        },
+        {
+          "ok": true,
+          "o_que": "estado final COMPLETED",
+          "observado": "COMPLETED"
+        },
+        {
+          "ok": true,
+          "o_que": "os 14 passos foram confirmados",
+          "observado": "14/14"
+        },
+        {
+          "ok": true,
+          "o_que": "os checkpoints são contíguos e em ordem",
+          "observado": "[0,1,2,3,4,5,6,7,8,9,10,11,12,13]"
+        },
+        {
+          "ok": true,
+          "o_que": "o DISCO concorda com a resposta",
+          "observado": "COMPLETED step_index=14"
+        },
+        {
+          "ok": true,
+          "o_que": "a trilha tem uma linha `task.checkpoint` por passo",
+          "observado": "15 linhas"
+        },
+        {
+          "ok": true,
+          "o_que": "a trilha registra `task.completed`",
+          "observado": "linha 64"
+        },
+        {
+          "ok": true,
+          "o_que": "o DOM da aba ativa prova o último passo",
+          "observado": "PASSO-C12-FINAL"
+        },
+        {
+          "ok": true,
+          "o_que": "o servidor viu o último passo exatamente uma vez",
+          "observado": "1"
+        }
+      ],
+      "duracao_ms": 1710,
+      "veredito": "PASS",
+      "erro": null
+    },
+    {
+      "n": 13,
+      "cenario": "task com crash do daemon no meio + resume sem repetir passo",
+      "comando": "daemon filho com SIGKILL no 7º passo → reinício → POST /api/v1/tasks/:id/resume",
+      "esperado": "checkpoint parado em 6, task reaparece RECOVERING (nunca RUNNING), resume completa os 14 e o LEDGER DO SERVIDOR mostra zero repetição dos passos já efetivados",
+      "observado": "signal=SIGKILL code=null · step_index=6 state_em_disco=RUNNING · RECOVERING last_error=RUNTIME_CRASH",
+      "classe": "",
+      "evidencia": [
+        "/tmp/nomos-e2e19-W9e9XL/task13-E6Qfgz/sessoes/ses_5a5e601a06e24f38/tasks/tsk_e7327bb9b9a34be4.json antes do reinício: state=RUNNING step_index=6",
+        "após reinício: state=RECOVERING last_error=RUNTIME_CRASH",
+        "ledger: /tarefa-c13-01×1 /tarefa-c13-07×1 /passo-c13-final×1"
+      ],
+      "checagens": [
+        {
+          "ok": true,
+          "o_que": "o daemon morreu por SIGKILL de verdade",
+          "observado": "signal=SIGKILL code=null"
+        },
+        {
+          "ok": true,
+          "o_que": "o crash pegou a task com 6 passos efetivados",
+          "observado": "step_index=6 state_em_disco=RUNNING"
+        },
+        {
+          "ok": true,
+          "o_que": "ao subir, a task está RECOVERING — nenhum RUNNING mentiroso",
+          "observado": "RECOVERING last_error=RUNTIME_CRASH"
+        },
+        {
+          "ok": true,
+          "o_que": "a causa registrada é o crash do runtime",
+          "observado": "RUNTIME_CRASH"
+        },
+        {
+          "ok": true,
+          "o_que": "o checkpoint sobreviveu ao crash",
+          "observado": "step_index=6"
+        },
+        {
+          "ok": true,
+          "o_que": "a retomada completou a task",
+          "observado": "COMPLETED passos=14"
+        },
+        {
+          "ok": true,
+          "o_que": "os 14 passos ficaram confirmados",
+          "observado": "14/14"
+        },
+        {
+          "ok": true,
+          "o_que": "a retomada é uma execução NOVA (run_id diferente)",
+          "observado": "run_60466037effb4e06 → run_cf961a9d79734da7"
+        },
+        {
+          "ok": true,
+          "o_que": "nenhum passo JÁ EFETIVADO foi repetido (ledger do fixture)",
+          "observado": "/tarefa-c13-01 ×1"
+        },
+        {
+          "ok": true,
+          "o_que": "o passo final foi executado exatamente uma vez",
+          "observado": "1"
+        },
+        {
+          "ok": true,
+          "o_que": "o DOM da sessão nova prova a conclusão",
+          "observado": "PASSO-C13-FINAL"
+        }
+      ],
+      "duracao_ms": 2005,
+      "veredito": "PASS",
+      "erro": null
+    },
+    {
+      "n": 14,
+      "cenario": "handoff entre dois donos com credenciais distintas",
+      "comando": "sessão criada por DONO-A → POST /sessions/:id/handoff{to_owner,to_holder} → DONO-B age",
+      "esperado": "antes do handoff B é recusado e o DOM não muda; depois, B age e A é recusado; a trilha registra handoff e transferência de lease",
+      "observado": "A=n5j5i9… B=yDyaRf… · \"ok\" · DONO-A",
+      "classe": "",
+      "evidencia": [
+        "/tmp/nomos-e2e19-W9e9XL/d2-lRG5jy/sessoes/ses_0dc49f5949a74094/actions.jsonl:10 action=session.handoff detail={\"from_owner\":\"DONO-A\",\"to_owner\":\"DONO-B\",\"attached_client\":\"e2e-final-19\",\"lease_holder\":\"DONO-B\"}",
+        "/tmp/nomos-e2e19-W9e9XL/d2-lRG5jy/sessoes/ses_0dc49f5949a74094/actions.jsonl:9 action=lease.transferred detail={\"from_holder\":\"DONO-A\",\"to_holder\":\"DONO-B\",\"moved\":true,\"reason\":\"handoff com to_holder\",\"lease_id\":\"lease_bdbd7f67a6e64ac3\"}"
+      ],
+      "checagens": [
+        {
+          "ok": true,
+          "o_que": "duas credenciais distintas emitidas pelo daemon",
+          "observado": "A=n5j5i9… B=yDyaRf…"
+        },
+        {
+          "ok": true,
+          "o_que": "DONO-A abriu a página na sessão dele",
+          "observado": "\"ok\""
+        },
+        {
+          "ok": true,
+          "o_que": "o volante nasceu com DONO-A (sujeito do token)",
+          "observado": "DONO-A"
+        },
+        {
+          "ok": true,
+          "o_que": "DONO-B é recusado ANTES do handoff",
+          "observado": "409 CAPABILITY_DENIED"
+        },
+        {
+          "ok": true,
+          "o_que": "controle no DOM: a recusa impediu o efeito",
+          "observado": "INTOCADO"
+        },
+        {
+          "ok": true,
+          "o_que": "o handoff trocou o dono da sessão",
+          "observado": "200 owner=DONO-B"
+        },
+        {
+          "ok": true,
+          "o_que": "o volante passou para DONO-B",
+          "observado": "DONO-B"
+        },
+        {
+          "ok": true,
+          "o_que": "DONO-B age DEPOIS do handoff",
+          "observado": "success=true entregue=true"
+        },
+        {
+          "ok": true,
+          "o_que": "o DOM prova a ação do novo dono",
+          "observado": "CLICADO-ALVO-1"
+        },
+        {
+          "ok": true,
+          "o_que": "DONO-A perdeu o volante e é recusado",
+          "observado": "409 CAPABILITY_DENIED"
+        },
+        {
+          "ok": true,
+          "o_que": "controle no DOM: a recusa do antigo dono também impediu efeito",
+          "observado": "INTOCADO"
+        },
+        {
+          "ok": true,
+          "o_que": "a trilha registra handoff e transferência de lease",
+          "observado": "handoff na linha 10, lease.transferred na linha 9"
+        }
+      ],
+      "duracao_ms": 392,
+      "veredito": "PASS",
+      "erro": null
+    },
+    {
+      "n": 15,
+      "cenario": "takeover humano congela ACT e OBSERVE; release devolve",
+      "comando": "POST /sessions/:id/takeover → browser.click e browser.observe → POST /sessions/:id/release",
+      "esperado": "409 CONTROL_HELD_BY_HUMAN nas DUAS classes (não só nas de ação), DOM inalterado durante o congelamento, e tudo volta a funcionar após release",
+      "observado": "200 · 200 control=human status=PAUSED · 409 CONTROL_HELD_BY_HUMAN",
+      "classe": "",
+      "evidencia": [
+        "/tmp/nomos-e2e19-W9e9XL/d2-lRG5jy/sessoes/ses_a9f63aef17934b5b/actions.jsonl: 3 linhas policy.deny com CONTROL_HELD_BY_HUMAN (nºs 9,10,11)",
+        "DOM #saida-congelado durante o congelamento: INTOCADO → depois do release: CLICADO-CONGELADO"
+      ],
+      "checagens": [
+        {
+          "ok": true,
+          "o_que": "controle: OBSERVE funciona ANTES do takeover",
+          "observado": "200"
+        },
+        {
+          "ok": true,
+          "o_que": "o humano assumiu o controle",
+          "observado": "200 control=human status=PAUSED"
+        },
+        {
+          "ok": true,
+          "o_que": "ACT congelado com 409 CONTROL_HELD_BY_HUMAN",
+          "observado": "409 CONTROL_HELD_BY_HUMAN"
+        },
+        {
+          "ok": true,
+          "o_que": "OBSERVE TAMBÉM congelado (não só ACT)",
+          "observado": "409 CONTROL_HELD_BY_HUMAN"
+        },
+        {
+          "ok": true,
+          "o_que": "extract — a outra porta de leitura — também é recusada",
+          "observado": "409 CONTROL_HELD_BY_HUMAN"
+        },
+        {
+          "ok": true,
+          "o_que": "release devolveu o controle",
+          "observado": "200 control=agent status=RECOVERING"
+        },
+        {
+          "ok": true,
+          "o_que": "o DOM prova que NADA aconteceu durante o congelamento",
+          "observado": "INTOCADO"
+        },
+        {
+          "ok": true,
+          "o_que": "depois do release o agente volta a agir",
+          "observado": "200 \"ok\""
+        },
+        {
+          "ok": true,
+          "o_que": "o DOM prova a devolução do controle",
+          "observado": "CLICADO-CONGELADO"
+        },
+        {
+          "ok": true,
+          "o_que": "cada recusa por controle humano deixou linha própria",
+          "observado": "3 linhas policy.deny"
+        }
+      ],
+      "duracao_ms": 360,
+      "veredito": "PASS",
+      "erro": null
+    },
+    {
+      "n": 16,
+      "cenario": "negação de política auditada: sem capability ⇒ 403 + policy.deny",
+      "comando": "sessão com download:false → browser.download",
+      "esperado": "HTTP 403 com CAPABILITY_DENIED, linha `policy.deny` na trilha com a capability exigida, e NENHUM arquivo no disco",
+      "observado": "403 · CAPABILITY_DENIED: capability \"download\" negada para browser.download (classe COMMIT) · success=false result=null",
+      "classe": "",
+      "evidencia": [
+        "/tmp/nomos-e2e19-W9e9XL/d2-lRG5jy/sessoes/ses_ea414c1b3f464b87/actions.jsonl:6 action=policy.deny capability=download policy_reason=CAPABILITY_DENIED: capability \"download\" negada para browser.download (classe COMMIT)"
+      ],
+      "checagens": [
+        {
+          "ok": true,
+          "o_que": "HTTP 403",
+          "observado": "403"
+        },
+        {
+          "ok": true,
+          "o_que": "código do contrato CAPABILITY_DENIED",
+          "observado": "CAPABILITY_DENIED: capability \"download\" negada para browser.download (classe COMMIT)"
+        },
+        {
+          "ok": true,
+          "o_que": "o envelope não traz resultado nenhum",
+          "observado": "success=false result=null"
+        },
+        {
+          "ok": true,
+          "o_que": "a trilha tem a linha `policy.deny` da negação",
+          "observado": "linha 6"
+        },
+        {
+          "ok": true,
+          "o_que": "a linha classifica decisão e desfecho",
+          "observado": "policy_decision=deny result=denied"
+        },
+        {
+          "ok": true,
+          "o_que": "a linha carrega o motivo com o código",
+          "observado": "CAPABILITY_DENIED: capability \"download\" negada para browser.download (classe COMMIT)"
+        },
+        {
+          "ok": true,
+          "o_que": "a linha diz QUEM pediu",
+          "observado": "e2e-final-19"
+        },
+        {
+          "ok": true,
+          "o_que": "controle no DISCO: nenhum arquivo novo apareceu",
+          "observado": "1 → 1"
+        },
+        {
+          "ok": true,
+          "o_que": "controle positivo: com a capability concedida, a MESMA rota entrega",
+          "observado": "200 /private/tmp/nomos-e2e19-W9e9XL/download-permitido/nomos-e2e-19.txt"
+        }
+      ],
+      "duracao_ms": 344,
+      "veredito": "PASS",
+      "erro": null
+    },
+    {
+      "n": 17,
+      "cenario": "injeção: página hostil marcada, cru retido, instrução neutralizada",
+      "comando": "browser.observe / browser.extract numa página com payload de prompt injection",
+      "esperado": "provenance.injection_detected=true com severity=alta, raw_content_available=false, conteúdo entregue entre delimitadores com nonce, e a página benigna PASSA (controle de falso positivo)",
+      "observado": "source=WEB trust=UNTRUSTED · true · alta",
+      "classe": "",
+      "evidencia": [
+        "provenance ataque: detected=true severity=alta raw=false findings=12",
+        "provenance benigna: severity=null raw=true",
+        "/tmp/nomos-e2e19-W9e9XL/d2-lRG5jy/sessoes/ses_d1aa9aab50604f3d/actions.jsonl sem trecho literal do payload"
+      ],
+      "checagens": [
+        {
+          "ok": true,
+          "o_que": "a procedência classifica a origem como web não confiável",
+          "observado": "source=WEB trust=UNTRUSTED"
+        },
+        {
+          "ok": true,
+          "o_que": "injection_detected=true",
+          "observado": "true"
+        },
+        {
+          "ok": true,
+          "o_que": "severity=alta",
+          "observado": "alta"
+        },
+        {
+          "ok": true,
+          "o_que": "a inspeção olhou campos de verdade",
+          "observado": "fields_inspected=9 findings=12"
+        },
+        {
+          "ok": true,
+          "o_que": "o texto CRU foi RETIDO",
+          "observado": "false"
+        },
+        {
+          "ok": true,
+          "o_que": "o que chega ao agente vem entre delimitadores com nonce — DADO, não instrução",
+          "observado": "nonce=61413ef1a103…"
+        },
+        {
+          "ok": true,
+          "o_que": "os elementos entregues carregam a marca de retenção, não o payload",
+          "observado": "[{\"ref\":\"e1\",\"tag\":\"h1\",\"role\":\"heading\",\"text\":\"Artigo comum\",\"attributes\":{},\"box\":{\"x\":8,\"y\":21.4375,\"width"
+        },
+        {
+          "ok": true,
+          "o_que": "o payload literal NÃO chega ao agente pelos elementos",
+          "observado": "payload presente=false"
+        },
+        {
+          "ok": true,
+          "o_que": "browser.extract sela a mesma procedência",
+          "observado": "det=true sev=alta"
+        },
+        {
+          "ok": true,
+          "o_que": "controle negativo: a página benigna NÃO é marcada como alta",
+          "observado": "null"
+        },
+        {
+          "ok": true,
+          "o_que": "controle negativo: o cru da página benigna é entregue",
+          "observado": "true"
+        },
+        {
+          "ok": true,
+          "o_que": "a trilha não guarda o trecho literal do ataque",
+          "observado": "bytes=6910 literal=false"
+        }
+      ],
+      "duracao_ms": 236,
+      "veredito": "PASS",
+      "erro": null
+    },
+    {
+      "n": 18,
+      "cenario": "timeout de provider: porta morta, erro classificado, daemon vivo",
+      "comando": "daemon com providers_base_url em porta MORTA e em porta que ACEITA e nunca responde → browser.task",
+      "esperado": "as duas falhas vêm CLASSIFICADAS e DISTINGUÍVEIS (recusa imediata vs. prazo estourado); o daemon segue respondendo /health e as ações determinísticas ficam intactas",
+      "observado": "http://127.0.0.1:55461 provider=http://127.0.0.1:55459 · success=false · INTERNAL: raciocínio falhou: fetch failed {\"task_id\":\"tsk_e60085958f244f40\",\"run_id\":\"run_20bc3e2ecd70435c\",\"state\":\"FAI",
+      "classe": "",
+      "evidencia": [
+        "porta MORTA     : code=INTERNAL gasto=22ms — raciocínio falhou: fetch failed {\"task_id\":\"tsk_e60085958f244f40\",\"run_id\":\"run_20bc3e2ecd70435c\",\"state\":\"FAILED\",\"task",
+        "porta PENDURADA : code=TIMEOUT gasto=4027ms — raciocínio falhou: timeout após 4000 ms {\"task_id\":\"tsk_848151bc71214eef\",\"run_id\":\"run_a9cc47a3f5d64f65\",\"state\":\"FAILE",
+        "/health=200 · DOM pós-falha=CLICADO-ALVO-1"
+      ],
+      "checagens": [
+        {
+          "ok": true,
+          "o_que": "o daemon SOBE mesmo com o provider inalcançável (morta)",
+          "observado": "http://127.0.0.1:55461 provider=http://127.0.0.1:55459"
+        },
+        {
+          "ok": true,
+          "o_que": "morta: browser.task FALHOU (não fingiu sucesso)",
+          "observado": "success=false"
+        },
+        {
+          "ok": true,
+          "o_que": "morta: o erro veio com código do contrato",
+          "observado": "INTERNAL: raciocínio falhou: fetch failed {\"task_id\":\"tsk_e60085958f244f40\",\"run_id\":\"run_20bc3e2ecd70435c\",\"state\":\"FAI"
+        },
+        {
+          "ok": true,
+          "o_que": "porta morta falha DEPRESSA (recusa de conexão, não espera de prazo)",
+          "observado": "22ms"
+        },
+        {
+          "ok": true,
+          "o_que": "a causa de rede viaja junto do erro",
+          "observado": "raciocínio falhou: fetch failed {\"task_id\":\"tsk_e60085958f244f40\",\"run_id\":\"run_20bc3e2ecd70435c\",\"state\":\"FAILED\",\"task"
+        },
+        {
+          "ok": true,
+          "o_que": "o daemon SOBE mesmo com o provider inalcançável (pendurada)",
+          "observado": "http://127.0.0.1:55468 provider=http://127.0.0.1:55466"
+        },
+        {
+          "ok": true,
+          "o_que": "pendurada: browser.task FALHOU (não fingiu sucesso)",
+          "observado": "success=false"
+        },
+        {
+          "ok": true,
+          "o_que": "pendurada: o erro veio com código do contrato",
+          "observado": "TIMEOUT: raciocínio falhou: timeout após 4000 ms {\"task_id\":\"tsk_848151bc71214eef\",\"run_id\":\"run_a9cc47a3f5d64f65\",\"sta"
+        },
+        {
+          "ok": true,
+          "o_que": "o PRAZO de fato foi esperado (4000ms de ai_timeout_ms)",
+          "observado": "4027ms"
+        },
+        {
+          "ok": true,
+          "o_que": "a falha foi em prazo LIMITADO — não pendurou o cliente",
+          "observado": "4027ms"
+        },
+        {
+          "ok": true,
+          "o_que": "a causa de PRAZO viaja junto do erro (distinta da causa de rede)",
+          "observado": "raciocínio falhou: timeout após 4000 ms {\"task_id\":\"tsk_848151bc71214eef\",\"run_id\":\"run_a9cc47a3f5d64f65\",\"state\":\"FAILED\",\"task_code\":\"TIME"
+        },
+        {
+          "ok": true,
+          "o_que": "as duas falhas são DISTINGUÍVEIS pelo tempo, não só pelo texto",
+          "observado": "morta=22ms vs pendurada=4027ms"
+        },
+        {
+          "ok": true,
+          "o_que": "GET /health continua 200 depois da falha do provider",
+          "observado": "200"
+        },
+        {
+          "ok": true,
+          "o_que": "o processo do daemon não morreu",
+          "observado": "exit=null signal=null"
+        },
+        {
+          "ok": true,
+          "o_que": "clique verificado continua ENTREGANDO depois da falha do provider",
+          "observado": "entregue=true dom=CLICADO-ALVO-1"
+        },
+        {
+          "ok": true,
+          "o_que": "navegação determinística intacta",
+          "observado": "PAGINA-C18-DEPOIS"
+        }
+      ],
+      "duracao_ms": 5438,
+      "veredito": "PASS",
+      "erro": null
+    },
+    {
+      "n": 19,
+      "cenario": "crash recovery do daemon: SIGKILL real → sobe de novo",
+      "comando": "SIGKILL no daemon com task em voo → reinício sobre o mesmo runtime_dir/sessions_root",
+      "esperado": "o disco guardava RUNNING; ao subir, nada continua RUNNING, a varredura de arranque decide e registra, e o runtime volta utilizável",
+      "observado": "pid=19631 signal=SIGKILL · state=RUNNING step_index=4 · 19631 → 19643",
+      "classe": "",
+      "evidencia": [
+        "disco antes do reinício: state=RUNNING (/tmp/nomos-e2e19-W9e9XL/crash19-Ab5c0U/sessoes/ses_0ad962df03ed4be2/tasks/tsk_3f508e6c8b6b4b90.json)",
+        "depois do reinício: RECOVERING last_error=RUNTIME_CRASH; RUNNING=0",
+        "/tmp/nomos-e2e19-W9e9XL/crash19-Ab5c0U/sessoes/ses_0ad962df03ed4be2/actions.jsonl: 1 linhas de recuperação"
+      ],
+      "checagens": [
+        {
+          "ok": true,
+          "o_que": "SIGKILL real no processo do daemon",
+          "observado": "pid=19631 signal=SIGKILL"
+        },
+        {
+          "ok": true,
+          "o_que": "o disco ficou com o estado MENTIROSO (RUNNING) — sem isso não há o que reconstituir",
+          "observado": "state=RUNNING step_index=4"
+        },
+        {
+          "ok": true,
+          "o_que": "o daemon subiu de novo com PID novo",
+          "observado": "19631 → 19643"
+        },
+        {
+          "ok": true,
+          "o_que": "GET /health responde 200 depois do crash",
+          "observado": "200 {\"runtime\":\"ok\",\"browser\":\"starting\",\"workers\":{\"active\":0,\"max\":4},\"sessions\":{"
+        },
+        {
+          "ok": true,
+          "o_que": "NENHUMA task voltou como RUNNING",
+          "observado": "tasks=tsk_3f508e6c8b6b4b90:RECOVERING"
+        },
+        {
+          "ok": true,
+          "o_que": "a task foi reclassificada com a causa registrada",
+          "observado": "RECOVERING / RUNTIME_CRASH"
+        },
+        {
+          "ok": true,
+          "o_que": "a varredura de arranque deixou rastro na trilha",
+          "observado": "1 linhas: 24:task.recovering"
+        },
+        {
+          "ok": true,
+          "o_que": "o runtime aceita ação determinística nova depois do crash",
+          "observado": "\"ok\""
+        },
+        {
+          "ok": true,
+          "o_que": "a ação nova produziu efeito real no navegador",
+          "observado": "PAGINA-C19-POS"
+        }
+      ],
+      "duracao_ms": 1474,
+      "veredito": "PASS",
+      "erro": null
+    },
+    {
+      "n": 20,
+      "cenario": "supervisor: install → start → health → SIGKILL → restart → stop → uninstall",
+      "comando": "scripts/service.sh com LaunchAgent REAL, e guarda de produção label→pid antes/depois",
+      "esperado": "cada degrau conferido pelo estado do launchd e pelo PID do lock; o launchd ressobe com PID NOVO após SIGKILL; a máquina termina como começou (serviço DESINSTALADO)",
+      "observado": "br.com.se7enpay.nomos.servico=83005;com.nomos.panel=83034;ai.sovereign.omniroute=12728;com.gijarvis.backend=29108; · carregada=false · rc=0 INSTALL=OK label=ai.nomos.browser plist=/Users/AI/Library/LaunchAgents/ai.nomos.browser.plist log=/Users/AI/Library/Logs/nomos-browser",
+      "classe": "",
+      "evidencia": [
+        "producao antes : br.com.se7enpay.nomos.servico=83005;com.nomos.panel=83034;ai.sovereign.omniroute=12728;com.gijarvis.backend=29108;",
+        "producao depois: br.com.se7enpay.nomos.servico=83005;com.nomos.panel=83034;ai.sovereign.omniroute=12728;com.gijarvis.backend=29108;",
+        "ESTADO_DO_SERVICO=DESINSTALADO"
+      ],
+      "checagens": [
+        {
+          "ok": true,
+          "o_que": "a guarda de produção está MEDINDO (pids não vazios)",
+          "observado": "br.com.se7enpay.nomos.servico=83005;com.nomos.panel=83034;ai.sovereign.omniroute=12728;com.gijarvis.backend=29108;"
+        },
+        {
+          "ok": true,
+          "o_que": "a label não estava carregada antes — não mexo no que não instalei",
+          "observado": "carregada=false"
+        },
+        {
+          "ok": true,
+          "o_que": "install carrega o LaunchAgent",
+          "observado": "rc=0 INSTALL=OK label=ai.nomos.browser plist=/Users/AI/Library/LaunchAgents/ai.nomos.browser.plist log=/Users/AI/Library/Logs/nomos-browser"
+        },
+        {
+          "ok": true,
+          "o_que": "start é aceito (0) ou recusado por instância única (9) — nunca erro obscuro",
+          "observado": "rc=0 START=OK label=ai.nomos.browser"
+        },
+        {
+          "ok": true,
+          "o_que": "o lock em disco tem o PID de um processo VIVO",
+          "observado": "19696"
+        },
+        {
+          "ok": true,
+          "o_que": "`health` responde ok",
+          "observado": "pid=19696"
+        },
+        {
+          "ok": true,
+          "o_que": "o SIGKILL de fato matou o processo do serviço",
+          "observado": "kill rc=0 pid=19696 morreu=true"
+        },
+        {
+          "ok": true,
+          "o_que": "após SIGKILL o launchd reiniciou com PID NOVO",
+          "observado": "19696 → 19936"
+        },
+        {
+          "ok": true,
+          "o_que": "o serviço reiniciado volta SAUDÁVEL",
+          "observado": "health rc=0 com pid 19936"
+        },
+        {
+          "ok": true,
+          "o_que": "stop encerra o serviço",
+          "observado": "rc=0 pid_restante=nenhum"
+        },
+        {
+          "ok": true,
+          "o_que": "uninstall descarrega e remove o plist — a máquina volta ao estado anterior",
+          "observado": "rc=0 carregada=false plist=NAO"
+        },
+        {
+          "ok": true,
+          "o_que": "serviços de PRODUÇÃO intactos (mesmos PIDs)",
+          "observado": "antes=br.com.se7enpay.nomos.servico=83005;com.nomos.panel=83034;ai.sovereign.omniroute=12728;com.gijarvis.backend=29108; depois=br.com.se7enpay.nomos.servico=83005;com.nomos.panel=83034;ai.sovereign.omniroute=12728;com.gijarvis.backend=29108;"
+        }
+      ],
+      "duracao_ms": 11178,
+      "veredito": "PASS",
+      "erro": null
+    }
+  ]
+}

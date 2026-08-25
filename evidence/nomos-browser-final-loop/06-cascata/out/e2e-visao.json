@@ -1,0 +1,82 @@
+{
+  "quando": "2026-08-25T03:36:56.351Z",
+  "modelo": "qwen2.5vl:3b",
+  "alvo_verdade": {
+    "x": 400,
+    "y": 120,
+    "w": 160,
+    "h": 100
+  },
+  "strategy": "vision",
+  "attempted": [
+    "semantic",
+    "vision"
+  ],
+  "box_da_visao": {
+    "x": 397,
+    "y": 121,
+    "width": 158,
+    "height": 100
+  },
+  "clique": {
+    "x": 476,
+    "y": 171,
+    "isTrusted": true
+  },
+  "erro_px": 4.12,
+  "margem_ate_a_borda_px": 49,
+  "dentro_do_alvo": true,
+  "find_ms": 12685,
+  "click_ms": 1683,
+  "trace": [
+    {
+      "strategy": "semantic",
+      "outcome": "miss",
+      "probe": "semantic(literal) sobre 19 tipos interativos",
+      "candidates": 0,
+      "reason": "página sem elementos interativos",
+      "duration_ms": 13
+    },
+    {
+      "strategy": "vision",
+      "outcome": "hit",
+      "probe": "vision:ollama(\"o botao vermelho escrito COMPRAR\")",
+      "candidates": 1,
+      "duration_ms": 12666,
+      "detail": {
+        "passadas": 0,
+        "box_p1": {
+          "x": 404,
+          "y": 124,
+          "width": 158,
+          "height": 100
+        },
+        "box_refinada": {
+          "x": 404,
+          "y": 124,
+          "width": 158,
+          "height": 100
+        },
+        "deslocamento_px": 0,
+        "area_ratio_p1_p2": 1,
+        "refino": "desligado",
+        "motivo": "vision_refine_passes = 0",
+        "inferencias": 1,
+        "regiao_de_recorte": null,
+        "aim_modo": "point_then_box",
+        "aim": "point",
+        "aim_point": {
+          "x": 476,
+          "y": 171
+        },
+        "aim_box_bruta": {
+          "x": 404,
+          "y": 124,
+          "width": 158,
+          "height": 100
+        },
+        "aim_motivo": null
+      }
+    }
+  ]
+}

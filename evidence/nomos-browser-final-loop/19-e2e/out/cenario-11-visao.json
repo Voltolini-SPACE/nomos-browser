@@ -1,0 +1,27 @@
+{
+  "modelo": "qwen2.5vl:3b",
+  "alvo": {
+    "x": 400,
+    "y": 120,
+    "w": 160,
+    "h": 100
+  },
+  "clique": {
+    "x": 476,
+    "y": 171,
+    "isTrusted": true
+  },
+  "erro_px": 4.12,
+  "margem_px": 49,
+  "strategy": "vision",
+  "attempted": [
+    "semantic",
+    "vision"
+  ],
+  "box_da_visao": {
+    "x": 397,
+    "y": 121,
+    "width": 158,
+    "height": 100
+  }
+}

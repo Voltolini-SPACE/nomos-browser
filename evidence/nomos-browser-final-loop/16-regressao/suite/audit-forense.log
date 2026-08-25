@@ -1,0 +1,20 @@
+✔ 1. duas abas: cada linha aponta a aba certa, conferida pelo conteúdo extraído (303.163083ms)
+✔ 2. context_id é estável dentro da sessão e diferente entre duas sessões (90.552833ms)
+✔ 3. capability negada deixa linha de política com decisão, motivo e capability (1.778167ms)
+✔ 4. takeover congela o agente e a negação por controle humano vira linha (87.1495ms)
+✔ 5. release devolve o volante, abre uma recuperação e a reobservação a fecha (7.774542ms)
+✔ 6. handoff troca o dono e a linha carrega o dono antigo e o novo (4.468583ms)
+✔ 7. created, attach, detach e closed deixam linhas de controle (58.965208ms)
+✔ 8. task com AgentProvider registra o provider; provider que falha vira provider.degraded (99.05225ms)
+✔ 9. toda linha de toda sessão tem TODAS as chaves do schema (1.490292ms)
+✔ 10. `actor` nunca é "unknown" numa sessão com dono (0.849708ms)
+✔ 11. a trilha não carrega set-cookie, authorization nem o literal da injeção (93.349083ms)
+✔ 12. sessão que só abre uma página NÃO gera nenhuma linha de policy.deny (91.031291ms)
+ℹ tests 12
+ℹ suites 0
+ℹ pass 12
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1215.723041
