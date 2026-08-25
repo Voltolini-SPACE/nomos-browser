@@ -1,0 +1,11 @@
+=== CONTROLE NEGATIVO DO GUARDA ===
+--- rebaixando browser_tab_open (egresso) de A2 para A0 no manifesto ---
+14:    "browser_tab_open": "A0",
+--- node scripts/verificar-risco-mcp.ts ---
+MCP_RISK_COHERENT=NO
+  - browser_tab_open: declarada A0 no manifesto, mas despacha "browser.new_tab" (egresso), que exige ao menos A2. ELEVAÇÃO DE PRIVILÉGIO PELO MCP.
+rc=1
+--- restaurado ---
+14:    "browser_tab_open": "A2",
+MCP_RISK_COHERENT=YES (16 tools, 23 rotas classificadas)
+rc=0

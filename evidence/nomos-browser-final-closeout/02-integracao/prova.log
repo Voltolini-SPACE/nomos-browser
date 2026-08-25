@@ -1,0 +1,132 @@
+
+[1m══ 0. preparo — daemon, credencial, alvo HTTP e linha de base ══════════════════════[0m
+  · runtime vivo em http://127.0.0.1:7777
+  · credencial presente: /Users/AI/.nomos-browser/control-token
+  · alvo HTTP: http://127.0.0.1:8901/segredo (canário CANARIO-CLOSEOUT2-45509)
+  · SESSOES_VIVAS_ANTES=0  CHROMIUM_ANTES=0
+  · HASH_ATUAL_DO_MANIFESTO=317f15893e9ebd83afa17d11f66dd896c83342858ad723e0f4ed7afd32e27207
+
+[1m══ 1. discovery — nomos mcp catalogo ══════════════════════[0m
+    servers MCP confiáveis (2) · 0 revogado(s):
+    
+      ✓ calendario-ics  [6ea7c63d83e06926…]  ['python3', 'servidor.py']
+      ✓ nomos-browser  [d267002feb6f9e4a…]  ['node', 'servidor.mjs']
+  · DISCOVERY: o catálogo do dono lista o conector
+
+[1m══ 2. confiança do dono — o hash registrado é o do manifesto ATUAL? ══════════════════════[0m
+  · TRUST: FAIL — o catálogo tem OUTRA impressão. O manifesto mudou (correção
+  ·         da elevação de privilégio) e voltou a EXPERIMENTAL, fail-closed.
+  ·         Re-registro (SÓ o dono): /Users/AI/.local/bin/nomos mcp confiar /Users/AI/Projects/nomos-browser/packaging/mcp/manifesto.json
+
+[1m══ 3. conexão — handshake + tools/list com os níveis do manifesto ══════════════════════[0m
+    [NOMOS-E002] 'nomos-browser' não é confiável (experimental) — conectar exige confirmação em terminal, ou registre com: nomos mcp confiar
+  · PAROU AQUI: BLOQUEADO_MANIFESTO_EXPERIMENTAL (NOMOS-E002)
+
+[1m══ 4. sessão durável — a página é aberta numa chamada e lida na SEGUINTE ══════════════════════[0m
+--- chamada A (canônica): browser_tab_open url=http://127.0.0.1:8901/segredo ---
+    [NOMOS-E002] 'nomos-browser' é experimental — só chamo tools de server registrado. Confie primeiro: nomos mcp confiar <manifesto>
+--- chamada B (canônica), PROCESSO SEPARADO: browser_extract #fato ---
+    [NOMOS-E002] 'nomos-browser' é experimental — só chamo tools de server registrado. Confie primeiro: nomos mcp confiar <manifesto>
+
+--- via=lancador-direto (NAO-CANONICO): mesma sequência, dois processos ---
+    route=browser.new_tab session_id=ses_7a9105553ad7467a http=200 action_id=act_mt8nzv1j_5 state=IDLE duration_ms=75
+    {
+      "page_id": "pg_c7f0f28d2d8d43fd",
+      "url": "http://127.0.0.1:8901/segredo",
+      "title": "Alvo",
+      "active": true,
+      "opened_at": "2026-08-25T12:52:11.658Z"
+    }
+    isError=false
+    route=browser.extract session_id=ses_7a9105553ad7467a http=200 action_id=act_mt8nzva8_a state=ACTIVE duration_ms=44
+    {
+      "content": "CANARIO-CLOSEOUT2-45509",
+    SESSAO_A=ses_7a9105553ad7467a SESSAO_B=ses_7a9105553ad7467a IGUAIS=sim
+    LEU_O_CANARIO=sim
+    registro persistido:
+      {
+        "session_id": "ses_7a9105553ad7467a",
+        "runtime_url": "http://127.0.0.1:7777",
+        "criada_em": "2026-08-25T12:52:11.617Z",
+        "owner": "mcp:nomos-browser-mcp"
+      }
+
+[1m══ 5. erro válido — tool inexistente, argumento inválido, alvo inexistente ══════════════════════[0m
+--- tool inexistente ---
+    [NOMOS-E002] 'nomos-browser' é experimental — só chamo tools de server registrado. Confie primeiro: nomos mcp confiar <manifesto>
+--- argumento inválido (url ausente) ---
+    [NOMOS-E002] 'nomos-browser' é experimental — só chamo tools de server registrado. Confie primeiro: nomos mcp confiar <manifesto>
+--- alvo inexistente ---
+    [NOMOS-E002] 'nomos-browser' é experimental — só chamo tools de server registrado. Confie primeiro: nomos mcp confiar <manifesto>
+--- via=lancador-direto (NAO-CANONICO) ---
+    RPC_ERROR code=-32602 message=ferramenta desconhecida: browser_inexistente
+    RPC_ERROR code=-32602 message=browser_navigate: "url" é obrigatório
+    NOMOS_BROWSER_ERROR code=TARGET_NOT_FOUND
+    route=browser.extract session_id=ses_7a9105553ad7467a http=404 action_id=act_mt8nzvze_f state=ACTIVE duration_ms=2
+
+[1m══ 6. capability enforcement — browser_download sem a capability ══════════════════════[0m
+    [NOMOS-E002] 'nomos-browser' é experimental — só chamo tools de server registrado. Confie primeiro: nomos mcp confiar <manifesto>
+--- via=lancador-direto (NAO-CANONICO) ---
+    NOMOS_BROWSER_ERROR code=CAPABILITY_DENIED
+    route=browser.download session_id=ses_7a9105553ad7467a http=403 action_id=act_mt8nzw87_k state=ACTIVE duration_ms=1
+    message: capability "download" negada para browser.download (classe COMMIT)
+    detail: {
+
+[1m══ 7. elevação de privilégio — o exploit de 01-mcp/03 não é mais expressável ══════════════════════[0m
+--- (a) veredito do NOMOS para cada ferramenta de aba (não depende de confiança) ---
+    A0 · ler arquivos locais · alvo=mcp:nomos-browser:browser_tabs
+    veredito: ALLOW — permitido pela política
+    A2 · sair para a rede · alvo=mcp:nomos-browser:browser_tab_open
+    veredito: REQUIRE_APPROVAL — ação sensível: exige aprovação explícita
+    na prática: pediria a SUA aprovação; sem aprovador presente, o gate NEGA (fail-closed).
+--- (b) o exploit literal: browser_tabs com action=new + url ---
+    [NOMOS-E002] 'nomos-browser' é experimental — só chamo tools de server registrado. Confie primeiro: nomos mcp confiar <manifesto>
+    via=lancador-direto (NAO-CANONICO):
+      RPC_ERROR code=-32602 message=browser_tabs: argumento(s) desconhecido(s): action, url. Aceitos: session_id
+--- (c) confirmação PELO NAVEGADOR: a aba do exploit NÃO existe ---
+    ABAS_ANTES=2 ABAS_DEPOIS=2 ocorrencias_da_url_do_exploit=0
+--- (d) browser_tab_open pelo caminho canônico: exige o dono ---
+    [NOMOS-E002] 'nomos-browser' é experimental — só chamo tools de server registrado. Confie primeiro: nomos mcp confiar <manifesto>
+
+[1m══ 8. audit — as chamadas aparecem em sessions/<id>/actions.jsonl ══════════════════════[0m
+  · sessão auditada: ses_7a9105553ad7467a
+    TOTAL_LINHAS=29
+    LINHAS_COM_actor+capability+policy_decision=11
+    {"action": "session.attach", "actor": "mcp:nomos-browser-mcp", "owner": "mcp:nomos-browser-mcp", "capability": null, "policy_decision": "not_applicable", "result": "ok"}
+    {"action": "task.resume", "actor": "mcp:nomos-browser-mcp", "owner": "mcp:nomos-browser-mcp", "capability": null, "policy_decision": "not_applicable", "result": "ok"}
+    {"action": "policy.allow", "actor": "daemon-root", "owner": "mcp:nomos-browser-mcp", "capability": "read", "policy_decision": "allow", "result": "ok"}
+    {"action": "browser.tabs", "actor": "daemon-root", "owner": "mcp:nomos-browser-mcp", "capability": "read", "policy_decision": "allow", "result": "ok"}
+    ACOES=browser.extract,browser.new_tab,browser.tabs,lease.acquired,policy.allow,policy.deny,session.attach,session.created,task.resume,task.started
+
+[1m══ 9. prazo e interrupção — comportamento observável (ver LIMITAÇÃO no topo) ══════════════════════[0m
+--- (a) prazo curto contra um alvo que nunca responde ---
+    NOMOS_BROWSER_ERROR code=MCP_TRANSPORT_ERROR
+    route=browser.goto
+    message: falha ao falar com o Browser Runtime em http://127.0.0.1:7777/api/v1/browser.goto
+    decorrido_ms=3267
+--- (b) SIGTERM no cliente no meio da chamada ---
+    cliente_morto=sim  runtime_health=200  sessoes_agora=1
+
+[1m══ 10. encerramento — sem órfão ══════════════════════[0m
+    MCP_SESSION_CLOSED session_id=ses_7a9105553ad7467a http=200 arquivo_apagado=true
+    SESSOES_VIVAS_ANTES=0  SESSOES_VIVAS_DEPOIS=0
+    CHROMIUM_ANTES=0  CHROMIUM_DEPOIS=0
+evidence/nomos-browser-final-closeout/02-integracao/prova-nomos-real.sh: line 350: 45522 Terminated: 15          node /tmp/alvo-closeout2.mjs
+
+[1m══ RODAPÉ ══════════════════════[0m
+MOTIVO_DOS_FAIL=BLOQUEADO_MANIFESTO_EXPERIMENTAL
+PAROU_EM=nomos mcp conectar/chamar → [NOMOS-E002] 'nomos-browser' é experimental
+HASH_NOVO=317f15893e9ebd83afa17d11f66dd896c83342858ad723e0f4ed7afd32e27207
+DESTRAVA (só o dono): /Users/AI/.local/bin/nomos mcp confiar /Users/AI/Projects/nomos-browser/packaging/mcp/manifesto.json
+MCP_OWNER_TRUST=FAIL
+NOMOS_DISCOVERY=PASS
+NOMOS_HANDSHAKE=FAIL
+NOMOS_TOOLS_LIST=FAIL
+NOMOS_SESSION_DURAVEL=FAIL
+NOMOS_EXTRACT=FAIL
+NOMOS_ERRO_VALIDO=FAIL
+NOMOS_CAPABILITY_ENFORCEMENT=FAIL
+NOMOS_NO_PRIVILEGE_ESCALATION=PASS
+NOMOS_AUDIT=PASS
+NOMOS_SEM_ORFAO=PASS
+NOMOS_BROWSER_INTEGRATION=FAIL

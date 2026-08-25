@@ -447,7 +447,7 @@ async function main(): Promise<void> {
   caso(
     "00 manifesto canônico carrega com a MESMA validação do NOMOS",
     manifesto.nome === "nomos-browser" &&
-      Object.keys(manifesto.tools).length === 13 &&
+      Object.keys(manifesto.tools).length === 16 &&
       manifesto.nivel_padrao === "A5",
     `nome=${manifesto.nome} tools=${Object.keys(manifesto.tools).length} nivel_padrao=${manifesto.nivel_padrao}`,
   );
@@ -489,7 +489,7 @@ async function main(): Promise<void> {
     const niveisBatem = tools.every((t) => t.nivel === manifesto.tools[String(t.name)]);
     caso(
       "01 discoverability — tools/list devolve as 13 com schema e nível do manifesto",
-      tools.length === 13 && JSON.stringify(nomes) === JSON.stringify(declaradas) && todasComSchema && niveisBatem,
+      tools.length === 16 && JSON.stringify(nomes) === JSON.stringify(declaradas) && todasComSchema && niveisBatem,
       `server=${String(c1.serverInfo.name)} tools=${tools.length} schema_ok=${todasComSchema} niveis_do_manifesto_ok=${niveisBatem}`,
     );
     caso(
@@ -672,7 +672,7 @@ async function main(): Promise<void> {
     const tools2 = await c2.tools();
     caso(
       "09 reconnect — subprocesso morto, novo processo faz handshake e lista as 13 de novo",
-      tools2.length === 13 && String(c2.serverInfo.name) === "nomos-browser-mcp",
+      tools2.length === 16 && String(c2.serverInfo.name) === "nomos-browser-mcp",
       `server=${String(c2.serverInfo.name)} tools=${tools2.length} pid_novo=${String(c2.pid)}`,
     );
     const rRetomada = await c2.chamar("browser_extract", { session_id: sid ?? "", format: "text" }, 60_000);

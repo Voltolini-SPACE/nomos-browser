@@ -1,0 +1,86 @@
+### exploit antigo pelo lancador direto
+RPC_ERROR code=-32602 message=browser_tabs: argumento(s) desconhecido(s): action, url. Aceitos: session_id
+### ci.sh all
+marca:sem-hex-no-fonte                        OK
+marca:dist-nao-versionado                     OK
+desacoplamento:mcp-sem-playwright             OK
+deps:versoes-pinadas                          OK
+pacotes:manifestos-completos                  OK
+config:tabela-gerada-esta-atual               OK
+supervisor:label-propria                      OK
+mcp:lancador-do-manifesto-fala-mcp            OK
+
+[1m── core — DOM, input, percepção, alvo, sessão (Chromium real) ─────────────────────────────[0m
+test:session                                  OK
+test:perception                               OK
+test:pointer-keyboard                         OK
+test:target-verifier                          OK
+
+[1m── security — testes de segurança + defaults fechados ─────────────────────────────[0m
+test:auth                                     OK
+test:policy-vault                             OK
+test:ownership                                OK
+test:injection-wired                          OK
+test:security-files-secrets                   OK
+test:security-net-injection                   OK
+segredo:nada-no-versionado                    OK
+mcp:manifesto-classifica-todas-as-tools       OK
+mcp:risco-por-tool-coerente                   OK
+rede:bind-loopback-por-default                OK
+lease:fechado-por-default                     OK
+watchdog:ligado-por-default                   OK
+auth:ligada-por-default                       OK
+config:redacao-dos-sensiveis                  OK
+seguranca:t7-fechado                          OK
+
+[1m── providers — modelos ligados ao runtime (FASE 5) + contratos de provider ─────────────────────────────[0m
+memoria:disponivel-antes                      3.39 GB (livre 47%)
+test:aiprovider                               OK
+  memoria:apos-aiprovider                     8.16 GB
+test:vision                                   OK
+  memoria:apos-vision                         7.13 GB
+test:providers-runtime                        OK
+  memoria:apos-providers-runtime              6.77 GB
+test:cascata-percepcao                        OK
+  memoria:apos-cascata-percepcao              6.01 GB
+memoria:nenhum-modelo-residente               OK
+memoria:disponivel-depois                     5.86 GB (livre 73%)
+producao:sobreviveu-intacta                   OK
+
+[1m── integration — daemon e Chromium reais ─────────────────────────────[0m
+test:api                                      OK
+test:mcp                                      OK
+test:sdk-ts                                   OK
+test:cli                                      OK
+test:task-engine                              OK
+test:click-entrega                            OK
+test:audit-forense                            OK
+test:backpressure-audit                       OK
+
+[1m── adversarial — ataques, falhas provocadas, recovery e watchdog ─────────────────────────────[0m
+test:security-net-injection                   OK
+test:security-files-secrets                   OK
+test:injection-wired                          OK
+test:watchdog-wired                           OK
+test:recovery-watchdog                        OK
+seguranca:bateria-completa                    OK
+seguranca:guardas-vivos                       OK
+
+[1m── e2e — gates ponta a ponta ─────────────────────────────[0m
+test:e2e-gate                                 OK
+test:product02-gate                           OK
+
+[1m── recovery — vigia e supervisor ─────────────────────────────[0m
+test:recovery-watchdog                        OK
+test:supervisor                               OK
+
+[1m── resultado ─────────────────────────────[0m
+CI_PASS=YES
+### ci-cobertura
+  arquivos em tests/: 35   declarados na matriz: 35
+
+VISION_IN_CI=YES
+AIPROVIDER_IN_CI=YES
+ALL_TEST_FILES_IN_CI=YES
+CI_COBERTURA=PASS
+FIM

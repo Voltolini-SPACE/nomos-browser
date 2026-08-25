@@ -1,0 +1,24 @@
+=== FASE 0 — BASELINE ===
+DATE_UTC=2026-08-25T11:42:57Z
+REPO=/Users/AI/Projects/nomos-browser
+BRANCH=main
+HEAD=6dc4f40c33cda230ad2dd14bdb7014ca3ad91b3d
+HEAD_CURTO=6dc4f40
+BASELINE_ESPERADO=6314050
+COMMITS_DESDE_ab235d4=10
+TAGS=[]
+REMOTES=[]
+--- working tree ---
+?? evidence/nomos-browser-final-closeout/
+SUJO=1
+--- os commits da missao anterior ---
+6dc4f40 docs: relatorio final do NOMOS_BROWSER_FINAL_PRODUCTION_LOOP
+6314050 docs(evidence): clean room definitivo do HEAD, regressao total e coletor da matriz
+ba8a69e fix: recusa de pool auditavel e profundidade de fila publicada
+0625151 docs(evidence): trilha reproduzivel das validacoes e do ciclo de correcao
+be9ab72 feat: matriz de CI com cobertura provada, schema de configuracao e documentacao de produto
+78491cc feat: integracao canonica com o NOMOS e binding da Gi
+8cd9fff feat: ownership com lease obrigatorio, T7 fechado, replay selado, watchdog e supervisor
+3f62706 feat: providers no runtime, cascata ate a visao e task engine persistente
+bc7130f feat: procedencia anti-injecao, auditoria forense, clique com prova de entrega
+ae4bff1 fix: download bloqueado derrubava o daemon; lockfile fora de sincronia

@@ -1,0 +1,44 @@
+[
+  {
+    "id": "I1",
+    "invariante": "NOMOS decide: A0 ALLOW e A2 REQUIRE_APPROVAL",
+    "esperado": "veredito do NOMOS real, por categoria do manifesto",
+    "observado": "browser_extract(A0)=ALLOW | browser_tab_open(A2)=REQUIRE_APPROVAL",
+    "ok": true
+  },
+  {
+    "id": "I2",
+    "invariante": "guarda reprova A0 que alcanca egresso (mutacao)",
+    "esperado": "coerente=YES no manifesto real; NO quando rebaixado",
+    "observado": "real=YES rc=0 | rebaixado=NO rc=1 | restaurado=true",
+    "ok": true
+  },
+  {
+    "id": "I3",
+    "invariante": "capability negada = 403; a permitida funciona",
+    "esperado": "download 403 CAPABILITY_DENIED e extract 200",
+    "observado": "download=403/CAPABILITY_DENIED extract=200/ok=true",
+    "ok": true
+  },
+  {
+    "id": "I4",
+    "invariante": "session allowlist efetiva nas rotas de acao",
+    "esperado": "token de A: 200 em A, recusa em B",
+    "observado": "emitido_via=AuthManager.issue openA=200 A=200/true B=403/CAPABILITY_DENIED",
+    "ok": true
+  },
+  {
+    "id": "I5",
+    "invariante": "lease obrigatorio: perde o volante, para de agir",
+    "esperado": "clique OK com lease; recusa sem lease",
+    "observado": "com_lease=true transfer=200 sem_lease=409/CAPABILITY_DENIED eco=\"?\"",
+    "ok": true
+  },
+  {
+    "id": "I6",
+    "invariante": "Gi: veredito do NOMOS antes de agir; sem rota direta",
+    "esperado": "browser.py consulta o NOMOS e nao chama o runtime direto",
+    "observado": "modulo=true consulta_nomos=true rota_direta_no_modulo=false outros_com_rota_direta=[]",
+    "ok": true
+  }
+]

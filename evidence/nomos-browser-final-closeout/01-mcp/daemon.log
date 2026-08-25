@@ -1,0 +1,5 @@
+nomos-browser em http://127.0.0.1:7777 — contrato v1, versão 0.1.0, headless=true, política=restricted
+eventos: ws://127.0.0.1:7777/events
+trava de instância: /Users/AI/.nomos-browser/daemon.lock
+providers: sem AIProvider | sem VisionProvider
+credencial: /Users/AI/.nomos-browser/control-token

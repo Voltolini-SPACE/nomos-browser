@@ -1,0 +1,4 @@
+=== hash do manifesto registrado x hash atual ===
+HASH_ATUAL   = d267002feb6f9e4a8d24331fa75eb504629515469e9f07b2deb94edd803e0ffe
+HASH_NO_CATALOGO= d267002feb6f9e4a8d24331fa75eb504629515469e9f07b2deb94edd803e0ffe
+COMANDO= ['node', 'servidor.mjs']

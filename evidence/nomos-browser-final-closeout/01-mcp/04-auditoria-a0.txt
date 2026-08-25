@@ -1,0 +1,12 @@
+=== sessoes vivas no runtime apos 2 chamadas one-shot ===
+SESSOES_VIVAS= 2
+  ses_ac4cc2ddff2d4751 mcp:nomos-browser-mcp None
+  ses_d77016fefecb47b1 mcp:nomos-browser-mcp None
+
+=== AUDITORIA DAS TOOLS DECLARADAS A0 ===
+tools declaradas A0: ['browser_observe', 'browser_find', 'browser_extract', 'browser_tabs', 'browser_screenshot']
+  browser_observe      rotas=['browser.observe'] aceita_url=False
+  browser_find         rotas=['browser.find'] aceita_url=False
+  browser_extract      rotas=['browser.extract'] aceita_url=False
+  browser_tabs         rotas=['browser.close_tab', 'browser.new_tab', 'browser.switch_tab', 'browser.tabs'] aceita_url=True
+  browser_screenshot   rotas=['browser.screenshot'] aceita_url=False

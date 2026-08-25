@@ -1,0 +1,4 @@
+servers MCP confiáveis (2) · 0 revogado(s):
+
+  ✓ calendario-ics  [6ea7c63d83e06926…]  ['python3', 'servidor.py']
+  ✓ nomos-browser  [d267002feb6f9e4a…]  ['node', 'servidor.mjs']

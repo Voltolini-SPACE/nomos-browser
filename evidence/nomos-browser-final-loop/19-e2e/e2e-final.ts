@@ -1106,7 +1106,7 @@ async function cenario9(): Promise<void> {
     "A0 com veredito ALLOW: o loop roda de verdade até o Chromium e volta. A2 com REQUIRE_APPROVAL: NÃO executa, registra BLOQUEADO_POR_APROVACAO e o navegador não se move",
     async (p) => {
       const m = lerManifesto();
-      p.exigir(m.nome === "nomos-browser" && Object.keys(m.tools).length === 13, "manifesto canônico carregado", `${m.nome} tools=${Object.keys(m.tools).length} nivel_padrao=${m.nivel_padrao}`);
+      p.exigir(m.nome === "nomos-browser" && Object.keys(m.tools).length === 16, "manifesto canônico carregado", `${m.nome} tools=${Object.keys(m.tools).length} nivel_padrao=${m.nivel_padrao}`);
 
       // Sessão preparada pelo arnês, com o <div> dedicado em estado conhecido.
       const sid = await novaSessao(D1, "E2E19-C9", { capabilities: caps() });
@@ -1142,7 +1142,7 @@ async function cenario9(): Promise<void> {
           await cli.fechar();
         }
       }
-      p.exigir(serverName === "nomos-browser-mcp" && tools === 13, "handshake stdio com o servidor canônico e as 13 tools", `server=${serverName} tools=${tools}`);
+      p.exigir(serverName === "nomos-browser-mcp" && tools === 16, "handshake stdio com o servidor canônico e as 16 tools", `server=${serverName} tools=${tools}`);
       p.exigir(textoExtract.includes(MARCA), "o loop voltou com o CONTEÚDO REAL da página do Chromium", textoExtract.replace(/\s+/g, " ").slice(0, 120));
       p.exigir(textoExtract.includes(`session_id=${sid}`), "a resposta é da sessão preparada (mesmo session_id)", `session_id=${sid}`);
 
@@ -1225,7 +1225,7 @@ async function cenario10(): Promise<void> {
       const g = marcador >= 0 ? (JSON.parse(bruto.slice(marcador + 8).split("\n")[0]!) as Record<string, unknown>) : {};
       p.exigir(g.erro === null || g.erro === undefined, "a Gi rodou sem exceção", String(g.erro ?? "sem erro"));
 
-      p.exigir(g.n_tools === 13 && g.cat_extract === "A0_READ_LOCAL" && g.cat_click === "A2_NET_EGRESS", "a Gi classifica pelo MANIFESTO registrado", `tools=${String(g.n_tools)} extract=${String(g.cat_extract)} click=${String(g.cat_click)}`);
+      p.exigir(g.n_tools === 16 && g.cat_extract === "A0_READ_LOCAL" && g.cat_click === "A2_NET_EGRESS", "a Gi classifica pelo MANIFESTO registrado", `tools=${String(g.n_tools)} extract=${String(g.cat_extract)} click=${String(g.cat_click)}`);
       p.exigir(g.ver_extract === "ALLOW", "veredito do NOMOS consultado PELA Gi para a tool A0", String(g.ver_extract));
       p.exigir(g.ver_click === "REQUIRE_APPROVAL", "veredito do NOMOS consultado PELA Gi para a tool A2", String(g.ver_click));
 
