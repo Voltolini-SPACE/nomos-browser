@@ -1,0 +1,60 @@
+TAG=v0.2.0
+SHA_APONTADO=e9a847cb65aecf8d0a636f6040c112ca9e287523
+CLONE=/tmp/nomos-tag-v0.2.0
+
+══ 1. git clone --branch v0.2.0                   OK
+
+══ 2. o HEAD do clone é o commit da tag          OK
+
+══ 3. o clone não tem NADA fora do versionado    OK
+VERSAO_NA_TAG=0.2.0
+
+══ 4. npm ci --include=dev                        OK
+
+══ 5. playwright install chromium                 OK
+
+══ 6. typecheck                                   OK
+
+══ 7. versao coerente em todo o produto           OK
+
+══ 8. guarda de versao nao e cego                 OK
+
+══ 9. expansao de shell segura                    OK
+
+══ 10. guarda de shell nao e cego                 OK
+
+══ 11. risco por tool coerente                    OK
+
+══ 12. cobertura da matriz de CI                  OK
+
+══ 13. ci.sh all (regressao) → PASS
+══ 14. suite Node: TS_PASS=735 TS_FAIL=0 ARQUIVOS_OK=35 → PASS
+══ 15. SDK Python: 31 testes → PASS
+    15:   TRANSPORTE(daemon fora do ar): DELETE /api/v1/sessions/ses_07f6ee1676fb41e5 — TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 53449] · health=INALCANCAVEL (TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 53449])
+    17:   TRANSPORTE(daemon fora do ar): DELETE /api/v1/sessions/ses_c2d935b09ee9448d — TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 53515] · health=INALCANCAVEL (TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 53515])
+    19:   TRANSPORTE(daemon fora do ar): POST /api/v1/browser.task — TypeError: fetch failed [cause UND_ERR_SOCKET] · health=INALCANCAVEL (TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 53540])
+    20:   TRANSPORTE(daemon fora do ar): DELETE /api/v1/sessions/ses_2c5f03fb43d34ca2 — TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 53548] · health=INALCANCAVEL (TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 53548])
+    21:   TRANSPORTE(daemon fora do ar): DELETE /api/v1/sessions/ses_816c4d7a3db44b35 — TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 53540] · health=INALCANCAVEL (TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 53540])
+    28:   TRANSPORTE(daemon fora do ar): DELETE /api/v1/sessions/ses_dd2bbd94ab8e4a4d — TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 53627] · health=INALCANCAVEL (TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 53627])
+    29:   TRANSPORTE(daemon fora do ar): DELETE /api/v1/sessions/ses_9c527160fea04433 — TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 53627] · health=INALCANCAVEL (TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 53627])
+    30:   TRANSPORTE(daemon fora do ar): DELETE /api/v1/sessions/ses_a089fc74d7da4346 — TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 53608] · health=INALCANCAVEL (TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 53608])
+    32:   TRANSPORTE(daemon fora do ar): POST /api/v1/browser.task — TypeError: fetch failed [cause UND_ERR_SOCKET] · health=INALCANCAVEL (TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 53667])
+    33:   TRANSPORTE(daemon fora do ar): DELETE /api/v1/sessions/ses_e3b65883842440f7 — TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 53673] · health=INALCANCAVEL (TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 53673])
+    34:   TRANSPORTE(daemon fora do ar): DELETE /api/v1/sessions/ses_c90dcf2a212e4a27 — TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 53667] · health=INALCANCAVEL (TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 53667])
+    115:TRANSPORTE_REPETICOES=0
+    116:TRANSPORTE_APOS_DAEMON_MORTO=11
+══ 16. E2E na tag: 20/20 cenarios, 213 checagens → PASS
+══ 17. residuo: daemons=0 chromium=0 servidor_mcp=0
+
+══════════════════════ RODAPE ══════════════════════
+TAG=v0.2.0
+SHA=e9a847cb65aecf8d0a636f6040c112ca9e287523
+VERSAO_NA_TAG=0.2.0
+PASSOS_FALHOS=0
+REGRESSION_ON_TAG=PASS
+SUITE_ON_TAG=PASS (TS_PASS=735)
+PYTHON_ON_TAG=PASS (31)
+E2E_ON_TAG=PASS (20/20, 213 checagens)
+TRANSPORTE_REPETICOES_DAEMON_VIVO=0   (0 exigido)
+TRANSPORTE_APOS_DAEMON_MORTO=11   (ruido do proprio teste, nao reprova)
+TAG_REVALIDATED=YES

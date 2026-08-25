@@ -13,7 +13,7 @@
 set -uo pipefail
 
 ORIG="/Users/AI/Projects/nomos-browser"
-TAG="${TAG:-v0.2.0-rc.1}"
+TAG="${TAG:-v0.2.0}"
 SHA_TAG="$(git -C "$ORIG" rev-parse "${TAG}^{}")"
 CR="/tmp/nomos-tag-${TAG}"
 FALHAS=0
