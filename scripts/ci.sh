@@ -73,7 +73,7 @@ FALHAS=0
 # ─────────────────────────────────────────────────────────────────────────────
 E_FAST="bench lease observability replay-hardening skills traceability ui-build config-schema"
 E_CORE="session perception pointer-keyboard target-verifier"
-E_SECURITY="auth policy-vault ownership injection-wired security-files-secrets security-net-injection autonomy"
+E_SECURITY="auth policy-vault ownership injection-wired security-files-secrets security-net-injection autonomy approvals"
 E_PROVIDERS="aiprovider vision providers-runtime cascata-percepcao"
 E_INTEGRATION="api mcp sdk-ts cli task-engine click-entrega audit-forense backpressure-audit"
 E_ADVERSARIAL="security-net-injection security-files-secrets injection-wired watchdog-wired recovery-watchdog"

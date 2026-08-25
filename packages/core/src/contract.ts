@@ -95,6 +95,15 @@ export type ActionErrorCode =
   | "TIMEOUT"
   | "BACKPRESSURE_REJECTED"
   | "POLICY_BLOCKED"
+  // Live Agent — um HUMANO olhou e disse nao. Merece codigo proprio: juntar
+  // isso a `CAPABILITY_DENIED` apagaria a unica diferenca que importa para
+  // quem le a trilha depois — se foi a POLITICA que barrou ou se foi uma
+  // PESSOA que decidiu. As duas pedem reacoes opostas.
+  | "APPROVAL_DENIED"
+  // Ninguem respondeu dentro do prazo. Fail-closed: a ausencia de resposta
+  // NUNCA vira permissao. Separado de APPROVAL_DENIED porque "disseram nao" e
+  // "nao havia ninguem" sao diagnosticos diferentes.
+  | "APPROVAL_TIMEOUT"
   | "BROWSER_UNAVAILABLE"
   | "UPLOAD_DENIED"
   | "DOWNLOAD_DENIED"
@@ -430,7 +439,23 @@ export type EventName =
   // nao tinha nome nenhum no barramento: quem observava o runtime pelo
   // WebSocket via o silencio de uma sessao que nunca apareceu e nao tinha como
   // distinguir "ninguem pediu" de "pedi e fui recusado".
-  | "session.rejected";
+  | "session.rejected"
+  // ── Live Agent Console ────────────────────────────────────────────────────
+  // Sem estes nomes, uma sessao governada por autonomia era irreconstituivel:
+  // a trilha mostrava a acao acontecendo e nao mostrava a DECISAO que a
+  // permitiu. Reconstruir "por que isso rodou?" e' o proposito da trilha.
+  | "autonomy.changed"
+  | "action.proposed"
+  | "action.approved"
+  | "action.denied"
+  | "cancel.requested"
+  | "cancel.accepted"
+  | "cancel.too_late"
+  | "owner.changed"
+  | "agent.paused"
+  | "agent.resumed"
+  | "emergency_stop"
+  | "session.completed";
 
 export interface RuntimeEvent<P = Record<string, unknown>> {
   timestamp: string;

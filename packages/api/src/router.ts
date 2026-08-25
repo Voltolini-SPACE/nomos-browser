@@ -222,6 +222,12 @@ export const HTTP_STATUS: Readonly<Record<ActionErrorCode, number>> = Object.fre
   TIMEOUT: 504,
   BACKPRESSURE_REJECTED: 429,
   POLICY_BLOCKED: 403,
+  // 403: um humano negou. Nao e' 401 (a credencial estava boa) nem 409 (nao ha
+  // conflito de estado): o pedido foi entendido, avaliado e recusado.
+  APPROVAL_DENIED: 403,
+  // 408 Request Timeout: o servidor esperou o cliente/humano e desistiu. 504
+  // seria culpar um upstream que nao existe — quem nao respondeu foi a pessoa.
+  APPROVAL_TIMEOUT: 408,
   BROWSER_UNAVAILABLE: 503,
   UPLOAD_DENIED: 403,
   DOWNLOAD_DENIED: 403,
@@ -281,6 +287,18 @@ const KNOWN_EVENTS_TUPLA = [
   "control.taken",
   "control.returned",
   "session.rejected",
+  "autonomy.changed",
+  "action.proposed",
+  "action.approved",
+  "action.denied",
+  "cancel.requested",
+  "cancel.accepted",
+  "cancel.too_late",
+  "owner.changed",
+  "agent.paused",
+  "agent.resumed",
+  "emergency_stop",
+  "session.completed",
 ] as const;
 
 export const KNOWN_EVENTS: readonly EventName[] = Object.freeze(KNOWN_EVENTS_TUPLA);
