@@ -1,6 +1,6 @@
 # fixture em http://127.0.0.1:8907/
 # daemon em :7794
-# sessão ses_d364c7b45b1c49ea
+# sessão ses_1de8874b583c4cb0
 [PASS] 0. preparo — a fixture abriu — http=200
 [PASS] 0b. controle — a saída começa INTOCADO — INTOCADO
 [PASS] 1. ASK ligado — http=200 modo=ASK scope=SESSION
@@ -13,7 +13,7 @@
 [PASS] 8. aprovada: a ação acontece — aprovacao=200 acao=200
 [PASS] 9. e o EFEITO está na página — CLICADO
 [PASS] 10. controle — a página voltou a INTOCADO — INTOCADO
-[PASS] 11. AUTO: clique passa direto, sem pendência — http=200 pendentes=0 132ms
+[PASS] 11. AUTO: clique passa direto, sem pendência — http=200 pendentes=0 134ms
 [PASS] 12. e o efeito está lá — CLICADO
 [PASS] 13. AUTO + ação protegida = WAITING_APPROVAL (o gate crítico) — modo=AUTO runtime_state=WAITING_APPROVAL rota=browser.upload
 [PASS] 14. e o motivo declarado é o fator de risco, não o nível — motivo="a ação envia dado seu para fora, e isso não se retira"

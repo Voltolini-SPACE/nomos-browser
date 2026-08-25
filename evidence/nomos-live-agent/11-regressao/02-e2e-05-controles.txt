@@ -1,4 +1,4 @@
-# daemon :7797 · sessão ses_4e5954158f2d49cc
+# daemon :7797 · sessão ses_82c488e7b34e45bd
 [PASS] 0. linha de base — o agente age — CLICADO
 [PASS] 1. PAUSAR responde e marca a sessão — http=200 paused=true
 [PASS] 2. o runtime declara PAUSED — PAUSED

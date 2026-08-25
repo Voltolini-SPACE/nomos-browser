@@ -9,7 +9,7 @@ e2e-07-replay	PASS	13 casos PASS
 e2e-08-modos	PASS	8 casos PASS
 e2e-09-falhas	PASS	13 casos PASS
 e2e-10-latencia	PASS	6 casos PASS
-gi-pytest	PASS	148 passed, 2 warnings in 20.82s
+gi-pytest	PASS	148 passed, 2 warnings in 17.94s
 mcp-catalogo	PASS	modo 0600 · confiaveis=2 revogadas=1
 ci-cobertura	PASS	todo arquivo de teste está declarado na CI
 guardas-estaticas	PASS	expansão de shell + coerência de versão

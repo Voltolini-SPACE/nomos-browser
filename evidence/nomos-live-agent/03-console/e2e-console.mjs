@@ -79,7 +79,27 @@ async function ate(fn, ms, rotulo) {
   throw new Error(`tempo esgotado esperando ${rotulo}; último=${JSON.stringify(ultimo)}`);
 }
 
+/**
+ * Constrói a UI antes de medir.
+ *
+ * O daemon serve `packages/ui/dist/index.html`, que é ARTEFATO DE BUILD e não
+ * entra no git. Rodar este teste sem construir mede a versão ANTERIOR da tela —
+ * foi assim que uma mutação deliberada "passou" sem derrubar caso nenhum
+ * durante a FASE 25, e eu quase registrei o teste como cego quando o cego era o
+ * instrumento.
+ */
+async function construirUI() {
+  const { execSync } = await import("node:child_process");
+  try {
+    execSync("node packages/ui/build.ts", { cwd: RAIZ, stdio: "pipe" });
+  } catch (e) {
+    console.error("ERRO DO INSTRUMENTO: build da UI falhou —", String(e.stderr ?? e.message).slice(0, 300));
+    process.exit(2);
+  }
+}
+
 async function main() {
+  await construirUI();
   for (const d of [DIR, SESSOES]) { fs.rmSync(d, { recursive: true, force: true }); fs.mkdirSync(d, { recursive: true }); }
 
   const fixture = http.createServer((_q, r) => {

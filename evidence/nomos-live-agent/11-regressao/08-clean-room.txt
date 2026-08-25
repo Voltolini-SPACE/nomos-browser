@@ -1,0 +1,37 @@
+HEAD=5473137c243beda843ad9bee42434a5a863e2f23
+SALA_LIMPA=/tmp/nomos-cr-live-agent-5473137
+ZERO_PATCH_MANUAL=SIM (so git clone)
+
+══ 1. git clone do HEAD                                 OK
+
+══ 2. npm ci --include=dev                              OK
+
+══ 3. typecheck do clone                                OK
+
+══ 4. cobertura declarada da CI                         OK
+
+══ 5. guarda de expansao de shell                       OK
+
+══ 6. coerencia de versao                               OK
+
+══ 7. build da UI a partir do src do clone              OK
+
+══ 8. a UI construida contem o painel de historico      OK
+
+══ 9.02-gate E2E rodando do clone                       OK
+
+══ 9.06-segredos E2E rodando do clone                   OK
+
+══ 9.07-replay E2E rodando do clone                     OK
+
+══ 9.08-modos E2E rodando do clone                      OK
+
+══ 9.09-falhas E2E rodando do clone                     OK
+
+══ 10. o clone usa runtime proprio, nao o do dono       OK
+
+════════════════════════════════════════════
+PASSOS=14
+FALHAS=0
+LIVE_AGENT_CLEAN_ROOM=PASS
+SALA_LIMPA=/tmp/nomos-cr-live-agent-5473137

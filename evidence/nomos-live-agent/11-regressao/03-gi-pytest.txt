@@ -11,4 +11,4 @@ test_gi_gateway_auth.py:72
     @pytest.mark.timeout(60)
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-148 passed, 2 warnings in 20.82s
+148 passed, 2 warnings in 17.94s
