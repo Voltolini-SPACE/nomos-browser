@@ -1,0 +1,72 @@
+▶ replay-verify · controle negativo (bundle íntegro precisa passar)
+  ✔ 1. bundle escrito pelo SessionRecorder REAL sai integro:true, sem um problema sequer (10.967583ms)
+  ✔ 2. molde deste arquivo, sem defeito injetado, também sai integro:true (5.392166ms)
+  ✔ 3. ação resolvida SÓ pela trilha de auditoria (sem evento de conclusão) não é in-flight (3.351459ms)
+✔ replay-verify · controle negativo (bundle íntegro precisa passar) (21.527959ms)
+▶ replay-verify · corrupção de arquivo
+  ✔ 4. linha JSONL corrompida é apontada por ARQUIVO e LINHA, sem perder as boas (4.028375ms)
+  ✔ 5. corrupção em actions.jsonl e network.jsonl é atribuída ao arquivo certo (2.971333ms)
+  ✔ 6. bundle truncado (última linha íntegra, mas sem newline final) é reportado (3.409625ms)
+  ✔ 7. bundle truncado no meio do registro acumula TRUNCADO + CORROMPIDO (4.110333ms)
+  ✔ 8. o relatório NÃO carrega o conteúdo da linha corrompida — só sob incluir_bruto (4.317083ms)
+✔ replay-verify · corrupção de arquivo (19.070084ms)
+▶ replay-verify · screenshots
+  ✔ 9. screenshot no índice e ausente do disco vira SCREENSHOT_AUSENTE (3.303334ms)
+  ✔ 10. arquivo no disco fora do índice vira SCREENSHOT_ORFAO (4.191334ms)
+  ✔ 11. PNG ilegível é detectado pelo decodificador, não pela extensão (2.981042ms)
+  ✔ 12. índice que declara dimensão diferente do arquivo é pego (3.327542ms)
+  ✔ 12b. PNG cortado logo após o cabeçalho: o índice o denuncia pelo TAMANHO (4.691458ms)
+  ✔ 12c. índice forjado de forma coerente só cai com decodificar_pixels (4.598375ms)
+  ✔ 12d. índice malformado vira problema, não derruba o verificador (2.37425ms)
+  ✔ 12e. índice que OMITE a dimensão não é acusado de divergir (2.959292ms)
+  ✔ 13. registro que cita screenshot_ref desconhecido do índice é reportado (3.864791ms)
+✔ replay-verify · screenshots (32.552375ms)
+▶ replay-verify · tempo
+  ✔ 14. timestamp que retrocede dentro da fonte é TIMESTAMP_FORA_DE_ORDEM (2.868084ms)
+  ✔ 15. timestamp ilegível não vira 1970: sai TIMESTAMP_INVALIDO (3.0485ms)
+  ✔ 16. empate de timestamp é DITO, é aviso (não corrupção) e o desempate é estável (3.753125ms)
+  ✔ 17. lacuna temporal grande é aviso e o limiar é configurável (5.704917ms)
+✔ replay-verify · tempo (15.504125ms)
+▶ replay-verify · ownership e ações em voo
+  ✔ 18. troca de ator sem evento que a explique é reportada (2.798625ms)
+  ✔ 19. controle negativo: a MESMA troca com session.handoff no intervalo não acusa nada (2.769708ms)
+  ✔ 20. handoff FORA da janela não conta como explicação (2.469959ms)
+  ✔ 21. ação iniciada sem fim sai UNKNOWN_OUTCOME — nunca 'ok', nunca 'falhou' (3.646167ms)
+  ✔ 22. action.started sem action_id é in-flight não-correlacionável, não é sucesso (2.59375ms)
+✔ replay-verify · ownership e ações em voo (14.398917ms)
+▶ replay-verify · fechamento da sessão e contagens
+  ✔ 23. result.json ausente: a sessão nunca fechou (2.528375ms)
+  ✔ 24. result.json ilegível não vira 'sem resultado' mudo (2.617333ms)
+  ✔ 25. linha apagada depois do fato: o bundle parece íntegro e SÓ a contagem denuncia (3.882834ms)
+  ✔ 26. sobra de registro é aviso, não erro (outro escritor na mesma sessão) (2.4845ms)
+  ✔ 27. fonte ausente é declarada como aviso, sem virar zero silencioso (2.411667ms)
+✔ replay-verify · fechamento da sessão e contagens (14.056292ms)
+▶ replay-verify · conduta do verificador
+  ✔ 28. sessão inexistente é dita, não confundida com sessão vazia (0.359ms)
+  ✔ 29. session_id que vira caminho é recusado, não sanitizado (0.327125ms)
+  ✔ 30. bundle com vários defeitos: todos aparecem, nada é consertado e o relatório é estável (5.521291ms)
+✔ replay-verify · conduta do verificador (6.295667ms)
+▶ FASE 12 · selo de integridade do replay
+  ✔ F12-1. gravar → carregar → verificar: bundle real sai ÍNTEGRO e SELADO (7.27225ms)
+  ✔ F12-2. ADULTERAR UMA LINHA (JSON válido, ordem intacta) é RECUSADO (5.227375ms)
+  ✔ F12-3. REORDENAR as linhas (mesmos bytes, outra ordem) é RECUSADO (5.070458ms)
+  ✔ F12-4. TRUNCAR o arquivo é RECUSADO, e o relatório diz que foi truncamento (3.794458ms)
+  ✔ F12-5. APAGAR um arquivo do bundle é RECUSADO (3.18575ms)
+  ✔ F12-6. ACRESCENTAR arquivo depois do selo é RECUSADO (2.782291ms)
+  ✔ F12-7. ADULTERAR o BINÁRIO do screenshot é RECUSADO (4.68025ms)
+  ✔ F12-8. CONTROLE NEGATIVO: bundle íntegro atravessa tudo sem uma recusa (7.03375ms)
+REPLAY_RECORD=PASS
+REPLAY_LOAD=PASS
+REPLAY_VERIFY=PASS
+REPLAY_TAMPER_DETECTION=PASS
+  ✔ F12-9. bundle LEGADO (nunca selado) é AVISO, não erro (4.127125ms)
+  ✔ F12-99. portões da FASE 12 (0.145333ms)
+✔ FASE 12 · selo de integridade do replay (43.5075ms)
+ℹ tests 44
+ℹ suites 8
+ℹ pass 44
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 332.639959

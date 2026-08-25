@@ -1,0 +1,28 @@
+✔ 0a. transição fora da tabela é recusada, e estado final não tem saída (11.630292ms)
+✔ 0b. ação negada por política NUNCA é retentável; desconhecido também não (fail closed) (0.116875ms)
+✔ 0c. backoff cresce, respeita o teto e o jitter nunca zera a espera (0.123125ms)
+✔ 1. task de 1 passo completa, é persistida em disco e a auditoria fecha o ciclo (176.117875ms)
+✔ 2. task de 12 passos completa e grava checkpoint a cada passo (299.229459ms)
+✔ 3. socket derrubado no passo 3 vira NAVIGATION_FAILED, retenta e completa na 2ª tentativa (267.313ms)
+✔ 4. CAPABILITY_DENIED real no passo 2 falha na hora, com zero retentativas (169.045833ms)
+✔ 5. alvo que nunca existe esgota max_attempts e falha com last_error preenchido (257.335375ms)
+✔ 6. SIGKILL no meio da task: recuperação, resume e ZERO passos repetidos (1987.084416ms)
+✔ 7. resume de task completa devolve o resultado guardado e não reexecuta nada (234.290292ms)
+✔ 8. mesma idempotency_key: duas chamadas simultâneas viram UMA task; depois de COMPLETED, ecoa (217.076625ms)
+✔ 9. cancel no meio aborta o passo em voo e nenhum passo posterior roda (188.468334ms)
+✔ 10. passo contra servidor que nunca responde estoura o prazo DO MOTOR e retenta (6234.334875ms)
+✔ 11. provider fora do ar registra provider.degraded UMA vez e a task falha (sem fallback) (215.694375ms)
+✔ 12. BrowserContext fechado no meio da task encerra a task; nada fica RUNNING (289.424ms)
+✔ 13. alvo que muda de identidade entre passos falha e NUNCA é clicado de novo por coordenada (422.930334ms)
+✔ 14. depois do estado final não sobra processo, aba órfã nem lease (282.55425ms)
+✔ 14b. lease desviado para um delegado de task no meio: o instrumento REPROVA (2170.635417ms)
+✔ 15. controle negativo: a task que deve falhar falha, e o instrumento reprova o contrário (309.586667ms)
+[api] audit.append falhou: ENOENT: no such file or directory, open '/tmp/nomos-task-sess-X820y3/_runtime/actions.jsonl'
+ℹ tests 19
+ℹ suites 0
+ℹ pass 19
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 14142.394458

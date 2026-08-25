@@ -1,5 +1,5 @@
 {
-  "quando": "2026-08-25T03:36:56.351Z",
+  "quando": "2026-08-25T07:01:13.509Z",
   "modelo": "qwen2.5vl:3b",
   "alvo_verdade": {
     "x": 400,
@@ -26,8 +26,8 @@
   "erro_px": 4.12,
   "margem_ate_a_borda_px": 49,
   "dentro_do_alvo": true,
-  "find_ms": 12685,
-  "click_ms": 1683,
+  "find_ms": 12199,
+  "click_ms": 1754,
   "trace": [
     {
       "strategy": "semantic",
@@ -42,7 +42,7 @@
       "outcome": "hit",
       "probe": "vision:ollama(\"o botao vermelho escrito COMPRAR\")",
       "candidates": 1,
-      "duration_ms": 12666,
+      "duration_ms": 12180,
       "detail": {
         "passadas": 0,
         "box_p1": {

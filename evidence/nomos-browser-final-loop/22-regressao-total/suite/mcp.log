@@ -1,0 +1,38 @@
+✔ 1a. tools/list devolve exatamente as 13 ferramentas do escopo (5.698292ms)
+✔ 1b. toda ferramenta tem inputSchema JSON Schema utilizável (0.240666ms)
+✔ 1c. campos obrigatórios estão declarados onde a API v1 exige (0.099583ms)
+✔ 2a. browser_navigate com session_id explícito faz UM POST em /api/v1/browser.goto (19.121083ms)
+✔ 2b. sem session_id: cria UMA sessão, reutiliza nas chamadas seguintes (3.759541ms)
+✔ 2c. chamadas concorrentes sem session_id não criam duas sessões (2.932583ms)
+✔ 2e. FASE 7 — o session_id da sessão IMPLÍCITA volta no resultado (1.949959ms)
+✔ 2d. cada ferramenta cai na rota do contrato, com o corpo certo (8.592459ms)
+✔ 3a. runtime com success=false vira isError preservando error.code (0.646833ms)
+✔ 3b. CONTROLE: o mesmo caminho com success=true NÃO marca isError (0.652208ms)
+✔ 3c. runtime inalcançável vira isError explícito, não sucesso vazio (0.265333ms)
+✔ 3d. resposta fora do envelope ActionResponse não é aceita como sucesso (0.54375ms)
+✔ 3e. resposta não-JSON do runtime não vira sucesso (2.741791ms)
+✔ 3f. argumento inválido vira erro de PROTOCOLO e não toca o runtime (0.485792ms)
+✔ 3g. ferramenta desconhecida é erro de protocolo, não silêncio (0.066ms)
+✔ 4a. o fonte do pacote MCP não menciona o motor de navegador (1.142792ms)
+✔ 4b. o pacote MCP importa apenas o contrato e a stdlib do Node (0.483917ms)
+✔ 4c. package.json declara o binário e não tem dependências (0.076875ms)
+✔ 5a. processo real: initialize + tools/list + tools/call por stdio (168.201083ms)
+✔ 5b. processo real: linha inválida vira -32700 e o servidor continua vivo (116.923209ms)
+✔ 5c. processo real: JSON quebrado na linha devolve -32700 (114.73025ms)
+✔ 5d. stdin fechado logo após o pedido não trunca a resposta (172.728167ms)
+✔ 5e. URL de runtime inválida derruba o arranque em vez de cair no default (114.434833ms)
+✔ 6a. buildRuntimeCall é pura e monta o caminho com o prefixo do contrato (0.167542ms)
+✔ 6b. ToolInputError carrega um ActionErrorCode do contrato (0.071917ms)
+✔ 6c. RuntimeClient recusa esquema não-HTTP (0.255833ms)
+✔ 6a. sem credencial o servidor MCP recusa ANTES de abrir socket (0.08675ms)
+✔ 6b. a credencial é PROPAGADA em toda chamada ao runtime (1.116459ms)
+✔ 6c. recusa por ESCOPO do runtime vira erro MCP com nome próprio (0.574084ms)
+✔ 6d. recusa por ARBITRAGEM de lease também tem nome próprio (0.483625ms)
+ℹ tests 30
+ℹ suites 0
+ℹ pass 30
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 896.705958

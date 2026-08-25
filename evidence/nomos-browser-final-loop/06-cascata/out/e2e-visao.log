@@ -1,17 +1,17 @@
 preparo: modelos residentes antes = []
-daemon=http://127.0.0.1:55775 fixture=http://127.0.0.1:55774/vision.html
+daemon=http://127.0.0.1:53764 fixture=http://127.0.0.1:53763/vision.html
 vision_provider=ollama:qwen2.5vl:3b min_conf=0.7
 VisionProvider injetado=ollama
-sessao=ses_ee9f1be2f2f842dd
-find: 12685ms strategy=vision attempted=[semantic -> vision]
+sessao=ses_a02bc65438df4a51
+find: 12199ms strategy=vision attempted=[semantic -> vision]
 find.box={"x":397,"y":121,"width":158,"height":100}
 click.box={"x":397,"y":121,"width":158,"height":100} ponto_do_clique={"x":476,"y":171}
-click: 1683ms
+click: 1754ms
 alvo_verdade={x:400,y:120,w:160,h:100} centro=(480,170)
 clique_observado=(476,171) isTrusted=true
 ERRO_PX=4.1 (dx=4.0 dy=1.0) DENTRO_DO_ALVO=SIM
 MARGEM_ATE_A_BORDA=49px (alvo 160x100)
 audit: 15 linhas; target.cascade(vision)=presente
-audit.trace=[{"strategy":"semantic","outcome":"miss","probe":"semantic(literal) sobre 19 tipos interativos","candidates":0,"reason":"página sem elementos interativos","duration_ms":13},{"strategy":"vision","outcome":"hit","probe":"vision:ollama(\"o botao vermelho escrito COMPRAR\")","candidates":1,"duration_ms":12666,"detail":{"passadas":0,"box_p1":{"x":404,"y":124,"width":158,"height":100},"box_refinada":{"x":404,"y":124,"width":158,"height":100},"deslocamento_px":0,"area_ratio_p1_p2":1,"refino":"desligado","motivo":"vision_refine_passes = 0","inferencias":1,"regiao_de_recorte":null,"aim_modo":"point_then_box","aim":"point","aim_point":{"x":476,"y":171},"aim_box_bruta":{"x":404,"y":124,"width":158,"height":100},"aim_motivo":null}}]
+audit.trace=[{"strategy":"semantic","outcome":"miss","probe":"semantic(literal) sobre 19 tipos interativos","candidates":0,"reason":"página sem elementos interativos","duration_ms":13},{"strategy":"vision","outcome":"hit","probe":"vision:ollama(\"o botao vermelho escrito COMPRAR\")","candidates":1,"duration_ms":12180,"detail":{"passadas":0,"box_p1":{"x":404,"y":124,"width":158,"height":100},"box_refinada":{"x":404,"y":124,"width":158,"height":100},"deslocamento_px":0,"area_ratio_p1_p2":1,"refino":"desligado","motivo":"vision_refine_passes = 0","inferencias":1,"regiao_de_recorte":null,"aim_modo":"point_then_box","aim":"point","aim_point":{"x":476,"y":171},"aim_box_bruta":{"x":404,"y":124,"width":158,"height":100},"aim_motivo":null}}]
 E2E_VISAO=PASS  strategy=vision erro=4.1px isTrusted=true
 limpeza: modelos residentes depois = []

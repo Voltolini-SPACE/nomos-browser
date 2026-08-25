@@ -1,0 +1,21 @@
+✔ 1. pool cheio recusa POST /sessions com 429 e DEIXA linha auditável (141.230709ms)
+✔ 2. a linha da recusa segue o schema de 19 campos da FASE 3 (0.145167ms)
+✔ 3. a linha responde QUEM, O QUÊ e SOB QUE PRESSÃO (0.097125ms)
+✔ 4. as capabilities pedidas entram NORMALIZADAS — nada de eco do corpo cru (0.074334ms)
+✔ 5. a trilha da recusa não carrega credencial nem valor sensível (0.615542ms)
+✔ 6. CONTROLE: sem pressão de pool, nenhuma linha `backpressure` é escrita (103.477667ms)
+✔ 7. a profundidade publicada bate com o que o cliente observa sob pressão (5155.762916ms)
+✔ 8. `GET /api/v1/queues` publica a fila POR SESSÃO com os tetos (0.216666ms)
+✔ 9. `/health` publica o AGREGADO — e só o agregado (0.137792ms)
+✔ 10. CONTROLE DE ESPECIFICIDADE: pressão de FILA não vira linha de recusa de POOL (1.225625ms)
+✔ 11. `GET /api/v1/queues` recusa sem credencial e recusa com escopo insuficiente (3.194333ms)
+✔ 12. todo `event` que chegou ao disco está declarado em AUDIT_EVENTS (1.528792ms)
+✔ 13. AUDIT_EVENTS é a lista congelada e declara a família nova (0.101916ms)
+ℹ tests 13
+ℹ suites 0
+ℹ pass 13
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 5870.550958

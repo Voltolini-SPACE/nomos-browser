@@ -1,0 +1,38 @@
+▶ redact (FASE 23)
+  ✔ 1. objeto aninhado: esconde Authorization e mantém os demais campos intactos (0.86325ms)
+  ✔ case-insensitive e insensível a separador (0.104167ms)
+  ✔ 2. redactUrl esconde ?token=… mas preserva o resto da URL (0.130667ms)
+  ✔ redactUrl não inventa barra nem toca URL sem query (0.07075ms)
+  ✔ redactHeaders preserva o NOME do cabeçalho e destrói só o valor (0.758875ms)
+  ✔ anti-regressão: ciclo, binário e Error não derrubam nem viram {} (0.2135ms)
+✔ redact (FASE 23) (3.837459ms)
+▶ eventbus (FASE 9)
+  ✔ 3. entrega ao assinante certo e NÃO entrega ao filtro de outra sessão (0.671083ms)
+  ✔ 4. evento com header Authorization sai do bus já redigido (0.213791ms)
+  ✔ backpressure: handler lento não bloqueia o emit; drops são contados (0.268834ms)
+  ✔ handler que estoura é contabilizado e não derruba os outros assinantes (0.17575ms)
+  ✔ off cancela o par (seletor, handler) (0.116417ms)
+  ✔ buffer circular retém apenas os últimos N (0.114791ms)
+✔ eventbus (FASE 9) (1.716125ms)
+▶ audit (FASE 24)
+  ✔ 5. escreve JSONL e lê de volta; linha corrompida no meio não impede ler as boas (19.138125ms)
+  ✔ caminho é sessions/<id>/actions.jsonl e appends concorrentes gravam NA ORDEM DE CHAMADA (9.410458ms)
+  ✔ sessão inexistente responde exists:false em vez de estourar (0.31925ms)
+  ✔ fail closed: session_id com travessia de caminho é RECUSADO (0.284375ms)
+  ✔ raiz padrão é <repo>/sessions e o arquivo nasce lá (1.863959ms)
+✔ audit (FASE 24) (31.174583ms)
+▶ replay (FASE 25)
+  ✔ 6. recorder + loadReplay reconstroem a linha do tempo na ordem de timestamp (4.294417ms)
+  ✔ linha corrompida em events.jsonl aparece em errors sem perder as boas (0.8855ms)
+  ✔ sessão sem nada gravada devolve bundle vazio com missing explícito (0.433084ms)
+  ✔ recordFrom liga o recorder ao EventBus e finish desliga (1.665166ms)
+  ✔ saveScreenshot registra o erro quando o buffer não é PNG, em vez de fingir (0.853083ms)
+✔ replay (FASE 25) (8.269291ms)
+ℹ tests 22
+ℹ suites 4
+ℹ pass 22
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 181.452209

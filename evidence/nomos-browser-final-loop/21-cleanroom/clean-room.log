@@ -1,0 +1,58 @@
+HEAD_CANDIDATO=ba8a69e5cbb2a06546af15f35324ab0fae4b51b3
+CLEAN_ROOM=/tmp/nomos-cleanroom-final-ba8a69e
+ZERO_MANUAL_PATCHES=YES (nenhum arquivo copiado; só git clone)
+
+══ 1. git clone do HEAD                         OK
+  commit no clone: ba8a69e
+  arquivos versionados: 426
+
+══ 2. npm ci --include=dev                      OK
+
+══ 3. workspaces ligados                        OK
+
+══ 4. playwright install chromium               OK
+
+══ 5. typecheck (não há build)                OK
+
+══ 6. cobertura da matriz de CI                 OK
+
+══ 7. smoke: spike de controle real             OK
+
+══ 8. ci.sh fast                                OK
+
+══ 9. ci.sh core                                OK
+
+══ 10. ci.sh security                           OK
+
+══ 11. ci.sh integration                        OK
+
+══ 12. ci.sh adversarial                        OK
+
+══ 13. ci.sh recovery                           OK
+
+══ 14. ci.sh e2e                                OK
+
+══ 15. ci.sh providers                          OK
+
+══ 16. service.sh install                       OK
+
+══ 17. service.sh start                         OK
+
+══ 18. service.sh health                        OK
+
+══ 19. instância única (2º start recusa)     OK
+
+══ 20. service.sh status                        OK
+
+══ 21. service.sh stop                          OK
+
+══ 22. service.sh uninstall                     OK
+
+══ 23. plist removido                           OK
+
+── resultado do clean room ──
+PASSOS_FALHOS=0
+CLEAN_ROOM_FROM_RELEASE_HEAD=PASS
+INSTALLATION_REPRODUCIBLE=YES
+ZERO_MANUAL_PATCHES=YES
+DIR=/tmp/nomos-cleanroom-final-ba8a69e

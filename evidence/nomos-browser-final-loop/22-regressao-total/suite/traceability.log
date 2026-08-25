@@ -1,0 +1,15 @@
+✔ o mapa foi parseado e não está vazio (0.721667ms)
+✔ todo artefato citado no mapa existe no repositório (1.349583ms)
+✔ todo teste citado no mapa existe no repositório (0.436125ms)
+✔ status só usa o vocabulário da missão (0.073792ms)
+✔ fase com status de prova precisa citar um teste — e vice-versa (0.131291ms)
+✔ a divergência de numeração está registrada, não corrigida em silêncio (0.172041ms)
+✔ o gate E2E ainda declara sua equivalência histórica (0.463084ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 123.927875

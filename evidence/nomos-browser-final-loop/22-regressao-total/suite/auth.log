@@ -1,0 +1,29 @@
+✔ sem credencial → DENY (2.107583ms)
+✔ credencial inválida → DENY (0.176167ms)
+✔ credencial expirada → DENY, com relógio controlado (0.144667ms)
+✔ credencial correta → PASS (0.09725ms)
+✔ revogação corta acesso imediatamente (0.110917ms)
+✔ replay de token continua valendo — e é por isso que o TTL existe (0.103292ms)
+✔ token de outro AuthManager não vale (segredo é por instância/arranque) (0.084292ms)
+✔ extract lê Bearer, x-nomos-token e ?token=, nesta precedência (0.287042ms)
+✔ autenticar NÃO é autorizar: token de observação não recebe CONTROL (0.125292ms)
+✔ ADMIN não implica os demais escopos (nada de hierarquia implícita) (0.12875ms)
+✔ preset full NÃO inclui ADMIN — takeover é ato do operador humano (0.101ms)
+✔ token da sessão A não alcança a sessão B (0.902625ms)
+✔ token sem allowlist alcança qualquer sessão — e bindSession não a cria do nada (0.165833ms)
+✔ toda ferramenta do contrato tem escopo, e desconhecida cai em ADMIN (0.729042ms)
+✔ escopos de rota separam leitura de controle e de administração (0.03625ms)
+✔ download e upload não são o mesmo escopo que clicar (0.058875ms)
+✔ escopo inválido na emissão é recusado, não normalizado (0.199292ms)
+✔ bootstrap grava o token com permissão 0600 e não o imprime (1.269375ms)
+✔ arquivo de token com permissão larga é RECUSADO, não corrigido em silêncio (0.485416ms)
+✔ modo disabled é explícito e concede tudo — existe só para migração (0.058041ms)
+✔ dois tokens distintos não colidem e são distinguíveis na auditoria (0.072958ms)
+ℹ tests 21
+ℹ suites 0
+ℹ pass 21
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 142.857375

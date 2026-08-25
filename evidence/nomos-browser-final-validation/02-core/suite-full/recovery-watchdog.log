@@ -32,3 +32,7 @@
   ✔ 22. porta reciclada por OUTRO Chromium (identidade não confere) → orphan, sem conectar (16.981167ms)
   ✔ 23. SIGKILL no Chromium com sessão ativa → orphan/browser_pid_dead, e nada é inventado (48.535791ms)
 ✔ recovery — reattach contra Chromium REAL (4150.784833ms)
+
+Interrupted while running:
+
+⚠ tests/recovery-watchdog.test.ts (tests/recovery-watchdog.test.ts:1:1)

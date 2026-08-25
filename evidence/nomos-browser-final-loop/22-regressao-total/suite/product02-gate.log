@@ -1,0 +1,20 @@
+[VISAO] provider=ollama box={"x":524,"y":325,"width":149,"height":112} conf=0.99
+[VISAO] pixel no centro={"r":18,"g":184,"b":134,"a":255} distancia=0.0
+✔ FASE 5 — visão REAL: imagem → alvo → coordenada → mouse confiável → efeito (13053.235459ms)
+[MULTI-AI] A=ollama:qwen3.5:4b-q8_0 lat=12697ms | B=ollama:qwen2.5-coder:7b lat=6377ms
+✔ FASE 10 — dois providers REAIS, ownership arbitrado, handoff e auditoria (20022.805583ms)
+[RECOVERY] decisões=[{"s":"ses_a977eb9cf3454813","d":"orphan","m":"browser_pid_dead"}]
+✔ FASE 14 — SIGKILL no processo do daemon, reinício e decisão explícita (2078.306ms)
+
+── GATE PRODUCT-02 ──
+VISION_MOUSE_PASS=YES
+MULTI_AI_PASS=YES
+RECOVERY_PASS=YES
+ℹ tests 3
+ℹ suites 0
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 35550.500666

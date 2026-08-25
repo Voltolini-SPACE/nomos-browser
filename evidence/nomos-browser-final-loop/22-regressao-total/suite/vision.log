@@ -1,0 +1,61 @@
+✔ A1. JSON limpo vira observação com todos os campos exigidos pela FASE 2 (142.575791ms)
+✔ A2. texto livre em volta e cerca markdown não impedem o parsing (0.310208ms)
+✔ A3. bloco <think> do qwen3.5 é descartado antes do parsing (0.138458ms)
+✔ A4. convenções de canto nomeadas são convertidas para x/y/width/height (0.166958ms)
+✔ A5. caixa normalizada 0..1 é escalada pela viewport e declarada como tal (0.175125ms)
+✔ A5b. dica explícita coordinate_space=pixels vence a heurística de 0..1 (0.099791ms)
+✔ A6. array cru de 4 números é RECUSADO (xywh e corners apontam lugares diferentes) (0.102667ms)
+✔ A7. string vazia, ruído puro e resposta não textual não viram coordenada (0.095958ms)
+✔ A8. modelo que declara ausência é respeitado — nunca convertido em palpite (0.427917ms)
+✔ A9. JSON quebrado é recusado, não remendado (0.077958ms)
+✔ A10. caixa degenerada (área não positiva ou cantos invertidos) é recusada (0.097041ms)
+✔ A11. número inválido não vira 0 nem NaN silencioso (0.152ms)
+✔ A12. confiança ausente ou fora de [0,1] vira 0 — não se inventa a régua do modelo (0.1515ms)
+✔ A13. dois candidatos são preservados — o primeiro NÃO é escolhido no parser (0.161542ms)
+✔ A14. excerpt é escrubado: credencial some, dígito longo vira [NUM] (0.081375ms)
+✔ A15. extractJsonCandidates respeita string e escape (chave dentro de string não conta) (0.096875ms)
+✔ A16. image_hash é sha256 real do PNG, conferido contra um cálculo independente (0.33975ms)
+✔ A17. nenhum caminho de parsing escreve em stdout/stderr (0.112625ms)
+✔ B1. endpoint fora do loopback é recusado na construção (fail closed) (0.37875ms)
+✔ B2. resposta boa via fetch injetado produz observação completa (0.909625ms)
+✔ B3. HTTP 500 devolve null e fica registrado — nunca vira caixa (0.203375ms)
+✔ B4. falha de transporte e timeout são distinguidos e registrados (0.255542ms)
+✔ B5. texto livre do modelo através do provider inteiro devolve null e registra (0.144875ms)
+✔ B6. modelo REAL do Ollama atravessando a política — pulada se 11434 não responder (11165.889458ms)
+ℹ qwen2.5vl:3b @ 640x400: RESOLVED em 11109ms — resolvido no 4º degrau por ollama/qwen2.5vl:3b
+ℹ alvo realmente desenhado: {"x":60,"y":60,"width":160,"height":80}
+ℹ caixa alegada pelo modelo: {"x":108,"y":112,"width":286,"height":143} conf=0.99
+✔ C0. cascata da FASE 3 é exatamente DOM → accessibility → semantic → vision → human (0.241667ms)
+✔ C1. DOM existe ⇒ resolve no 1º degrau e a visão NEM é consultada (73.353625ms)
+✔ C2. alvo só-pixel no <canvas> só é alcançado no 4º degrau, e a caixa aponta para os pixels certos (92.5715ms)
+✔ C3. alvo inexistente ⇒ TARGET_NOT_FOUND + escalada ao 5º degrau (34.312167ms)
+✔ C3b. sem VisionProvider injetado, o 4º degrau é PULADO e registrado como tal (19.46575ms)
+✔ C4. dois alvos idênticos no DOM ⇒ TARGET_AMBIGUOUS e a cascata PARA (visão não é consultada) (17.550458ms)
+✔ C5. visão que vê DOIS alvos parecidos ⇒ TARGET_AMBIGUOUS, sem pegar o primeiro (36.729583ms)
+✔ C6. confiança abaixo do limiar ⇒ VISION_UNCERTAIN (e o limiar é configurável) (116.933792ms)
+✔ C7. caixa fora da viewport NUNCA vira clique (115.578208ms)
+✔ C7b. caixa que cobre a viewport inteira é palpite, não alvo ⇒ VISION_UNCERTAIN (33.028458ms)
+✔ C7c. caixa sub-pixel do moondream real (0.8x0.8 declarada em 'pixels') não vira clique (34.1265ms)
+✔ C8. observação com image_hash de OUTRA imagem ⇒ STALE_OBSERVATION (33.010792ms)
+✔ C9. assertObservationCurrent: verde quando nada muda, STALE quando a tela muda (57.975917ms)
+✔ C10. página muda entre a percepção e o clique ⇒ guard devolve STALE_OBSERVATION (100.928208ms)
+✔ C11. overlay sobre o alvo DOM é detectado por elementFromPoint ⇒ OVERLAY_OBSTRUCTED + humano (67.315042ms)
+✔ C12. overlay que aparece DEPOIS da resolução por visão é pego pelo guard (58.545917ms)
+✔ C13. provedor que lança ⇒ PROVIDER_ERROR; provedor lento ⇒ PROVIDER_TIMEOUT (109.399ms)
+✔ C14. descritor sem campo utilizável ⇒ INVALID_REQUEST, nunca chute (11.261ms)
+✔ C15. guard recusa proteger uma resolução que não resolveu (37.470584ms)
+✔ C16. oclusão indeterminável NÃO é liberada (fail closed) (56.740417ms)
+✔ C17. LIMITE DECLARADO: a política valida a caixa MECANICAMENTE, não semanticamente (77.355042ms)
+✔ D1. todo VisionOutcome (menos RESOLVED) mapeia para um ActionErrorCode que EXISTE no contrato v1 (0.217458ms)
+✔ D2. toActionError preserva o outcome original em detail (tradução lossy só no código) (0.085667ms)
+✔ D3. RichVisionProvider satisfaz o VisionProvider do contrato — TargetResolver o aceita sem adaptador (41.096958ms)
+✔ D4. centerOf e o veredito de viewport concordam com a caixa real da fixture (9.668625ms)
+✔ D5. superfície pública do módulo está montada (0.117833ms)
+ℹ tests 50
+ℹ suites 0
+ℹ pass 50
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 12900.363667

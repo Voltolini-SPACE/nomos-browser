@@ -1,7 +1,7 @@
 {
-  "base": "http://127.0.0.1:55746",
-  "sessao": "ses_61128a7159854c47",
-  "quando": "2026-08-25T03:36:38.319Z",
+  "base": "http://127.0.0.1:53682",
+  "sessao": "ses_e9014e5e0e584bb3",
+  "quando": "2026-08-25T07:00:48.864Z",
   "resultados": [
     {
       "id": "E2E-01",
@@ -9,17 +9,17 @@
       "esperado": "carrinho passa a '1 item' e isTrusted=true",
       "observado": "find.verified=undefined click.verified=true extract=\"carrinho: 1 item | isTrusted=true\"",
       "passou": true,
-      "comando": "POST /api/v1/browser.open {url:http://127.0.0.1:55745/loja.html} ; browser.find ; browser.click ; browser.extract",
-      "ms": 362
+      "comando": "POST /api/v1/browser.open {url:http://127.0.0.1:53681/loja.html} ; browser.find ; browser.click ; browser.extract",
+      "ms": 372
     },
     {
       "id": "E2E-02",
       "nome": "navegar por resultados e extrair informação",
       "esperado": "extrai NOMOS-E2E-ARTIGO-7391 do artigo",
-      "observado": "artigo=\"O identificador canonico deste artigo e NOMOS-E2E-ARTIGO-7391.\" back.url=http://127.0.0.1:55745/busca.html",
+      "observado": "artigo=\"O identificador canonico deste artigo e NOMOS-E2E-ARTIGO-7391.\" back.url=http://127.0.0.1:53681/busca.html",
       "passou": true,
       "comando": "browser.goto busca.html ; browser.click #r1 ; browser.extract #fato",
-      "ms": 367
+      "ms": 376
     },
     {
       "id": "E2E-03",
@@ -28,25 +28,25 @@
       "observado": "nome.verified=false valor_lido=\"Validacao Final\" saida=CANCELADO",
       "passou": true,
       "comando": "browser.goto formulario.html ; browser.type #nome ; browser.type #email ; browser.click #cancelar",
-      "ms": 3485
+      "ms": 3496
     },
     {
       "id": "E2E-04",
       "nome": "SPA com conteúdo tardio",
       "esperado": "wait resolve e o conteúdo tardio aparece",
-      "observado": "wait=702ms app=\"rota: perfil | conteudo tardio NOMOS-SPA-OK\"",
+      "observado": "wait=704ms app=\"rota: perfil | conteudo tardio NOMOS-SPA-OK\"",
       "passou": true,
       "comando": "browser.goto spa.html ; browser.click #ir ; browser.wait text_present",
-      "ms": 876
+      "ms": 882
     },
     {
       "id": "E2E-05",
       "nome": "multi-aba: abrir, listar, trocar, fechar",
       "esperado": "2 abas, troca preserva estado, fecha volta a 1",
-      "observado": "abas 2->3->2; switch_volta.url=http://127.0.0.1:55745/artigo.html",
+      "observado": "abas 2->3->2; switch_volta.url=http://127.0.0.1:53681/artigo.html",
       "passou": true,
       "comando": "browser.new_tab ; browser.tabs ; browser.switch_tab ; browser.close_tab",
-      "ms": 107
+      "ms": 108
     },
     {
       "id": "E2E-06",
@@ -55,16 +55,16 @@
       "observado": "destino=/Users/AI/Projects/nomos-browser/evidence/nomos-browser-final-validation/10-e2e/out/downloads/nomos-e2e.txt bytes=40 conteudo=\"arquivo de recibo NOMOS-E2E-DOWNLOAD-OK\"",
       "passou": true,
       "comando": "browser.goto loja.html ; browser.download {target:#baixar}",
-      "ms": 165
+      "ms": 168
     },
     {
       "id": "E2E-07",
       "nome": "upload de arquivo de fixture",
       "esperado": "input recebe o arquivo e a página confirma o nome",
-      "observado": "upload_id=up_7673ec6e501640ca pagina=\"arquivo: upload-fixture.txt\"",
+      "observado": "upload_id=up_a0bff30e2fc64aca pagina=\"arquivo: upload-fixture.txt\"",
       "passou": true,
       "comando": "browser.goto formulario.html ; browser.upload {path:upload-fixture.txt, target:#arquivo}",
-      "ms": 53
+      "ms": 49
     },
     {
       "id": "E2E-07b",
@@ -82,7 +82,7 @@
       "observado": "falha.code=TARGET_NOT_FOUND sessao.state=undefined recuperou=SIM resultado=\"carrinho: 1 item | isTrusted=true\"",
       "passou": true,
       "comando": "browser.click alvo inexistente ; depois browser.click alvo válido",
-      "ms": 3217
+      "ms": 3197
     },
     {
       "id": "E2E-09",
@@ -91,16 +91,16 @@
       "observado": "ERRO: nenhum pacote de integração NOMOS/Gi existe. Chamadas externas encontradas: Binary file /Users/AI/Projects/nomos-browser/packages/core/src/verifier.ts matches\n/Users/AI/Projects/nomos-browser/packages/core/src/sanitize.ts:250: *   c) chamada JS de saída (`sendBeacon`, `new Image(`, `fetch(\"http…`).\n/Users/AI/Projects/nomos-browser/packages/core/src/taskengine.ts:760:  async",
       "passou": false,
       "comando": "busca por adaptador NOMOS no código de produção",
-      "ms": 76
+      "ms": 78
     },
     {
       "id": "E2E-10",
       "nome": "visão quando DOM/acessibilidade não bastam",
       "esperado": "runtime resolve alvo em <canvas> pelo degrau `vision` e clica dentro dele",
-      "observado": "ERRO: cascata nao resolveu o alvo visual. status=404 code=TARGET_NOT_FOUND detalhe={\"descriptor\":{\"semantic\":\"o botao vermelho escrito COMPRAR\"},\"attempted\":[\"semantic\",\"vision\"],\"trace\":[{\"strategy\":\"semantic\",\"outcome\":\"miss\",\"probe\":\"semantic(literal) sobre 19 tipos interativos\",\"candidates\":0,\"reason\":\"página sem elementos interativos\",\"duration_ms\":11},{\"strategy\":\"vision\",\"outcome\":\"skipped\",\"probe\":\"vision(\\\"o botao vermelho escrito COMPRAR\\\")\",\"candidates\":0,\"reason\":\"ne",
+      "observado": "ERRO: cascata nao resolveu o alvo visual. status=404 code=TARGET_NOT_FOUND detalhe={\"descriptor\":{\"semantic\":\"o botao vermelho escrito COMPRAR\"},\"attempted\":[\"semantic\",\"vision\"],\"trace\":[{\"strategy\":\"semantic\",\"outcome\":\"miss\",\"probe\":\"semantic(literal) sobre 19 tipos interativos\",\"candidates\":0,\"reason\":\"página sem elementos interativos\",\"duration_ms\":10},{\"strategy\":\"vision\",\"outcome\":\"skipped\",\"probe\":\"vision(\\\"o botao vermelho escrito COMPRAR\\\")\",\"candidates\":0,\"reason\":\"ne",
       "passou": false,
       "comando": "browser.goto vision.html ; browser.find {semantic:'botao vermelho COMPRAR'} (cascata deve chegar em vision)",
-      "ms": 25
+      "ms": 24
     },
     {
       "id": "E2E-AUD",
@@ -108,7 +108,7 @@
       "esperado": "actions.jsonl com todas as ações e sem segredo",
       "observado": "linhas=82 campos=[timestamp,event,session,browser,page,task,owner,actor,provider,action,capability,policy_decision,policy_reason,target,result,verified,error,detail,action_id]",
       "passou": true,
-      "comando": "leitura de /Users/AI/Projects/nomos-browser/evidence/nomos-browser-final-validation/10-e2e/out/sessions/ses_61128a7159854c47/actions.jsonl",
+      "comando": "leitura de /Users/AI/Projects/nomos-browser/evidence/nomos-browser-final-validation/10-e2e/out/sessions/ses_e9014e5e0e584bb3/actions.jsonl",
       "ms": 0
     }
   ]

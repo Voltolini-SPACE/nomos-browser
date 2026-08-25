@@ -1,0 +1,16 @@
+✔ SDK-01 createSession + goto + click emitem método, rota e corpo corretos (26.023917ms)
+✔ SDK-02 envelope com success=false vira NomosBrowserError preservando code/actionId/timing (6.700167ms)
+✔ SDK-03 detach() solta o cliente sem enviar DELETE; close() é que envia (3.097417ms)
+✔ SDK-04 events() entrega RuntimeEvent do WebSocket e aplica o filtro na query (4.384792ms)
+✔ SDK-05 servidor que não responde vira NomosBrowserError code TIMEOUT (253.899708ms)
+✔ SDK-06 stream reconecta com backoff e para no teto, sem loop infinito (39.357375ms)
+✔ SDK-07 cada método mapeia para a rota da tabela normativa (16.492ms)
+✔ SDK-08 resposta de ação sem envelope falha em vez de devolver null (3.208625ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 515.480084

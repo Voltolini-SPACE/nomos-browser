@@ -1,0 +1,23 @@
+✔ 1. o LaunchAgent existe, é plist válido e carrega a política exigida (7.548041ms)
+✔ 2. a label do produto não colide com nenhum serviço de produção (0.379708ms)
+✔ 3. service.sh oferece os oito subcomandos e é sintaticamente válido (11.995541ms)
+✔ 4. install RECUSA quando o plist no nosso caminho declara outra label (16.801125ms)
+✔ 5. status responde sem serviço instalado, em vez de estourar (62.968209ms)
+✔ 6. health sem daemon de pé responde FAIL, não trava nem mente (19.890458ms)
+✔ 7. DUAS instâncias sobre o mesmo runtime: a segunda RECUSA subir (919.270792ms)
+SUPERVISION=PASS
+SINGLE_OWNER=PASS
+RESTART_POLICY=PASS
+GRACEFUL_SHUTDOWN=PASS
+REBOOT_SAFETY=PASS (por RunAtLoad + bootstrap gui/UID; reboot real não executado — ver prova-supervisor.sh)
+✔ 8. trava OBSOLETA (pid morto) não emparedeia o daemon (470.343958ms)
+✔ 9. REBOOT_SAFETY — o que dá para provar, e a limitação declarada (0.570125ms)
+✔ 99. portões da FASE 14 (1.268167ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 10
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1640.228709
