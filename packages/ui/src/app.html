@@ -56,6 +56,26 @@
   .marca .dot[data-live="0"] { background: var(--nomos-erro); }
   .marca .dot[data-live="?"] { background: var(--nomos-aviso); }
 
+  /* ── FASE 18: histórico somente leitura ─────────────────────────── */
+  #hist-cab { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 6px 8px; border-bottom: 1px solid var(--linha); }
+  #hist-cab button { background: transparent; border: 1px solid var(--linha); border-radius: 4px; padding: 3px 8px; font-size: 11px; }
+  #hist-cab button:hover { border-color: var(--nomos-marca); }
+  /* O selo NÃO é decoração: ele só acende quando o runtime diz read_only. */
+  .selo-ro {
+    border: 1px solid var(--nomos-aviso); color: var(--nomos-aviso);
+    border-radius: 3px; padding: 1px 6px; font-size: 10px; letter-spacing: .08em;
+  }
+  .selo-ro[data-ro="0"] { display: none; }
+  #hist-meta { padding: 4px 8px; font-size: 11px; opacity: .8; }
+  #hist-alerta { padding: 4px 8px; font-size: 11px; color: var(--nomos-erro); }
+  #hist-alerta[hidden] { display: none; }
+  #hist-linha { overflow: auto; }
+  .hi { padding: 4px 8px; border-bottom: 1px solid var(--linha); font-size: 11px; display: flex; gap: 6px; }
+  .hi .h { opacity: .55; white-space: nowrap; }
+  .hi .f { opacity: .7; text-transform: uppercase; font-size: 9px; letter-spacing: .06em; align-self: center; }
+  .hi[data-fonte="action"] .f { color: var(--nomos-marca); }
+  .hi .l { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+
   /* ── corpo ──────────────────────────────────────────────────────── */
   main { display: grid; grid-template-columns: var(--rail) 1fr; min-height: 0; }
   nav {
@@ -219,7 +239,24 @@
     <div class="painel" id="p-sessions" hidden><div class="vazio">Nenhuma sessão.</div></div>
     <div class="painel" id="p-skills" hidden><div class="vazio">Nenhuma skill carregada.</div></div>
     <div class="painel" id="p-downloads" hidden><div class="vazio">Nenhum download.</div></div>
-    <div class="painel" id="p-history" hidden><div class="vazio">Sem histórico.</div></div>
+    <!--
+      FASE 18 — HISTÓRICO SOMENTE LEITURA.
+      Este painel não contém NENHUM controle que aja: sem clicar, sem digitar,
+      sem navegar. "Somente leitura" aqui não é um botão desabilitado que pode
+      voltar a habilitar — é a ausência da alavanca. E o selo abaixo acende
+      pelo `read_only` que o runtime devolve, nunca porque a tela deduziu que a
+      sessão parecia encerrada.
+    -->
+    <div class="painel" id="p-history" hidden>
+      <div id="hist-cab">
+        <button id="histRecarregar">Recarregar</button>
+        <span class="selo-ro" id="histSelo" data-ro="0">SOMENTE LEITURA</span>
+        <span class="selo-ro" id="histSelado" data-ro="0">SELADO</span>
+      </div>
+      <div id="hist-meta">Selecione uma sessão em <b>Sessions</b>.</div>
+      <div id="hist-alerta" hidden></div>
+      <div id="hist-linha"></div>
+    </div>
   </nav>
 
   <div id="palco">
@@ -317,6 +354,7 @@ for (const b of document.querySelectorAll('[role="tab"]')) {
       o.setAttribute("aria-selected", String(sel));
       $("p-" + o.dataset.aba).hidden = !sel;
     }
+    if (b.dataset.aba === "history") historico();
   });
 }
 
@@ -400,6 +438,75 @@ async function gestao(rota, metodo, corpo) {
   return r.json();
 }
 
+// ── FASE 18: histórico somente leitura ────────────────────────────────
+//
+// Nada aqui age. A função LÊ `/replay` e desenha. Se um dia alguém quiser
+// acrescentar um "repetir esta ação" a este painel, vai ter que criar a rota
+// de escrita que hoje não existe — e é essa fricção que faz READ_ONLY durar.
+function textoDe(item) {
+  const d = item.data || {};
+  if (item.source === "action") {
+    const extra = [d.capability, d.policy_decision, d.result].filter(Boolean).join(" · ");
+    return item.label + (extra ? "  (" + extra + ")" : "");
+  }
+  return item.label;
+}
+
+async function historico() {
+  const cab = $("hist-meta"), linha = $("hist-linha"), alerta = $("hist-alerta");
+  if (S.sessionId === null) {
+    cab.innerHTML = "Selecione uma sessão em <b>Sessions</b>.";
+    linha.innerHTML = ""; alerta.hidden = true;
+    $("histSelo").dataset.ro = "0"; $("histSelado").dataset.ro = "0";
+    return;
+  }
+  let r;
+  try {
+    r = await gestao("/api/v1/sessions/" + encodeURIComponent(S.sessionId) + "/replay");
+  } catch (e) {
+    // Não inventa um histórico vazio: diz que não conseguiu ler.
+    cab.textContent = "não foi possível ler o histórico desta sessão";
+    alerta.hidden = false; alerta.textContent = String(e.message || e);
+    linha.innerHTML = ""; $("histSelo").dataset.ro = "0"; $("histSelado").dataset.ro = "0";
+    return;
+  }
+
+  // O MODO vem do runtime. A tela não deduz.
+  $("histSelo").dataset.ro = r.read_only === true ? "1" : "0";
+  $("histSelado").dataset.ro = r.selado === true ? "1" : "0";
+
+  const c = r.contagens || {};
+  cab.textContent = r.session_id + " · " + (c.acoes || 0) + " ações · " + (c.eventos || 0) +
+    " eventos · " + (c.rede || 0) + " req · " + (c.screenshots || 0) + " imagens" +
+    (r.sealed_at ? " · selado em " + r.sealed_at : "");
+
+  // Leitura incompleta é DITA, nunca escondida numa linha do tempo mais curta.
+  const L = r.leitura || {};
+  const problemas = [];
+  if (L.linhas_corrompidas > 0) problemas.push(L.linhas_corrompidas + " linha(s) ilegível(is) na trilha");
+  if (Array.isArray(L.fontes_ausentes) && L.fontes_ausentes.length > 0) problemas.push("fontes ausentes: " + L.fontes_ausentes.join(", "));
+  if (L.result_erro) problemas.push("resultado: " + L.result_erro);
+  alerta.hidden = problemas.length === 0;
+  alerta.textContent = problemas.length === 0 ? "" : "histórico incompleto — " + problemas.join(" · ");
+
+  linha.innerHTML = "";
+  const itens = Array.isArray(r.timeline) ? r.timeline : [];
+  if (itens.length === 0) { linha.innerHTML = '<div class="vazio">Sem histórico gravado.</div>'; return; }
+  for (const item of itens) {
+    const d = document.createElement("div");
+    d.className = "hi"; d.dataset.fonte = item.source;
+    const h = document.createElement("span"); h.className = "h";
+    h.textContent = (item.timestamp || "").slice(11, 23) || "—";
+    const f = document.createElement("span"); f.className = "f"; f.textContent = item.source;
+    const l = document.createElement("span"); l.className = "l";
+    // textContent, não innerHTML: a trilha é dado gravado, não marcação.
+    l.textContent = textoDe(item);
+    d.append(h, f, l);
+    linha.appendChild(d);
+  }
+}
+$("histRecarregar").addEventListener("click", () => { historico(); });
+
 // ── saúde e sessões ───────────────────────────────────────────────────
 async function saude() {
   try {
@@ -426,7 +533,10 @@ async function sessoes() {
     d.innerHTML = "<b>" + s.session_id + "</b><br>" + s.status +
       " · perfil " + s.profile + " · controle " + s.control +
       "<br>" + (s.attached_client === null ? "sem cliente (viva)" : "cliente " + s.attached_client);
-    d.addEventListener("click", () => { S.sessionId = s.session_id; aplicarControle(s.control); sessoes(); });
+    d.addEventListener("click", () => {
+      S.sessionId = s.session_id; aplicarControle(s.control); sessoes();
+      if (!$("p-history").hidden) historico();
+    });
     p.appendChild(d);
   }
   if (S.sessionId === null) { S.sessionId = lista[0].session_id; aplicarControle(lista[0].control); }

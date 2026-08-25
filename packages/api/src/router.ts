@@ -41,6 +41,7 @@ export type RouteName =
   | "lease.transfer"
   | "lease.takeover"
   | "replay.verify"
+  | "replay.get"
   // FASE 17 — configuração como CONTRATO consultável. `config.schema` devolve a
   // FORMA (chaves, tipos, faixas, envs) sem valor nenhum; `config.get` devolve
   // os valores efetivos com os sensíveis redigidos. São rotas separadas porque
@@ -131,6 +132,18 @@ export const ROUTES: readonly RouteSpec[] = Object.freeze([
   // FASE 12 — verificação de integridade do replay pela API. A CLI é o caminho
   // do operador; esta rota é o caminho de quem já fala HTTP com o runtime.
   spec("GET", `${P}/sessions/:id/replay/verify`, "replay.verify", false),
+  // FASE 18 — HISTÓRICO SOMENTE LEITURA de uma sessão encerrada.
+  //
+  // Só GET. Não existe POST, PUT nem DELETE em `/replay`, e é isso que faz
+  // `REPLAY_MODE=READ_ONLY` ser uma propriedade da TABELA DE ROTAS e não uma
+  // promessa da interface: uma tela pode esquecer de esconder um botão, uma
+  // rota que não existe não pode ser chamada. O roteador responde 405 a
+  // qualquer método de escrita neste caminho, sem chegar ao daemon.
+  //
+  // Repare também que a rota é declarada ANTES de `/replay/verify` não importar:
+  // `matchSpec` casa por número de segmentos, então `/replay` (4) e
+  // `/replay/verify` (5) nunca disputam entre si.
+  spec("GET", `${P}/sessions/:id/replay`, "replay.get", false),
   // FASE 11 — "que credencial é esta?". Existe para que um cliente (o servidor
   // MCP, sobretudo) saiba ANTES de agir quais escopos ele carrega, e recuse a
   // chamada com uma mensagem útil em vez de arrancar um 403 do runtime depois

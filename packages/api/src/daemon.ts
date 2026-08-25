@@ -80,7 +80,7 @@ import {
   type LeaseResult,
 } from "../../core/src/lease.ts";
 import { verifyReplay } from "../../observability/src/replay-verify.ts";
-import { selarSessao } from "../../observability/src/replay.ts";
+import { lerSelo, loadReplay, selarSessao, timelineOf } from "../../observability/src/replay.ts";
 import { RecoveryManager } from "../../core/src/recovery.ts";
 import {
   decidir as decidirAutonomia,
@@ -88,7 +88,7 @@ import {
   PERFIL_DA_ROTA,
   rotasQueSempreAprovam,
 } from "../../core/src/autonomy.ts";
-import { RegistroDeAprovacoes } from "../../core/src/approvals.ts";
+import { paraExibicao, RegistroDeAprovacoes } from "../../core/src/approvals.ts";
 import { redactObject } from "../../observability/src/redact.ts";
 import { HealthWatchdog, type HealthEvent, type HealthStats } from "../../observability/src/watchdog.ts";
 
@@ -1762,6 +1762,98 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
         });
         return { ...r, previous_holder: anterior, revoked_lease_ids: soltos };
       }
+      // ── FASE 18 — HISTÓRICO SOMENTE LEITURA ───────────────────────────────
+      //
+      // Devolve a linha do tempo já fundida (`timelineOf`) da sessão gravada.
+      // NÃO reconstrói nada: o recorder é a fonte, esta rota é uma janela.
+      //
+      // Três cuidados que não são decoração:
+      //
+      //  1. `read_only: true` viaja NO CORPO. A interface não deve DEDUZIR que
+      //     está em replay porque "a sessão parece encerrada" — o runtime diz.
+      //     É a mesma regra que vale para `runtime_state` em `live.state`.
+      //
+      //  2. A sessão do replay NÃO é registrada como sessão viva. Ler o
+      //     histórico de `ses_x` não ressuscita `ses_x`, não cria lease e não
+      //     dá alvo para nenhuma rota de ação. Quem tentar agir sobre ela
+      //     recebe `SESSION_NOT_FOUND` do gate normal.
+      //
+      //  3. Os itens passam por `redactObject` ANTES de sair. A trilha em disco
+      //     já nasce sem segredo (medido na FASE 17), mas o replay é a
+      //     superfície onde uma sessão inteira é lida de uma vez, e uma
+      //     segunda camada aqui custa nada e cobre o dia em que uma fonte nova
+      //     for acrescentada ao bundle sem passar pela redação de origem.
+      case "replay.get": {
+        const bundle = await loadReplay(params.id!, {
+          ...(config.sessions_root !== null ? { root: config.sessions_root } : {}),
+        });
+        // "NÃO EXISTE" e "NÃO FEZ NADA" não são a mesma resposta.
+        //
+        // `loadReplay` devolve um bundle VAZIO para um diretório que nunca
+        // existiu — arrays vazios e todas as fontes em `missing`. Devolver isso
+        // como 200 faria a sessão inventada `ses_0000…` ficar indistinguível de
+        // uma sessão real que gravou pouco: mesma forma, mesmo `read_only`,
+        // mesma linha do tempo vazia. Quem lê a tela concluiria "essa sessão
+        // não fez nada" sobre uma sessão que nunca houve.
+        //
+        // A distinção não é inferida do CONTEÚDO (que é ambíguo): é o
+        // diretório da sessão existir ou não.
+        if (!existsSync(bundle.dir)) {
+          throw new ApiError("SESSION_NOT_FOUND", `sessão ${params.id!} não tem histórico gravado`);
+        }
+        const selo = await lerSelo(params.id!, {
+          ...(config.sessions_root !== null ? { root: config.sessions_root } : {}),
+        });
+        const linha = timelineOf(bundle).map((item) => ({
+          timestamp: item.timestamp,
+          source: item.source,
+          label: item.label,
+          index: item.index,
+          session_id: item.session_id,
+          action_id: item.action_id,
+          data: redactObject(item.data as unknown as Record<string, unknown>),
+        }));
+        await services.note({
+          session: params.id!,
+          event: "control",
+          action: "replay.read",
+          actor: ator,
+          result: "ok",
+          detail: { itens: linha.length, integro_na_leitura: bundle.errors.length === 0 },
+        });
+        return {
+          session_id: bundle.session_id,
+          // O contrato do modo. A UI LÊ isto; não infere.
+          read_only: true,
+          mode: "REPLAY",
+          selado: selo !== null,
+          sealed_at: selo?.sealed_at ?? null,
+          // Honestidade sobre a própria leitura: linhas corrompidas e fontes
+          // ausentes aparecem, em vez de sumirem numa linha do tempo mais curta
+          // que se apresentaria como completa.
+          leitura: {
+            linhas_corrompidas: bundle.errors.length,
+            fontes_ausentes: bundle.missing,
+            result_erro: bundle.result_error,
+          },
+          contagens: {
+            acoes: bundle.actions.length,
+            eventos: bundle.events.length,
+            rede: bundle.network.length,
+            screenshots: bundle.screenshots.length,
+          },
+          screenshots: bundle.screenshots.map((s) => ({
+            ref: path.basename(s.file).replace(/\.[^.]+$/, ""),
+            file: path.basename(s.file),
+            ...(typeof (s as unknown as Record<string, unknown>)["timestamp"] === "string"
+              ? { timestamp: (s as unknown as Record<string, unknown>)["timestamp"] }
+              : {}),
+          })),
+          resultado: bundle.result,
+          timeline: linha,
+        };
+      }
+
       // ── FASE 12 — verificação de integridade do replay ────────────────────
       case "replay.verify": {
         const relatorio = await verifyReplay(params.id!, {
@@ -1983,7 +2075,10 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
           // A tela mostra os argumentos REDIGIDOS. `redact` já é o que a
           // observabilidade usa na trilha; a tela de aprovação não pode ser a
           // única superfície do produto que exibe segredo em claro.
-          args_visiveis: redactObject(body) as Record<string, unknown>,
+          // DUAS camadas, e as duas precisam existir: `redactObject` pega os
+          // nomes de segredo conhecidos; `paraExibicao` pega o conteúdo que
+          // NÃO tem nome de segredo mas é digitado num campo que pode ser.
+          args_visiveis: paraExibicao(tool, redactObject(body) as Record<string, unknown>),
           nivel: veredito.nivel,
           motivo: veredito.motivo,
           consequencia: perfil?.consequencia ?? "consequência não declarada para esta rota",

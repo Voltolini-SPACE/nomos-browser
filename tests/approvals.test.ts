@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { impressaoDeArgs, RegistroDeAprovacoes } from "../packages/core/src/approvals.ts";
+import { impressaoDeArgs, paraExibicao, RegistroDeAprovacoes } from "../packages/core/src/approvals.ts";
 
 const BASE = {
   session_id: "ses_a",
@@ -244,4 +244,47 @@ test("19. o pedido carrega o que o usuário precisa para decidir", () => {
   assert.equal(p.nivel, "A2");
   assert.equal(p.rota, "browser.click");
   assert.deepEqual(p.args_visiveis, BASE.args_visiveis);
+});
+
+// --- mascaramento de segredo na tela de aprovação (FASE 17) ---
+// A tela de aprovação é a única superfície onde o texto digitado aparece antes
+// de ir para a página. Se ela mostra a senha em claro, o segredo vaza para
+// quem estiver olhando a tela — e para qualquer print dela.
+
+test("20. o texto digitado nunca aparece em claro no pedido", () => {
+  const fora = paraExibicao("browser.type", { text: "senha-secreta-123" });
+  assert.equal(String(fora["text"]).includes("senha-secreta-123"), false);
+  assert.equal(fora["text_oculto"], true);
+});
+
+test("21. o mascaramento preserva o que dá para decidir sem revelar", () => {
+  const fora = paraExibicao("browser.type", { text: "abcdef" });
+  // tamanho e pontas: o dono reconhece o que digitou sem que a tela o exponha
+  assert.equal(fora["text"], "[oculto: 6 caractere(s), a…f]");
+});
+
+test("22. texto de 1 e 2 caracteres não ganha pontas — seriam o texto inteiro", () => {
+  assert.equal(paraExibicao("browser.type", { text: "x" })["text"], "[oculto: 1 caractere(s)]");
+  assert.equal(paraExibicao("browser.type", { text: "xy" })["text"], "[oculto: 2 caractere(s)]");
+});
+
+test("23. os outros campos do pedido continuam visíveis", () => {
+  const fora = paraExibicao("browser.type", {
+    text: "senha",
+    target: { selector: "#password" },
+  });
+  assert.deepEqual(fora["target"], { selector: "#password" });
+});
+
+test("24. rotas que não digitam texto passam intactas", () => {
+  const args = { target: { selector: "#comprar" } };
+  assert.deepEqual(paraExibicao("browser.click", args), args);
+  assert.equal(paraExibicao("browser.click", args), args);
+});
+
+test("25. o argumento original não é mutilado — o produto ainda digita a senha", () => {
+  const args = { text: "senha-real" };
+  paraExibicao("browser.type", args);
+  assert.equal(args["text"], "senha-real");
+  assert.equal("text_oculto" in args, false);
 });

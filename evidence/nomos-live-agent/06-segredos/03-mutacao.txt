@@ -1,0 +1,10 @@
+# daemon :7798 · sessão ses_ae8322fa23bc487f · canário CANARIO-SEGREDO-I8VJJRKH
+[VAZOU] 1. o pedido de aprovação não mostra o segredo em claro — args_visiveis.text = "CANARIO-SEGREDO-I8VJJRKH"
+[VAZOU] 2. a lista de aprovações também não — VAZOU
+[PASS] 3. a trilha de auditoria em disco não guarda o segredo — nenhum arquivo
+[PASS] 4. nem o diretório de runtime — nenhum arquivo
+
+CANARIO=CANARIO-SEGREDO-I8VJJRKH
+SECRET_LEAK_IN_UI=SIM
+SECRET_LEAK_IN_AUDIT=0
+VAZAMENTOS=2

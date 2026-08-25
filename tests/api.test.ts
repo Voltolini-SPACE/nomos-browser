@@ -963,3 +963,193 @@ test("as rotas de configuração recusam método errado sem virar 404", async ()
   assert.equal(res.status, 405);
   assert.equal(res.headers.get("allow"), "GET");
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FASE 18 — REPLAY SOMENTE LEITURA
+//
+// "Somente leitura" é fácil de afirmar e fácil de perder. Aqui ela é medida em
+// três camadas independentes, porque cada uma falha de um jeito diferente:
+//
+//   1. ROTEAMENTO — não existe verbo de escrita em `/replay`. Uma tela pode
+//      esquecer de esconder um botão; uma rota que não existe não pode ser
+//      chamada. Esta é a camada que não depende de ninguém lembrar de nada.
+//   2. RESSURREIÇÃO — ler o histórico de uma sessão encerrada não a traz de
+//      volta. Sem isto, "read only" seria verdade sobre a ROTA e mentira sobre
+//      o SISTEMA: bastaria ler o replay e depois agir na sessão que voltou.
+//   3. HONESTIDADE — o replay relata o que não conseguiu ler, em vez de
+//      devolver uma linha do tempo mais curta que se apresenta como completa.
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface RespostaReplay {
+  session_id: string;
+  read_only: boolean;
+  mode: string;
+  selado: boolean;
+  leitura: { linhas_corrompidas: number; fontes_ausentes: string[]; result_erro: string | null };
+  contagens: { acoes: number; eventos: number; rede: number; screenshots: number };
+  timeline: { source: string; label: string; action_id: string | null }[];
+}
+
+/** Sessão real, ação real, encerrada — o insumo honesto do replay. */
+async function sessaoGravadaEEncerrada(): Promise<string> {
+  const criada = await call<SessionInfo>("POST", "/api/v1/sessions", {
+    owner: "teste-replay",
+    capabilities: { navigate: true, read: true },
+  });
+  const sid = criada.body.session_id;
+  await act("browser.open", { session_id: sid, url: fixture.base });
+  await act("browser.observe", { session_id: sid });
+  await call("DELETE", `/api/v1/sessions/${sid}`);
+  return sid;
+}
+
+test("FASE 18 — o replay devolve a linha do tempo REAL da sessão encerrada", async () => {
+  const sid = await sessaoGravadaEEncerrada();
+  const res = await call<RespostaReplay>("GET", `/api/v1/sessions/${sid}/replay`);
+  assert.equal(res.status, 200);
+  assert.equal(res.body.session_id, sid);
+
+  // O MODO vem do runtime, não é deduzido pela tela.
+  assert.equal(res.body.read_only, true);
+  assert.equal(res.body.mode, "REPLAY");
+
+  // Asserção vácua seria conferir só o formato. O que prova que isto é replay
+  // de ALGO é a ação real aparecer na linha do tempo com o rótulo dela.
+  assert.ok(res.body.contagens.acoes > 0, "nenhuma ação gravada — o replay está vazio");
+  const rotulos = res.body.timeline.map((i) => i.label).join(" | ");
+  assert.ok(/browser\.open/.test(rotulos), `browser.open não apareceu no replay: ${rotulos}`);
+  assert.ok(/browser\.observe/.test(rotulos), `browser.observe não apareceu no replay: ${rotulos}`);
+
+  // Honestidade da leitura: sem linhas corrompidas nesta sessão íntegra.
+  assert.equal(res.body.leitura.linhas_corrompidas, 0);
+});
+
+test("FASE 18 — READ_ONLY é propriedade da TABELA DE ROTAS, não da interface", async () => {
+  const sid = await sessaoGravadaEEncerrada();
+  // Nenhum verbo de escrita existe neste caminho. 405 (não 404) porque negar a
+  // existência da rota esconderia do cliente o que está lá.
+  for (const metodo of ["POST", "PUT", "PATCH", "DELETE"]) {
+    const res = await fetch(`${daemon.url}/api/v1/sessions/${sid}/replay`, {
+      method: metodo,
+      headers: { authorization: `Bearer ${TOKEN}` },
+    });
+    assert.equal(res.status, 405, `${metodo} /replay deveria ser 405, veio ${res.status}`);
+    assert.equal(res.headers.get("allow"), "GET", `${metodo} /replay: Allow errado`);
+  }
+  // Controle: o GET no MESMO caminho passa. Sem ele, os 405 acima poderiam vir
+  // de o caminho não existir.
+  const leitura = await call<RespostaReplay>("GET", `/api/v1/sessions/${sid}/replay`);
+  assert.equal(leitura.status, 200);
+});
+
+test("FASE 18 — ler o replay NÃO ressuscita a sessão", async () => {
+  const sid = await sessaoGravadaEEncerrada();
+  await call<RespostaReplay>("GET", `/api/v1/sessions/${sid}/replay`);
+
+  // Depois de ler o histórico inteiro, agir sobre aquela sessão continua sendo
+  // agir sobre algo que não existe.
+  const tentativa = await act("browser.observe", { session_id: sid });
+  assert.equal(tentativa.body.success, false, "a sessão do replay aceitou uma ação");
+
+  // O código é `CAPABILITY_DENIED`, não `SESSION_NOT_FOUND`, e isso foi MEDIDO,
+  // não presumido: o gate de lease roda antes da busca da sessão, e uma sessão
+  // encerrada não tem lease. A recusa acontece no portão MAIS CEDO possível —
+  // que é a ordem certa para um gate de segurança, ainda que o código diga
+  // menos sobre a causa do que "essa sessão não existe mais" diria.
+  //
+  // A asserção fixa o código de propósito: se um dia esta chamada passar a
+  // devolver sucesso — ou um erro que o cliente trate como "tente de novo" —
+  // o teste cai.
+  assert.equal(tentativa.body.error?.code, "CAPABILITY_DENIED");
+  assert.equal(
+    (tentativa.body.error?.detail as { reason?: string } | undefined)?.reason,
+    "CONTROL_NOT_OWNED",
+  );
+
+  // E ela não voltou para a listagem de sessões vivas.
+  const listadas = await call<SessionInfo[]>("GET", "/api/v1/sessions");
+  assert.equal(listadas.body.find((s) => s.session_id === sid), undefined);
+});
+
+test("FASE 18 — o replay relata o que não conseguiu ler, em vez de encurtar a linha do tempo", async () => {
+  const sid = await sessaoGravadaEEncerrada();
+  const antes = await call<RespostaReplay>("GET", `/api/v1/sessions/${sid}/replay`);
+  assert.equal(antes.body.leitura.linhas_corrompidas, 0);
+
+  // A sessão curta grava `actions.jsonl` e mais nada — `events.jsonl`,
+  // `network.jsonl`, `screenshots` e `result.json` nem existem, e o replay já
+  // os declara em `fontes_ausentes` em vez de fingir uma sessão completa.
+  assert.ok(
+    antes.body.leitura.fontes_ausentes.length > 0,
+    "esta sessão curta não grava todas as fontes — o replay deveria dizê-lo",
+  );
+
+  // Corrompe UMA linha da trilha que EXISTE. O modo de falha perigoso seria o
+  // replay engolir a linha quebrada e devolver 200 com uma linha do tempo
+  // silenciosamente incompleta — indistinguível de uma sessão que fez menos.
+  const trilha = path.join(sessionsRoot, sid, "actions.jsonl");
+  const original = await readFile(trilha, "utf8");
+  const { writeFile } = await import("node:fs/promises");
+  await writeFile(trilha, `${original}{isto nao e json\n`, "utf8");
+
+  const depois = await call<RespostaReplay>("GET", `/api/v1/sessions/${sid}/replay`);
+  assert.equal(depois.status, 200, "corrupção não deve derrubar a leitura — deve ser RELATADA");
+  assert.ok(
+    depois.body.leitura.linhas_corrompidas > 0,
+    "o replay engoliu a linha corrompida e se apresentou como íntegro",
+  );
+
+  await writeFile(trilha, original, "utf8");
+});
+
+test("FASE 18 — \"não existe\" não vira \"não fez nada\"", async () => {
+  // Uma sessão inventada e uma sessão real que gravou pouco têm exatamente a
+  // MESMA forma no bundle: arrays vazios e todas as fontes ausentes. Devolver
+  // 200 para as duas faria a tela afirmar "essa sessão não fez nada" sobre algo
+  // que nunca houve — uma mentira que parece um dado.
+  const inventada = await call<{ error?: { code?: string } }>(
+    "GET",
+    "/api/v1/sessions/ses_nunca_existiu_0000/replay",
+  );
+  assert.equal(inventada.status, 404);
+  assert.equal(inventada.body.error?.code, "SESSION_NOT_FOUND");
+
+  // Controle: uma sessão que EXISTE e gravou pouco continua sendo 200, com a
+  // ausência das fontes declarada em vez de escondida. Sem este controle, o 404
+  // acima poderia estar recusando todo replay.
+  const real = await sessaoGravadaEEncerrada();
+  const ok = await call<RespostaReplay>("GET", `/api/v1/sessions/${real}/replay`);
+  assert.equal(ok.status, 200);
+  assert.ok(ok.body.leitura.fontes_ausentes.length > 0);
+});
+
+test("FASE 18 — quem pode LER o replay não pode APROVAR, delegar modo nem retomar", async () => {
+  const sid = await sessaoGravadaEEncerrada();
+  const { secret } = daemon.auth.issue({ subject: "auditor", preset: "observe" });
+
+  // A trilha é o que torna auditável o que o agente fez. Trancá-la em ADMIN
+  // empurraria o auditor para fora, então OBSERVE lê.
+  const leitura = await callComToken<RespostaReplay>("GET", `/api/v1/sessions/${sid}/replay`, secret);
+  assert.equal(leitura.status, 200, "OBSERVE deveria poder auditar o replay");
+  assert.equal(leitura.body.read_only, true);
+
+  // Mas o mesmo portador não alcança nenhuma alavanca do dono. Este é o eixo
+  // inteiro do AUTO != BYPASS: quem age nunca é quem autoriza.
+  const proibidas: [string, string][] = [
+    ["POST", `/api/v1/approvals/apr_qualquer/approve`],
+    ["POST", `/api/v1/sessions/${sid}/autonomy`],
+    ["POST", `/api/v1/autonomy/default`],
+    ["POST", `/api/v1/sessions/${sid}/resume`],
+  ];
+  for (const [metodo, rota] of proibidas) {
+    const res = await callComToken<{ error?: { code?: string } }>(metodo, rota, secret);
+    assert.equal(res.status, 403, `${rota} deveria ser 403 para OBSERVE, veio ${res.status}`);
+    assert.equal(res.body.error?.code, "CAPABILITY_DENIED");
+  }
+
+  // Controle: PARAR nunca pode ser mais difícil que agir — e o token de AGENTE
+  // (não o de leitura) alcança o freio.
+  const agente = daemon.auth.issue({ subject: "agente", preset: "agent" });
+  const freio = await callComToken<unknown>("POST", `/api/v1/sessions/${sid}/pause`, agente.secret);
+  assert.notEqual(freio.status, 403, "o perfil de agente não alcança o próprio freio");
+});

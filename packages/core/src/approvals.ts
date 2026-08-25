@@ -108,6 +108,42 @@ export function impressaoDeArgs(args: Record<string, unknown>): string {
   return createHash("sha256").update(canonico(args)).digest("hex").slice(0, 16);
 }
 
+/**
+ * Prepara argumentos para a TELA DE APROVAÇÃO.
+ *
+ * `redactObject` da observabilidade mascara por NOME DE CHAVE — `password`,
+ * `token`, `authorization`, `api_key`. Isso cobre a trilha, e cobre bem. Mas
+ * `browser.type` carrega o que vai ser digitado em `text`, e `text` não é nome
+ * de segredo: um agente que digita uma senha num campo `<input type=password>`
+ * passa o valor em claro por ali.
+ *
+ * Foi medido, não suposto — o canário apareceu inteiro em `args_visiveis.text`
+ * (`evidence/nomos-live-agent/06-segredos/01-antes.txt`).
+ *
+ * A decisão, e o custo dela: `text` é SEMPRE mascarado aqui, mesmo quando não é
+ * segredo. Perde-se poder ver "Ana Ribeiro" antes de aprovar. Ganha-se que a
+ * tela mais compartilhada do produto — um console de agente é feito para ser
+ * assistido, gravado, projetado numa reunião — nunca exiba uma senha porque
+ * alguém não usou `credential_ref`. Entre errar para o lado de mostrar demais e
+ * o de mostrar de menos numa superfície assim, o segundo é o único que não
+ * produz um dano irreversível.
+ *
+ * O que sobra é suficiente para conferir: QUAL campo, QUANTOS caracteres, e as
+ * pontas. "Digitar 24 caracteres começando em A e terminando em 9 no campo
+ * #senha" é uma frase que dá para aprovar ou negar com consciência.
+ */
+export function paraExibicao(rota: string, args: Record<string, unknown>): Record<string, unknown> {
+  if (rota !== "browser.type") return args;
+  const fora: Record<string, unknown> = { ...args };
+  const bruto = fora["text"];
+  if (typeof bruto === "string" && bruto.length > 0) {
+    const pontas = bruto.length <= 2 ? "" : `${bruto[0]}…${bruto[bruto.length - 1]}`;
+    fora["text"] = `[oculto: ${bruto.length} caractere(s)${pontas === "" ? "" : `, ${pontas}`}]`;
+    fora["text_oculto"] = true;
+  }
+  return fora;
+}
+
 export interface OpcoesRegistro {
   /** Prazo de uma pendência. Esgotado = NEGADA. */
   ttl_ms?: number;

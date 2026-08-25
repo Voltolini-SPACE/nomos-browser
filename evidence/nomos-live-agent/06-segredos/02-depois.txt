@@ -1,0 +1,10 @@
+# daemon :7798 · sessão ses_67837ed3b7494f2b · canário CANARIO-SEGREDO-W9H4PZ4Z
+[PASS] 1. o pedido de aprovação não mostra o segredo em claro — args_visiveis.text = "[oculto: 24 caractere(s), C…Z]"
+[PASS] 2. a lista de aprovações também não — limpo
+[PASS] 3. a trilha de auditoria em disco não guarda o segredo — nenhum arquivo
+[PASS] 4. nem o diretório de runtime — nenhum arquivo
+
+CANARIO=CANARIO-SEGREDO-W9H4PZ4Z
+SECRET_LEAK_IN_UI=0
+SECRET_LEAK_IN_AUDIT=0
+VAZAMENTOS=0

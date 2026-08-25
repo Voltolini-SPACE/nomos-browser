@@ -1,0 +1,43 @@
+aiprovider                   OK      pass=41   fail=0   30s  mem=71% llm=0.0GB
+api                          OK      pass=42   fail=0   4s  mem=67% llm=0.0GB
+approvals                    OK      pass=26   fail=0   0s  mem=69% llm=0.0GB
+audit-forense                OK      pass=12   fail=0   1s  mem=69% llm=0.0GB
+auth                         OK      pass=24   fail=0   0s  mem=70% llm=0.0GB
+autonomy                     OK      pass=15   fail=0   0s  mem=70% llm=0.0GB
+backpressure-audit           OK      pass=13   fail=0   6s  mem=70% llm=0.0GB
+bench                        OK      pass=37   fail=0   1s  mem=71% llm=0.0GB
+cascata-percepcao            OK      pass=18   fail=0   4s  mem=71% llm=0.0GB
+cli                          OK      pass=35   fail=0   5s  mem=71% llm=0.0GB
+click-entrega                OK      pass=21   fail=0   9s  mem=72% llm=0.0GB
+config-schema                OK      pass=16   fail=0   1s  mem=72% llm=0.0GB
+e2e-gate                     OK      pass=12   fail=0   2s  mem=72% llm=0.0GB
+injection-wired              OK      pass=16   fail=0   1s  mem=72% llm=0.0GB
+lease                        OK      pass=37   fail=0   0s  mem=73% llm=0.0GB
+mcp                          OK      pass=36   fail=0   2s  mem=73% llm=0.0GB
+observability                OK      pass=22   fail=0   0s  mem=73% llm=0.0GB
+ownership                    OK      pass=11   fail=0   3s  mem=73% llm=0.0GB
+perception                   OK      pass=8    fail=0   1s  mem=73% llm=0.0GB
+pointer-keyboard             OK      pass=26   fail=0   2s  mem=73% llm=0.0GB
+policy-vault                 OK      pass=14   fail=0   2s  mem=73% llm=0.0GB
+product02-gate               OK      pass=3    fail=0   37s  mem=73% llm=0.0GB
+providers-runtime            OK      pass=14   fail=0   9s  mem=70% llm=0.0GB
+recovery-watchdog            OK      pass=24   fail=0   7s  mem=72% llm=0.0GB
+replay-hardening             OK      pass=44   fail=0   1s  mem=73% llm=0.0GB
+sdk-ts                       OK      pass=8    fail=0   0s  mem=73% llm=0.0GB
+security-files-secrets       OK      pass=38   fail=0   0s  mem=73% llm=0.0GB
+security-net-injection       OK      pass=22   fail=0   2s  mem=73% llm=0.0GB
+session                      OK      pass=12   fail=0   1s  mem=73% llm=0.0GB
+skills                       OK      pass=10   fail=0   0s  mem=74% llm=0.0GB
+supervisor                   OK      pass=10   fail=0   2s  mem=74% llm=0.0GB
+target-verifier              OK      pass=28   fail=0   2s  mem=74% llm=0.0GB
+task-engine                  OK      pass=19   fail=0   14s  mem=73% llm=0.0GB
+traceability                 OK      pass=7    fail=0   0s  mem=74% llm=0.0GB
+ui-build                     OK      pass=6    fail=0   1s  mem=74% llm=0.0GB
+vision                       OK      pass=50   fail=0   15s  mem=74% llm=0.0GB
+watchdog-wired               OK      pass=8    fail=0   9s  mem=59% llm=0.0GB
+
+TS_PASS=785
+TS_FAIL=0
+ARQUIVOS_OK=37
+ARQUIVOS_RUINS=0
+RESUMO=/Users/AI/Projects/nomos-browser/.suite/resumo.tsv

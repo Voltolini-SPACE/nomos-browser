@@ -128,6 +128,53 @@ export const ROUTE_SCOPE: Readonly<Record<string, Scope>> = Object.freeze({
   // serve porque um token limitado a UMA sessao passa aqui — a rota nao nomeia
   // sessao, entao a `session_allowlist` nao restringe nada.
   "queues.get": "ADMIN",
+  // ── Live Agent Console (FASES 13-18) ──────────────────────────────────────
+  //
+  // Estas rotas JÁ caíam em ADMIN pelo default de `scopeForRoute`. Estão aqui
+  // por DECLARAÇÃO, não por mudança: "certo por descuido" não é "certo por
+  // projeto". Enquanto o escopo delas dependia do default, bastava alguém
+  // abrandar o default — uma linha, com boa intenção — para que um token de
+  // agente passasse a aprovar as próprias ações. O teste `route-scope` abaixo
+  // fecha essa porta exigindo declaração explícita para TODA rota.
+  //
+  // O eixo é sempre o mesmo: quem PODE agir nunca pode ser quem AUTORIZA.
+  //
+  // Consulta do modo e das pendências: ADMIN. Não porque ler faça mal, mas
+  // porque estas rotas desenham, em laço, o que o dono está fazendo agora —
+  // mesmo raciocínio de `config.get` e `queues.get`.
+  "autonomy.get": "ADMIN",
+  "autonomy.default.get": "ADMIN",
+  "approvals.list": "ADMIN",
+  "live.state": "ADMIN",
+  // Definir o modo é DELEGAR autonomia. Se o portador de um token de agente
+  // pudesse se pôr em AUTO, `AUTO != BYPASS` continuaria verdadeiro no papel e
+  // vazio na prática: o agente escolheria sozinho o próprio nível de licença.
+  // A escolha do modo é do dono. ADMIN.
+  "autonomy.set": "ADMIN",
+  "autonomy.default.set": "ADMIN",
+  // Aprovar e negar são O ATO DO DONO. É a autorização humana inteira. Se um
+  // token de agente alcançasse esta rota, o agente aprovaria a própria compra
+  // e a aprovação viraria teatro. ADMIN — e note que estas duas rotas nomeiam
+  // `:approval_id`, não `:id` de sessão, então a `session_allowlist` não
+  // restringe nada aqui: o escopo é a única defesa.
+  "approvals.approve": "ADMIN",
+  "approvals.deny": "ADMIN",
+  // PARAR e RETOMAR não são simétricos, de propósito.
+  //
+  // Parar é CONTROL, o mesmo nível de `tasks.cancel`: interromper trabalho em
+  // curso nunca pode ser mais difícil do que iniciá-lo, senão o freio fica
+  // atrás de uma porta que o acelerador não tem.
+  //
+  // Retomar é ADMIN. Se o agente pausado pudesse se despausar, a pausa do
+  // operador duraria até a próxima linha do laço do agente — seria um pedido,
+  // não um freio. Quem parou é quem decide voltar.
+  "agent.pause": "CONTROL",
+  "emergency.stop": "CONTROL",
+  "agent.resume": "ADMIN",
+  // FASE 18 — replay é LEITURA de uma sessão que já terminou. Mesmo escopo de
+  // `replay.verify`, pelo mesmo motivo: a trilha é o que torna auditável o que
+  // o agente fez, e trancá-la em ADMIN empurraria o auditor para fora.
+  "replay.get": "OBSERVE",
   // Ler a PRÓPRIA credencial é o mínimo que qualquer portador pode fazer.
   "whoami": "OBSERVE",
   "events": "OBSERVE",

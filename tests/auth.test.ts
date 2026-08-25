@@ -24,6 +24,7 @@ import {
   type Scope,
 } from "../packages/api/src/auth.ts";
 import { ACTION_CLASS } from "../packages/core/src/contract.ts";
+import { ROUTES } from "../packages/api/src/router.ts";
 
 function tmpdir(): string {
   return mkdtempSync(path.join(os.tmpdir(), "nomos-auth-"));
@@ -172,6 +173,56 @@ test("escopos de rota separam leitura de controle e de administração", () => {
   assert.equal(ROUTE_SCOPE["sessions.create"], "CONTROL");
   assert.equal(ROUTE_SCOPE["sessions.takeover"], "ADMIN");
   assert.equal(ROUTE_SCOPE["sessions.release"], "ADMIN");
+});
+
+// ── FASE 18 — nenhuma rota pode depender do default ─────────────────────────
+//
+// `scopeForRoute` cai em ADMIN para rota desconhecida, e isso é a rede de
+// segurança certa. Mas rede de segurança não é projeto: enquanto uma rota REAL
+// dependesse dela, o escopo daquela rota seria um efeito colateral de uma linha
+// escrita para outro fim. Abrandar o default — um dia, com boa intenção, para
+// destravar um cliente — moveria em silêncio o escopo de toda rota não
+// declarada. Este teste exige DECLARAÇÃO.
+test("toda rota declarada na tabela tem escopo explícito — nenhuma vive do default", () => {
+  const nomes = [...new Set(ROUTES.map((r) => r.name))].filter((n) => n !== "action");
+  const semEscopo = nomes.filter((n) => ROUTE_SCOPE[n] === undefined);
+  assert.deepEqual(
+    semEscopo,
+    [],
+    `rotas sem escopo DECLARADO (hoje caem no default ADMIN por acaso): ${semEscopo.join(", ")}`,
+  );
+});
+
+// ── FASE 18 — quem age não autoriza ─────────────────────────────────────────
+//
+// O perfil `agent` é o que um agente autônomo carrega. Se ele alcançasse a
+// aprovação, `AUTO != BYPASS` viraria letra morta: o agente aprovaria a própria
+// ação. Se alcançasse `autonomy.set`, escolheria o próprio nível de licença.
+// Se alcançasse `agent.resume`, a pausa do operador duraria uma linha de laço.
+test("o perfil de agente não alcança aprovação, delegação de modo nem retomada", () => {
+  const doAgente = new Set(SCOPE_PRESETS["agent"]);
+  for (const rota of [
+    "approvals.approve",
+    "approvals.deny",
+    "autonomy.set",
+    "autonomy.default.set",
+    "agent.resume",
+  ]) {
+    assert.equal(
+      doAgente.has(scopeForRoute(rota)),
+      false,
+      `${rota} exige ${scopeForRoute(rota)}, que o perfil de agente possui — o agente autorizaria a si mesmo`,
+    );
+  }
+});
+
+// Parar é o contrapeso: nunca pode ser mais difícil do que agir.
+test("parar não é mais privilegiado do que agir", () => {
+  const doAgente = new Set(SCOPE_PRESETS["agent"]);
+  assert.equal(doAgente.has(scopeForRoute("agent.pause")), true);
+  assert.equal(doAgente.has(scopeForRoute("emergency.stop")), true);
+  // ...e retomar é, de propósito, mais difícil do que parar.
+  assert.notEqual(scopeForRoute("agent.pause"), scopeForRoute("agent.resume"));
 });
 
 test("download e upload não são o mesmo escopo que clicar", () => {
