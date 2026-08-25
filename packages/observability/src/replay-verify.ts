@@ -600,7 +600,33 @@ export async function verifyReplay(
   let atorAnterior: string | null = null;
   let atorAnteriorMs = Number.NaN;
   let atorAnteriorTs: string | null = null;
-  bundle.actions.forEach((entry, i) => {
+  // Compara ator SÓ entre registros de AÇÃO sobre a página.
+  //
+  // O reconhecimento usa DOIS sinais porque nenhum sozinho basta: `event`
+  // classifica o registro, mas nem toda trilha o traz preenchido; o nome
+  // `browser.*` vem do contrato e sobrevive a isso. Exigir só `event` fazia os
+  // controles negativos desta suíte pararem de acusar troca de ator real.
+  //
+  // O que C12 procura é um agente diferente passando a AGIR sem que um handoff
+  // explique a troca. Registros de plano de controle — `autonomy.changed`,
+  // `action.proposed`, `action.approved` — carregam legitimamente um ator
+  // diferente: quem decide é o dono, quem age é o agente. Essa alternância é a
+  // separação de poderes do produto, não uma troca de mãos.
+  //
+  // Medido antes desta correção: uma sessão normal com duas aprovações
+  // produzia 14 `TROCA_DE_DONO_SEM_EVENTO` e reprovava a própria integridade
+  // por estar funcionando como projetado. O sinal forense continua inteiro —
+  // um `browser.click` do agente A seguido de um do agente B sem handoff
+  // continua sendo erro.
+  // O índice ORIGINAL viaja junto: `registro` aponta para a linha real do
+  // arquivo, não para a posição na lista filtrada. Reportar a posição filtrada
+  // mandaria quem for conferir para a linha errada.
+  const ehAcaoDaPagina = (e: { event?: unknown; action?: unknown }): boolean =>
+    e.event === "action" || (typeof e.action === "string" && e.action.startsWith("browser."));
+  const acoesDaPagina = bundle.actions
+    .map((entry, indice) => ({ entry, indice }))
+    .filter((x) => ehAcaoDaPagina(x.entry));
+  acoesDaPagina.forEach(({ entry, indice: i }) => {
     const ator = typeof entry.actor === "string" ? entry.actor : "";
     const ms = msDe(entry.timestamp);
     if (atorAnterior !== null && ator !== atorAnterior) {

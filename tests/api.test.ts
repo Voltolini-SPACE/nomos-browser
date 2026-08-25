@@ -1153,3 +1153,105 @@ test("FASE 18 — quem pode LER o replay não pode APROVAR, delegar modo nem ret
   const freio = await callComToken<unknown>("POST", `/api/v1/sessions/${sid}/pause`, agente.secret);
   assert.notEqual(freio.status, 403, "o perfil de agente não alcança o próprio freio");
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FECHAR, SELAR E LER — três defeitos que a bateria de demos encontrou
+//
+// Os três tinham o mesmo formato: o produto se comportava bem e o VERIFICADOR
+// dizia que não. Em nenhum deles o verificador estava errado.
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface RelatorioVerificacao {
+  integro: boolean;
+  contagens: { erros: number; avisos: number };
+  problemas: { codigo: string; severidade: string; arquivo?: string }[];
+}
+
+test("fechar a sessão grava result.json e o bundle nasce ÍNTEGRO", async () => {
+  const criada = await call<SessionInfo>("POST", "/api/v1/sessions", {
+    owner: "dono-selo",
+    capabilities: { navigate: true, read: true },
+  });
+  const sid = criada.body.session_id;
+  await act("browser.open", { session_id: sid, url: fixture.base });
+  await call("DELETE", `/api/v1/sessions/${sid}`, { reason: "fim do caso" });
+
+  // Antes: o caminho de fechamento chamava `selarSessao()` direto e nunca
+  // escrevia `result.json`. O bundle nascia selado porém incompleto, e TODA
+  // sessão fechada pela API reprovava com "a sessão nunca fechou" — sobre uma
+  // sessão que tinha fechado.
+  const r = await call<RelatorioVerificacao>("GET", `/api/v1/sessions/${sid}/replay/verify`);
+  assert.equal(r.status, 200);
+  const erros = r.body.problemas.filter((p) => p.severidade !== "aviso");
+  assert.deepEqual(
+    erros.map((p) => p.codigo),
+    [],
+    `bundle recém-fechado deveria nascer íntegro; veio: ${JSON.stringify(erros)}`,
+  );
+  assert.equal(r.body.integro, true);
+});
+
+test("LER o replay não pode quebrar o selo do que ele lê", async () => {
+  const criada = await call<SessionInfo>("POST", "/api/v1/sessions", {
+    owner: "dono-leitura",
+    capabilities: { navigate: true, read: true },
+  });
+  const sid = criada.body.session_id;
+  await act("browser.open", { session_id: sid, url: fixture.base });
+  await call("DELETE", `/api/v1/sessions/${sid}`, { reason: "fim do caso" });
+
+  const trilha = path.join(sessionsRoot, sid, "actions.jsonl");
+  const antes = (await readFile(trilha, "utf8")).length;
+
+  // Ler e verificar, várias vezes. Uma rota somente leitura que muda aquilo que
+  // lê é a contradição que o replay existe para não cometer — e ela era real:
+  // `replay.read` era anotado no `actions.jsonl` DA SESSÃO, depois do selo.
+  await call("GET", `/api/v1/sessions/${sid}/replay`);
+  await call("GET", `/api/v1/sessions/${sid}/replay/verify`);
+  await call("GET", `/api/v1/sessions/${sid}/replay`);
+
+  const depois = (await readFile(trilha, "utf8")).length;
+  assert.equal(depois, antes, "ler o replay alterou a trilha selada da sessão");
+
+  const r = await call<RelatorioVerificacao>("GET", `/api/v1/sessions/${sid}/replay/verify`);
+  const divergencias = r.body.problemas.filter((p) => p.codigo === "SELO_DIVERGENTE");
+  assert.deepEqual(divergencias, [], "o selo foi quebrado por quem só deveria ler");
+  assert.equal(r.body.integro, true);
+});
+
+test("aprovar não é trocar de dono: sessão com aprovações verifica limpa", async () => {
+  const criada = await call<SessionInfo>("POST", "/api/v1/sessions", {
+    owner: "dono-aprova",
+    capabilities: { navigate: true, read: true, click: true },
+  });
+  const sid = criada.body.session_id;
+  // A ordem importa: `browser.open` é A2 e, em ASK, ficaria pendurada esperando
+  // uma aprovação que ninguém daria. Abre-se a página ANTES de ligar o modo.
+  await act("browser.open", { session_id: sid, url: fixture.base });
+  await call("POST", `/api/v1/sessions/${sid}/autonomy`, { mode: "ASK", by: "o-dono-humano" });
+
+  // Dispara sem esperar e aprova: em ASK a chamada fica pendurada até a decisão.
+  const emCurso = act("browser.click", { session_id: sid, target: { selector: "#botao" } });
+  for (let i = 0; i < 60; i += 1) {
+    await new Promise((r) => setTimeout(r, 60));
+    const fila = await call<{ pendentes: { approval_id: string; estado: string }[] }>(
+      "GET",
+      `/api/v1/sessions/${sid}/approvals`,
+    );
+    const pend = (fila.body.pendentes ?? []).filter((p) => p.estado === "PENDENTE");
+    if (pend.length === 0) continue;
+    await call("POST", `/api/v1/approvals/${pend[0]!.approval_id}/approve`, { by: "o-dono-humano" });
+    break;
+  }
+  await emCurso;
+  await call("DELETE", `/api/v1/sessions/${sid}`, { reason: "fim do caso" });
+
+  // O ator de uma DECISÃO é o humano; o de uma AÇÃO é o agente. Essa alternância
+  // é a separação de poderes do produto, não uma troca de mãos — e o verificador
+  // acusava 14 `TROCA_DE_DONO_SEM_EVENTO` numa sessão que funcionava como
+  // projetado.
+  const r = await call<RelatorioVerificacao>("GET", `/api/v1/sessions/${sid}/replay/verify`);
+  const trocas = r.body.problemas.filter((p) => p.codigo === "TROCA_DE_DONO_SEM_EVENTO");
+  assert.deepEqual(trocas, [], "aprovação humana foi lida como troca de dono");
+  assert.equal(r.body.integro, true, JSON.stringify(r.body.problemas.filter((p) => p.severidade !== "aviso")));
+});

@@ -1,5 +1,5 @@
-# daemon :7795 · sessão ses_08eb6870816e4adb
-[PASS] 1. a faixa mostra AGENTE, SESSÃO, STATUS, AUTONOMIA, OWNER e AÇÃO — agente=gi sessao=#4ADB status=CONTROLANDO owner=gi
+# daemon :7795 · sessão ses_ca93188f88e141b4
+[PASS] 1. a faixa mostra AGENTE, SESSÃO, STATUS, AUTONOMIA, OWNER e AÇÃO — agente=gi sessao=#41B4 status=CONTROLANDO owner=gi
 [PASS] 2. o controle de autonomia é SEMPRE visível — não vive em configuração — visivel=true
 [PASS] 3. marcar 'Perguntar' na tela muda o modo NO RUNTIME — runtime: modo=ASK escopo=SESSION
 [PASS] 4. e a faixa reflete — PERGUNTAR

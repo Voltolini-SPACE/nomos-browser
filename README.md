@@ -1,172 +1,347 @@
-# NOMOS Browser Runtime + NOMOS Web
+<div align="center">
 
-Infraestrutura universal de navegação para agentes de IA. O navegador vira um
-**recurso da plataforma**, não um brinquedo acoplado a um modelo específico.
+# NOMOS Browser
+
+**O navegador do seu agente, com você na sala.**
+
+Infraestrutura de navegação governada para agentes de IA. O navegador vira um
+recurso da plataforma, não um brinquedo acoplado a um modelo — e o dono vê,
+autoriza e interrompe o que o agente faz.
+
+`0.3.0-rc.1` · Node ≥ 22.6 · Chromium via Playwright · sem passo de build
+
+</div>
+
+---
+
+## O problema
+
+Dar a um agente o poder de usar um navegador é dar a ele o poder de comprar,
+enviar, apagar e vazar em nome de alguém. Isso costuma ser resolvido de dois
+jeitos ruins:
+
+- **confiança cega** — o agente age e o dono descobre depois;
+- **paralisia** — o agente pergunta tudo, e o dono clica "sim" no automático até
+  a aprovação virar reflexo.
+
+O NOMOS Browser separa **o que o dono já autorizou** do **que precisa de
+consentimento agora**, e torna a diferença visível, auditável e reversível.
+
+## Como fica
 
 ```
 NOMOS · Claude · Gemini · Qwen · Ollama · agente próprio
-                     │
-        MCP  ·  REST v1  ·  WebSocket  ·  SDK  ·  CLI
-                     │
-           NOMOS BROWSER RUNTIME
-                     │
-       Playwright · CDP · driver nativo
-                     │
-                  Chromium
+                        │
+      MCP  ·  REST v1  ·  WebSocket  ·  SDK  ·  CLI  ·  Live Agent Console
+                        │
+              NOMOS BROWSER RUNTIME
+        política → autonomia → aprovação → auditoria
+                        │
+                 Playwright · CDP
+                        │
+                     Chromium
 ```
 
-O ponto que define o produto: **o estado da navegação pertence ao Runtime, não ao
-modelo**. O agente desconecta, morre, ou é trocado por outro de outro fornecedor —
-a sessão continua viva, com as mesmas abas, cookies e task.
+O estado da navegação pertence ao **Runtime**, não ao modelo. O agente
+desconecta, morre ou é trocado por outro de outro fornecedor: a sessão continua
+viva, com as mesmas abas, cookies e task.
 
-## Estado atual — honesto
+---
 
-Medido em **2026-08-25**, HEAD `78491cc`.
+## Recursos
 
+| | |
+|---|---|
+| **Live Agent Console** | Espelho da página, cursor do agente, faixa de estado, feed de atividade, centro de aprovação e histórico somente leitura |
+| **Dois modos de autonomia** | `ASK` pergunta antes de cada ação que muda a página; `AUTO` executa sozinho o que você já autorizou |
+| **`AUTO` não é bypass** | O modo automático nunca remove uma aprovação obrigatória. Isso é topologia do código, não promessa |
+| **Aprovação com amarra** | Single-use, ligada à ação, à sessão e aos argumentos exatos. Aprovar "Cancelar" não autoriza "Confirmar compra" |
+| **Segredo mascarado** | O texto a digitar aparece como `[oculto: 24 caractere(s), C…Z]`: o bastante para decidir, nunca o bastante para vazar |
+| **Auditoria e replay** | Trilha encadeada por hash, selo ao encerrar a sessão, replay somente leitura em três camadas |
+| **Controle humano** | Assumir o volante congela o agente; devolvê-lo obriga a reobservar antes de agir |
+| **23 verbos, 16 ferramentas MCP** | Um contrato só, servido por MCP, REST, WebSocket, SDK e CLI |
+
+## Demonstração
+
+O Live Agent Console é servido pelo próprio runtime, na mesma origem, com CSP
+`connect-src 'self'` — não há CORS permissivo a explorar.
+
+```bash
+node packages/api/src/daemon.ts
+# abra a URL com o token que o daemon imprime
 ```
-run-suite.sh   TS_PASS=696  TS_FAIL=0  ARQUIVOS_OK=33  ARQUIVOS_RUINS=0
-sdk-python     Ran 31 tests ... OK
-```
 
-Medido contra o HEAD **commitado**; trabalho não commitado de outra frente na
-árvore no momento não entra na contagem.
-Evidência da medição: `evidence/nomos-browser-final-loop/18-docs/resumo.tsv`
-e `evidence/nomos-browser-final-loop/18-docs/sdk-python.out`. Números anteriores desta seção e do `EVIDENCIA.md`
-("269 testes", "238 pass", "552") eram de execuções antigas e foram substituídos.
+Roteiros reproduzíveis com resultado esperado estão em
+[`docs/demos.md`](docs/demos.md).
 
-| Área | Situação | Evidência |
-|---|---|---|
-| Núcleo do navegador (Chromium/CDP, DOM, AX, mouse, teclado) | **PASS** | erro de coordenada **0,000 px**, `isTrusted=true`; `tests/pointer-keyboard.test.ts`, `tests/e2e-gate.test.ts` |
-| Clique com **prova de entrega** | **PASS** | sem prova, devolve `TARGET_NOT_ACTIONABLE`/`CLICK_NOT_DELIVERED` — nunca sucesso otimista; `tests/click-entrega.test.ts` (21) |
-| Procedência anti-injeção **no caminho de execução** | **PASS** | `observe`/`extract` devolvem `provenance`; 8/8 ataques classificados alta, 6/6 páginas legítimas com o cru preservado; `tests/injection-wired.test.ts` (16) |
-| Auditoria forense (19 campos, negações, handoff, ator) | **PASS** | `AUDIT_COMPLETE=PASS` pelo script *intocado* da validação; `docs/AUDIT.md` |
-| Segurança do control plane (REST, WebSocket, MCP) | **PASS** | 53/53 vetores, `OPEN_SECURITY_P1=0`; `evidence/nomos-browser-final-loop/11-security/out/bateria-completa.json` |
-| Ownership com lease obrigatório | **PASS** | `allow_unleased` agora `false`; `tests/ownership.test.ts`, `tests/lease.test.ts` (37) |
-| Task engine persistente (checkpoint, retry, resume, idempotência) | **PASS** | `SIGKILL` no meio de 12 passos: retoma em 6/12, termina 12/12, **zero** passos repetidos; `docs/TASK-ENGINE.md` |
-| Providers de IA e visão **ligados ao runtime** | **PASS** | cascata chega ao degrau `vision`; erro medido **4,1 px** em alvo 160x100 |
-| Replay com selo de integridade | **PASS, com resíduo** | detecta adulteração/reordenação/truncamento; **o selo é hash sem chave** |
-| Watchdog e supervisão (launchd) | **PASS** | 11/11 passos contra o launchd real; **reboot real não testado** |
-| Integração NOMOS — **transporte** | **PASS** | `NOMOS_TRANSPORT_E2E=PASS`, 18/18 casos contra daemon e Chromium reais |
-| Integração NOMOS — **registro no catálogo** | **BLOQUEADO_POR_APROVACAO** | `nomos mcp confiar` é **ato do dono**; o pedido expirou por TTL sem resposta |
-| NOMOS Web (UI, cursor, takeover) | **PASS parcial** | renderiza e espelha, servida pelo próprio daemon; marca sai `PROPOSTA` |
-| Licença | **não escolhida** | `LICENSE` = todos os direitos reservados; escolher é ato do dono |
+---
 
-O que **não** está provado continua listado, com nome e motivo, em
-[`docs/LIMITATIONS.md`](docs/LIMITATIONS.md) e na seção "Ainda NÃO provado" de
-[`docs/EVIDENCIA.md`](docs/EVIDENCIA.md). Nada aqui é declarado PASS sem
-evidência executável.
-
-**Uma capacidade que depende de assinatura do dono não é uma capacidade pronta.**
-É o caso da integração NOMOS: o transporte está provado, o registro não é código
-— é consentimento, e ele não veio.
-
-## Requisitos
-
-- Node ≥ 22.6 (usa TypeScript nativo — **não há passo de build**)
-- Python ≥ 3.11 (apenas para o SDK Python)
-- macOS ou Linux (a supervisão via `scripts/service.sh` é **launchd**, ou seja, só macOS)
-
-## Começar
+## Instalação
 
 ```bash
 npm ci --include=dev
 npx playwright install chromium
 ```
 
-`--include=dev` não é decoração: nesta máquina `NODE_ENV=production` e
-`npm config omit=dev` fazem `npm ci` **pular as devDependencies**, e o typecheck
-falha depois com "This is not the tsc command you are looking for". Detalhes em
+`--include=dev` não é decoração: com `NODE_ENV=production` ou
+`npm config omit=dev`, o `npm ci` pula as devDependencies e o typecheck falha
+depois com *"This is not the tsc command you are looking for"*. Detalhes em
 [`docs/INSTALLATION.md`](docs/INSTALLATION.md).
 
-Provar que o controle do navegador é real:
+**Não há passo de build** para o runtime: o Node executa TypeScript nativamente.
+A interface tem um passo próprio (`node packages/ui/build.ts`) porque lê os
+tokens de marca do cofre a cada geração.
+
+## Quick start
 
 ```bash
-node spike/fase1_spike.ts        # 25/25
+# 1. subir o runtime
+node packages/api/src/daemon.ts &
+
+# 2. estado
+node packages/cli/src/main.ts health
+
+# 3. abrir uma página (a sessão nasce com a política padrão)
+node packages/cli/src/main.ts open https://example.com
+
+# 4. ver o que ficou gravado
+node packages/cli/src/main.ts sessions
+node packages/cli/src/main.ts replay <SESSION_ID>
 ```
 
-Rodar a suíte — use o executor, não `node --test tests/` direto:
+A CLI **nunca concede capability sensível**: sessão criada por ela nasce com
+download, upload, send, purchase, payment e delete negados.
+
+## Exemplos
 
 ```bash
-bash scripts/run-suite.sh --out /tmp/suite
+# capturar a tela de uma sessão
+node packages/cli/src/main.ts screenshot <SESSION_ID> --out /tmp/tela.png
+
+# entregar um objetivo ao agente
+node packages/cli/src/main.ts task --session <SESSION_ID> "encontre o preço do plano anual"
+
+# acompanhar os eventos ao vivo
+node packages/cli/src/main.ts events --session <SESSION_ID>
+
+# verificar a integridade do replay gravado
+node packages/cli/src/main.ts replay verify <SESSION_ID>
 ```
 
-O runner do Node paraleliza por CPU; sob pressão de memória o processo morre no
-meio e deixa saída truncada **sem linha de sumário**, que parece sucesso. O
-`run-suite.sh` roda um arquivo por vez e um arquivo morto aparece como `MORTO`.
+---
 
-Subir o daemon (`127.0.0.1:7777`):
+## ASK e AUTO
+
+A hierarquia, e a ordem **é** a garantia:
+
+```
+POLÍTICA DO DONO → MODO DE AUTONOMIA → CAPABILITY DO NOMOS → GATES DE APROVAÇÃO → AÇÃO
+```
+
+### `ASK` — perguntar
+
+Leituras passam direto. Toda ação que muda a página para e pergunta, com
+consequência e recurso escritos em português, para que a decisão seja consciente
+e não um clique reflexo.
+
+Aprovar uma `browser.task` **não** é cheque em branco: cada passo que o plano
+decidir executar reentra no portão.
+
+### `AUTO` — agir sem perguntar
+
+O agente executa sozinho tudo o que você já autorizou pela sua política. O que
+**não** muda:
+
+- ações com efeito financeiro, envio externo ou irreversibilidade alta continuam
+  pedindo aprovação — `browser.upload` pergunta em `AUTO` porque *envia dado seu
+  para fora, e isso não se retira*;
+- rota sem perfil de risco declarado cai em "sempre aprovar" (fail-closed);
+- se o estado de autonomia não puder ser comprovado (runtime caído, reconexão),
+  a interface **nunca** mostra `AUTO`: cai para desconhecido e trata como `ASK`.
+
+`AUTO != BYPASS` não é uma promessa de documentação. O portão de autonomia roda
+**depois** de capability e de controle humano: quando ele executa, tudo que a
+política nega já devolveu `403`. Não existe ramo no código que transforme um
+`deny` em `allow`.
+
+Mais em [`docs/ask-mode.md`](docs/ask-mode.md) e
+[`docs/auto-mode.md`](docs/auto-mode.md).
+
+## Segurança
+
+- **Autenticação por token com escopos** (`OBSERVE`, `NAVIGATE`, `INPUT`,
+  `DOWNLOAD`, `UPLOAD`, `SECRET`, `CONTROL`, `ADMIN`). Toda rota tem escopo
+  **declarado**; nenhuma vive do default.
+- **Quem age não autoriza.** O perfil de agente não alcança aprovar, delegar modo
+  nem retomar. Parar, sim: `pause` e `emergency-stop` nunca podem ser mais
+  difíceis do que agir.
+- **Política fail-closed** por capability, com `A6_DESTRUCTIVE` negado.
+- **Anti-SSRF**: navegar para host interno é ato explícito, nunca inferido.
+- **Procedência anti-injeção** no caminho de execução: `observe` e `extract`
+  devolvem `provenance`.
+- **Lease de controle** obrigatório (`allow_unleased: false`).
+- **Segredos** não aparecem na interface, na auditoria nem no replay.
+
+O modelo de ameaça T1–T10, **com resíduos declarados**, está em
+[`docs/SECURITY.md`](docs/SECURITY.md).
+
+Nada aqui afirma "100% seguro". Nenhuma medida sustenta isso, e nenhuma jamais
+sustentará.
+
+## Auditoria e replay
+
+Trilha de 19 campos por ação, encadeada por hash, com redação de segredo na
+origem. Ao encerrar, a sessão é **selada**.
+
+O replay é somente leitura em três camadas independentes: não existe verbo de
+escrita na rota (405 + `Allow: GET`); ler o histórico não ressuscita a sessão; e
+o modo é **declarado** pelo runtime, não deduzido pela tela.
+
+Ele também é honesto sobre a própria leitura: relata linhas corrompidas e fontes
+ausentes em vez de devolver uma linha do tempo mais curta que se apresenta como
+completa. Sessão que nunca existiu é `404`, não um replay vazio de `200`.
+
+Ver [`docs/audit-and-replay.md`](docs/audit-and-replay.md).
+
+## MCP
+
+16 ferramentas, sem acoplamento a modelo:
+
+`browser_navigate` · `browser_observe` · `browser_find` · `browser_extract` ·
+`browser_screenshot` · `browser_click` · `browser_type` · `browser_press` ·
+`browser_scroll` · `browser_tabs` · `browser_tab_open` · `browser_tab_switch` ·
+`browser_tab_close` · `browser_download` · `browser_upload` · `browser_task`
+
+No ecossistema NOMOS, o browser é uma **capability governada** pela política do
+dono, com catálogo assinado e confiança por impressão do manifesto normalizado.
+Ver [`docs/mcp.md`](docs/mcp.md) e
+[`docs/NOMOS-INTEGRATION.md`](docs/NOMOS-INTEGRATION.md).
+
+## Configuração
+
+51 chaves, consultáveis pelo próprio runtime:
 
 ```bash
-node packages/api/src/daemon.ts
+curl -s localhost:7777/api/v1/config/schema   # a FORMA (pública)
+curl -s localhost:7777/api/v1/config          # os VALORES efetivos (ADMIN)
 ```
 
-Como serviço supervisionado (macOS):
+A separação é deliberada: *"o que existe?"* pode ser respondida a qualquer
+portador; *"o que está valendo aqui?"* não. Ver
+[`docs/CONFIGURATION.md`](docs/CONFIGURATION.md).
+
+## Troubleshooting
+
+Sintoma → causa → verificação → correção em
+[`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md).
+
+---
+
+## Desenvolvimento
 
 ```bash
-bash scripts/service.sh install && bash scripts/service.sh start
-bash scripts/service.sh health
+npx tsc --noEmit                    # tipos
+bash scripts/run-suite.sh           # suíte inteira, um arquivo por vez
+bash scripts/run-suite.sh --fast    # pula browser/bench
+bash scripts/regressao-completa.sh  # 15 etapas, um veredito
+bash scripts/limpar-orfaos.sh       # higiene por prova de posse
 ```
 
-Ver a NOMOS Web:
+Use o executor, não `node --test tests/` direto. O runner do Node paraleliza por
+CPU; sob pressão de memória o processo morre no meio e deixa saída truncada
+**sem linha de sumário**, que parece sucesso. O `run-suite.sh` roda um arquivo
+por vez, e um arquivo morto aparece como `MORTO`.
 
-```bash
-node packages/ui/serve.ts
+## Testes
+
+Medido em `HEAD 6964cf0`:
+
+```
+suíte TypeScript     789 passes · 0 falhas · 37/37 arquivos
+E2E do Live Agent    106 casos  · 9 baterias
+sala limpa           14/14 passos, a partir de clone do HEAD
+regressão completa   15 etapas · 0 falha · 0 não-executada
 ```
 
-## Provas, não alegações
-
-O projeto se recusa a chamar de PASS o que não foi observado. Dois exemplos do
-que isso significa na prática:
+O projeto se recusa a chamar de PASS o que não foi observado. Dois exemplos:
 
 **O controle do navegador é real.** Um clique sintetizado por JavaScript chega à
-página com `isTrusted=false`; um clique despachado por CDP chega com `true`. O
-spike testa os dois — o segundo prova o controle, o primeiro prova que o teste
-não é vácuo. Sem esse controle negativo, "controlamos o Chromium" seria uma
-frase.
+página com `isTrusted=false`; um despachado por CDP chega com `true`. O spike
+testa os dois — o segundo prova o controle, o primeiro prova que o teste não é
+vácuo.
 
-**O screenshot corresponde ao DOM.** O runtime traz um decodificador PNG próprio
-para conferir que o pixel no centro do retângulo do elemento tem a cor daquele
-elemento — mais um controle negativo provando que um pixel fora dele tem cor
-diferente. Sem isso, a camada de visão operaria sobre um mapa não verificado.
+**O contador de aprovações não é cego.** Sob mutação do produto,
+`UNEXPECTED_APPROVAL_PROMPTS` sai de `0` para `3` e para `5` conforme o defeito
+injetado. Um contador que ficasse em zero sob mutação não estaria medindo nada.
+
+## Limitações conhecidas
+
+- **`p99` não é reportado** em nenhum caminho de latência: 30 amostras exigem 100
+  para sustentar um p99. Nenhum máximo observado é chamado de p99.
+- **Não há rota HTTP para emitir token com escopo** — existe na API interna.
+- **O ramo `pr.page.isClosed()` é inalcançável** em operação normal; é defesa de
+  corrida, não cobertura.
+- **A faixa de estado da interface atualiza por polling de 700 ms.** Os eventos
+  chegam em ~1 ms; a faixa, não.
+- Validado em **macOS/Apple Silicon**. Outras plataformas não foram medidas.
+
+A lista completa, com números, está em
+[`docs/LIMITATIONS.md`](docs/LIMITATIONS.md), e o que é `PROVEN` contra o que é
+`MEASURED` ou `NOT PROVEN` está em
+[`PRODUCT_TRUTH_MATRIX.md`](PRODUCT_TRUTH_MATRIX.md).
+
+## Roadmap
+
+Em [`ROADMAP.md`](ROADMAP.md). O que está lá são dívidas legítimas, não
+promessas de data.
+
+---
 
 ## Documentação
 
-| Arquivo | Conteúdo |
+**Comece por aqui**
+
+| | |
 |---|---|
-| [INSTALLATION.md](docs/INSTALLATION.md) | Requisitos, instalação, serviço, verificação |
-| [CONFIGURATION.md](docs/CONFIGURATION.md) | Grupos de configuração e as chaves sem as quais a funcionalidade não existe |
-| [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Sintoma → causa → verificação → correção |
-| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Camadas, módulos e o porquê de cada decisão |
-| [API.md](docs/API.md) | Tabela de rotas normativa da API v1 |
-| [TASK-ENGINE.md](docs/TASK-ENGINE.md) | Estados, checkpoint, idempotência, retry, cancel, resume |
-| [RECOVERY.md](docs/RECOVERY.md) | O que sobrevive ao quê — e o que não sobrevive |
-| [AUDIT.md](docs/AUDIT.md) | Schema de 19 campos, redação, como ler e verificar |
-| [SECURITY.md](docs/SECURITY.md) | Modelo de ameaça T1–T10, com resíduos declarados |
-| [LIMITATIONS.md](docs/LIMITATIONS.md) | Limites **medidos**, com números |
-| [EVIDENCIA.md](docs/EVIDENCIA.md) | Registro de evidência (OBSERVADO / MEDIDO / REPRODUZIDO) |
-| [RASTREABILIDADE.md](docs/RASTREABILIDADE.md) | Matriz requisito → artefato → teste → status |
-| [NOMOS-INTEGRATION.md](docs/NOMOS-INTEGRATION.md) | Manifesto MCP, níveis de risco e o registro pendente |
-| [GI-INTEGRATION.md](docs/GI-INTEGRATION.md) | Binding da Gi pelo caminho canônico do NOMOS |
-| [VISION-PROVIDER.md](docs/VISION-PROVIDER.md) | Escolha e medição do provider de visão |
-| [DECISAO-DRIVER-NATIVO.md](docs/DECISAO-DRIVER-NATIVO.md) | Por que não há driver nativo |
-| [BRAND.md](docs/BRAND.md) | Portão de marca da NOMOS Web |
-| [RELEASE.md](docs/RELEASE.md) | Como se faz uma versão |
-| [CHANGELOG.md](CHANGELOG.md) | Keep a Changelog — nada lançado ainda |
+| [quickstart.md](docs/quickstart.md) | Do zero ao primeiro browser task |
+| [live-agent-console.md](docs/live-agent-console.md) | O console, seus estados e controles |
+| [ask-mode.md](docs/ask-mode.md) · [auto-mode.md](docs/auto-mode.md) | Os dois modos, e o que não muda entre eles |
+| [demos.md](docs/demos.md) | Roteiros reproduzíveis |
+
+**Referência**
+
+| | |
+|---|---|
+| [INSTALLATION.md](docs/INSTALLATION.md) · [CONFIGURATION.md](docs/CONFIGURATION.md) · [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Instalar, configurar, destravar |
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md) · [API.md](docs/API.md) | Camadas e rotas |
+| [browser-control.md](docs/browser-control.md) · [tasks.md](docs/tasks.md) · [TASK-ENGINE.md](docs/TASK-ENGINE.md) | Verbos, alvos e o motor de task |
+| [security-overview.md](docs/security-overview.md) · [SECURITY.md](docs/SECURITY.md) | Segurança do produto e modelo de ameaça |
+| [audit-and-replay.md](docs/audit-and-replay.md) · [AUDIT.md](docs/AUDIT.md) | Trilha, selo e replay |
+| [mcp.md](docs/mcp.md) · [NOMOS-INTEGRATION.md](docs/NOMOS-INTEGRATION.md) · [GI-INTEGRATION.md](docs/GI-INTEGRATION.md) | Integrações |
+| [RECOVERY.md](docs/RECOVERY.md) · [VISION-PROVIDER.md](docs/VISION-PROVIDER.md) | O que sobrevive ao quê; visão |
+| [LIMITATIONS.md](docs/LIMITATIONS.md) · [EVIDENCIA.md](docs/EVIDENCIA.md) · [RASTREABILIDADE.md](docs/RASTREABILIDADE.md) | Limites, evidência, rastreabilidade |
+| [RELEASE.md](docs/RELEASE.md) · [CHANGELOG.md](CHANGELOG.md) | Como se faz uma versão; o que mudou |
 
 ## Marca
 
-A NOMOS Web sai marcada **PROPOSTA**: a marca NOMOS está vigente na v1.0 porém
-sem documento de congelamento, então `brand-resolve --require-official` devolve
-`rc=1` (fail-closed). Congelar é ato do dono, nunca do agente. Os tokens são
-lidos do cofre a cada build e **não** são versionados neste repositório.
+A marca NOMOS está **congelada na v1.0** e o resolvedor oficial responde `rc=0`.
+Os tokens são lidos do cofre a cada build e **não** são versionados neste
+repositório — copiar token de marca para arquivo intermediário é proibido pelo
+contrato de governança. Ver [`docs/BRAND.md`](docs/BRAND.md).
 
 ## Licença
 
-**Não escolhida.** [`LICENSE`](LICENSE) declara *todos os direitos reservados* —
-que é o estado legal padrão de uma obra sem licença, não uma decisão nova.
-Nenhuma permissão é concedida a terceiros.
+**Proprietária — todos os direitos reservados.** [`LICENSE`](LICENSE) não concede
+nenhuma permissão a terceiros: é o estado legal padrão de uma obra sob direito
+autoral, escrito explicitamente para que quem lê saiba.
 
-Adotar uma licença aberta (MIT, Apache-2.0, AGPL-3.0…) é **ato do dono**: o
-arquivo explica o efeito de cada opção e os passos exatos para trocar. O titular
-declarado no `LICENSE` hoje é um **placeholder** derivado da identidade do commit
-HEAD, e está marcado como tal.
+O titular declarado no arquivo é um **placeholder** derivado da identidade do
+commit HEAD, e está marcado como tal. Antes de qualquer distribuição, o dono
+precisa decidir o titular legal e se o produto será source-available proprietário
+ou licenciado. **Nenhum agente tem autoridade para escolher isso.**
+
+<div align="center">
+
+Parte do ecossistema **NOMOS** · [voltolini.space](https://voltolini.space)
+
+</div>

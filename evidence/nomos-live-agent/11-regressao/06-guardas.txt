@@ -1,2 +1,6 @@
 SHELL_EXPANSION_SAFE=YES (22 scripts .sh varridos)
-VERSION_COHERENT=YES (0.2.0 em 13 declarantes)
+VERSION_COHERENT=YES (0.3.0-rc.1 em 13 declarantes)
+AUTOTESTE_MARCAR_VERSAO=PASS (troca a chave certa e não toca em dependência)
+AUTOTESTE_LINKS=PASS (pega link ausente e caixa divergente)
+
+DOCS_LINKS_OK=YES (0 quebrado(s))

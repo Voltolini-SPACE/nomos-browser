@@ -81,6 +81,7 @@ import {
 } from "../../core/src/lease.ts";
 import { verifyReplay } from "../../observability/src/replay-verify.ts";
 import { lerSelo, loadReplay, selarSessao, timelineOf } from "../../observability/src/replay.ts";
+import { RUNTIME_BUCKET } from "../../observability/src/audit.ts";
 import { RecoveryManager } from "../../core/src/recovery.ts";
 import {
   decidir as decidirAutonomia,
@@ -1253,8 +1254,28 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
         });
         let selo_arquivos: number | null = null;
         try {
-          const selo = await selarSessao(id, config.sessions_root !== null ? { root: config.sessions_root } : {});
-          selo_arquivos = selo.files.length;
+          // FECHAR É ESCREVER `result.json` E SÓ ENTÃO SELAR.
+          //
+          // Antes, este caminho chamava `selarSessao()` direto e nunca escrevia
+          // `result.json`. O bundle nascia selado porém INCOMPLETO, e o
+          // verificador — corretamente — reprovava toda sessão fechada pela API
+          // com `RESULT_AUSENTE: a sessão nunca fechou`. A sessão tinha fechado;
+          // quem não tinha fechado era o gravador.
+          //
+          // `recorder.finish()` drena as escritas pendentes, grava o desfecho e
+          // sela DEPOIS — que é a ordem que o próprio `finish()` documenta: um
+          // selo tirado antes do último arquivo já nasce obsoleto.
+          const gravador = services.recorderFor(id);
+          if (gravador !== null) {
+            await gravador.finish({ closed: true, reason: typeof body.reason === "string" ? body.reason : null });
+            const selo = await lerSelo(id, config.sessions_root !== null ? { root: config.sessions_root } : {});
+            selo_arquivos = selo?.files.length ?? null;
+          } else {
+            // Observabilidade desligada por configuração: não há gravador, e
+            // selar o que existe continua sendo melhor do que não selar nada.
+            const selo = await selarSessao(id, config.sessions_root !== null ? { root: config.sessions_root } : {});
+            selo_arquivos = selo.files.length;
+          }
         } catch (e) {
           // Aqui a anotação de falha NÃO invalida nada: não há selo para quebrar.
           console.error(`[daemon] selo de replay falhou para ${id}:`, (e as Error).message);
@@ -1476,7 +1497,12 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
           event: "policy",
           action: decisao === "APROVADA" ? "action.approved" : "action.denied",
           actor: quem,
-          owner: quem,
+          // `owner` é DE QUEM É A SESSÃO, não quem decidiu. Escrever o aprovador
+          // aqui fazia o campo piscar `demo → dono → demo` na trilha, e o
+          // verificador — corretamente — reportava `TROCA_DE_DONO_SEM_EVENTO`:
+          // do ponto de vista dele, a sessão trocou de dono sem handoff. Quem
+          // decidiu já está em `actor`, que é o lugar dele.
+          owner: sessions.get(d.session_id)?.owner ?? null,
           result: "ok",
           verified: true,
           policy_decision: decisao === "APROVADA" ? "allow" : "deny",
@@ -1813,13 +1839,28 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
           action_id: item.action_id,
           data: redactObject(item.data as unknown as Record<string, unknown>),
         }));
+        // A LEITURA NÃO ESCREVE NO BUNDLE QUE ELA LÊ.
+        //
+        // Anotar `replay.read` em `sessions/<id>/actions.jsonl` acrescentava uma
+        // linha DEPOIS do selo e quebrava a integridade da sessão — medido: o
+        // verificador passava a reportar `SELO_DIVERGENTE: actions.jsonl foi
+        // ALTERADO depois do selo`. Uma rota somente leitura que muda aquilo que
+        // lê é a contradição que esta fase inteira existe para não cometer.
+        //
+        // O projeto já tinha aprendido isso ao fechar a sessão ("selar e depois
+        // anotar fazia todo bundle nascer divergente"); aqui a mesma armadilha
+        // voltou por outro lado.
+        //
+        // Quem leu a trilha de quem continua sendo auditável: o registro vai
+        // para o balde do RUNTIME, porque é atividade de quem lê, não da sessão
+        // encerrada — cuja história, por definição, já acabou.
         await services.note({
-          session: params.id!,
+          session: RUNTIME_BUCKET,
           event: "control",
           action: "replay.read",
           actor: ator,
           result: "ok",
-          detail: { itens: linha.length, integro_na_leitura: bundle.errors.length === 0 },
+          detail: { sessao_lida: params.id!, itens: linha.length, integro_na_leitura: bundle.errors.length === 0 },
         });
         return {
           session_id: bundle.session_id,
@@ -1860,14 +1901,16 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
           ...(config.sessions_root !== null ? { root: config.sessions_root } : {}),
           ...(search.get("pixels") === "1" ? { decodificar_pixels: true } : {}),
         });
+        // Mesma regra da leitura: verificar um selo não pode invalidá-lo.
         await services.note({
-          session: params.id!,
+          session: RUNTIME_BUCKET,
           event: "control",
           action: "replay.verified",
           actor: ator,
           result: relatorio.integro ? "ok" : "error",
           verified: relatorio.integro,
           detail: {
+            sessao_verificada: params.id!,
             integro: relatorio.integro,
             erros: relatorio.contagens.erros,
             avisos: relatorio.contagens.avisos,

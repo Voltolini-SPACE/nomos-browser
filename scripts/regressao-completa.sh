@@ -124,9 +124,14 @@ fi
 
 echo
 echo "════ 6. guardas estáticas ════"
-if (cd "$RAIZ" && node scripts/verificar-shell-expansao.ts && node scripts/verificar-versao-coerente.ts) \
+if (cd "$RAIZ" \
+      && node scripts/verificar-shell-expansao.ts \
+      && node scripts/verificar-versao-coerente.ts \
+      && node scripts/marcar-versao.ts --autoteste \
+      && node scripts/verificar-links-docs.ts --autoteste \
+      && node scripts/verificar-links-docs.ts) \
      > "$SAIDA/06-guardas.txt" 2>&1; then
-  registrar "guardas-estaticas" "PASS" "expansão de shell + coerência de versão"
+  registrar "guardas-estaticas" "PASS" "shell + versão + links de documentação"
 else
   registrar "guardas-estaticas" "FALHOU" "ver 06-guardas.txt"
 fi

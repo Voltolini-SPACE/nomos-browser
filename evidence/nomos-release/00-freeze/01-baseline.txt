@@ -1,0 +1,43 @@
+REPO=/Users/AI/Projects/nomos-browser
+BRANCH=main
+HEAD=6964cf009dd43e90a9534f50ecdd79089d92ec47
+HEAD_CURTO=6964cf0
+DATA=2026-08-25T20:31:05Z
+VERSION_PACKAGE_JSON=0.2.0
+--- git status ---
+?? evidence/nomos-release/
+(vazio acima = arvore limpa)
+--- tags ---
+v0.2.0
+v0.2.0-rc.1
+TOTAL_TAGS=2
+--- remotes ---
+TOTAL_REMOTES=0
+--- ultimos commits ---
+6964cf0 FASE 31: NOMOS_LIVE_AGENT_FINAL_VALIDATION
+5473137 FASE 29-30: regressao completa e sala limpa; limpeza por posse, nao por porta
+7cc00d2 FASE 26: latencia real dos cinco caminhos, com controle de instrumento
+cba488f FASE 25: modos de falha, e a pagina morta que se dizia alvo errado
+7bd33ae FASES 20-21: ASK e AUTO medidos numa jornada multipasso real
+847b2a7 FASE 17-18: mascara segredo na aprovacao, replay somente leitura, escopos declarados
+51b107b feat(ui+api): pausar e parar viram controles de VERDADE, no backend
+0cf1509 feat(api): devolver o volante nao devolve o CONHECIMENTO — reobservacao obrigatoria
+--- para onde apontam as tags ---
+v0.2.0 -> e9a847cb65aecf8d0a636f6040c112ca9e287523 (2026-08-25)
+v0.2.0-rc.1 -> 95787cbf538eb82b6d30f20bda8f4e3feda12ba2 (2026-08-25)
+HEAD    -> 6964cf009dd43e90a9534f50ecdd79089d92ec47 (2026-08-25)
+COMMITS_DESDE_v0.2.0=16
+--- hashes das evidencias principais ---
+511810783f012d91  NOMOS_LIVE_AGENT_FINAL_VALIDATION.md
+4b21875fce6aee5d  evidence/nomos-live-agent/11-regressao/etapas.tsv
+7f898bf101b22eb6  evidence/nomos-live-agent/11-regressao/INCIDENTE-processo-de-terceiro.md
+6d3d49252b635d1f  evidence/nomos-live-agent/11-regressao/08-clean-room.txt
+6899e404a2450f20  evidence/nomos-live-agent/10-latencia/medir-latencia.txt
+5e3fd39162cd6a8d  evidence/nomos-live-agent/08-modos/e2e-modos.txt
+b73f575924395ff3  evidence/nomos-live-agent/09-falhas/e2e-falhas.txt
+
+--- SMOKE (FASE 0) ---
+TS_PASS_FAST=488 TS_FAIL=0 ARQUIVOS=26 (11 pulados: browser/bench)
+TSC=0 erros
+TECHNICAL_BASELINE_STILL_GREEN=YES
+TREE_CLEAN_BEFORE_RELEASE_WORK=YES

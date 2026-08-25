@@ -3,7 +3,7 @@
 Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento pretendido: [SemVer](https://semver.org/lang/pt-BR/).
 
-**Versão corrente: `0.2.0`.** A primeira marcação foi `v0.2.0-rc.1`; antes dela
+**Versão corrente: `0.3.0-rc.1`.** A primeira marcação foi `v0.2.0-rc.1`; antes dela
 o repositório não tinha tag alguma e `package.json` declarava `0.1.0` desde o
 início — e este arquivo dizia isso, porque anunciar uma versão que nunca foi
 marcada seria o tipo de mentira que o resto desta documentação existe para
@@ -25,6 +25,156 @@ Keep a Changelog.
 
 Legenda usada nos itens:
 **⚠ INCOMPATÍVEL** = muda comportamento observável de quem já usa a API.
+
+---
+
+## [0.3.0-rc.1] — 2026-08-25
+
+O que esta versão acrescenta é **o dono na sala**: um console onde ele vê o
+agente trabalhar, e dois modos de autonomia que decidem quando o agente pergunta
+e quando ele age sozinho.
+
+A garantia que sustenta tudo é uma só, e ela é estrutural, não uma promessa:
+**`AUTO` não é `BYPASS`**. `decidir()` não tem ramo algum que rebaixe uma ação
+`SEMPRE_APROVAR` sob o modo automático, e o portão de autonomia roda **depois**
+de capability e de controle humano — quando ele executa, tudo que a política do
+dono nega já devolveu `403` e morreu.
+
+Estado medido: 789 testes em 37 arquivos, 106 casos E2E em 9 baterias, sala
+limpa 14/14 a partir de clone do HEAD, suíte da Gi com 148 passes.
+
+### `56e655e` · `51b86c5` — Autonomia e centro de aprovação (2026-08-25)
+
+#### Adicionado
+- **Modos `ASK` e `AUTO` por sessão**, opt-in. Sessão sem modo declarado segue
+  o comportamento anterior: a compatibilidade é estrutural, não um remendo, e é
+  por isso que os 735 testes que já existiam continuaram verdes sem ajuste.
+- **Classificação por FATOR antes do NÍVEL.** Efeito financeiro, envio externo e
+  irreversibilidade alta tornam a ação `SEMPRE_APROVAR` independentemente do
+  nível A0–A6. `browser.upload` pergunta em AUTO porque *envia dado seu para
+  fora, e isso não se retira* — não porque é A2.
+- **Aprovação `single-use, action-bound, session-bound, auditada, não-sticky`,
+  com TTL** e teto de pendências por sessão.
+- **Rota sem perfil de risco declarado cai em `SEMPRE_APROVAR`** (fail-closed).
+
+#### Corrigido — segurança
+- **A amarra de argumentos perdia chaves aninhadas.** `impressaoDeArgs` usava
+  `JSON.stringify(args, Object.keys(args).sort())`, e o segundo argumento do
+  `JSON.stringify` é um **replacer**, não uma lista de ordenação: ele descarta
+  toda chave que não esteja na lista, em todos os níveis. Resultado medido:
+  `{"target":{"selector":"#confirmar"}}` e `{"target":{"selector":"#comprar-agora"}}`
+  serializavam ambos para `{"target":{}}` e produziam a MESMA impressão. Uma
+  aprovação para clicar "Cancelar" teria autorizado "Confirmar compra".
+  Substituído por serialização canônica recursiva.
+
+### `a2d5ffe` · `004be52` — O gate entra no caminho crítico (2026-08-25)
+
+#### Adicionado
+- Portão de autonomia no ponto único de decisão do daemon, **depois** de
+  capability e de controle humano. A ordem é a garantia.
+- Rotas: `autonomy.get/set`, `autonomy.default.get/set`, `approvals.list`,
+  `approvals.approve/deny`, `live.state`, `agent.pause/resume`, `emergency.stop`.
+- Códigos de erro `APPROVAL_DENIED`, `APPROVAL_TIMEOUT`, `REOBSERVE_REQUIRED`,
+  `AGENT_PAUSED`; rótulo de política `require_approval`; 12 eventos novos.
+
+### `13bc871` · `0cf1509` · `51b107b` — Live Agent Console (2026-08-25)
+
+#### Adicionado
+- **Console visual**: espelho da página, cursor do agente, faixa de estado, feed
+  de atividade, centro de aprovação e histórico.
+- **Reobservação obrigatória**: devolver o volante não devolve o CONHECIMENTO. O
+  agente que recupera o controle precisa reobservar antes de agir — a página
+  pode ter mudado enquanto o humano digitava.
+
+#### Corrigido
+- **`Pausar` e `Parar` eram teatro.** `btPausar` só alternava um espelho local
+  (`S.pausado`) enquanto o agente seguia agindo, e `btParar` enviava um
+  `browser.task {goal:"", cancel:true}` sem significado. Agora falam com rotas
+  reais, e a interrupção **termina no backend mesmo se a UI cair no meio**.
+- **A UI não alcançava o runtime quando ele servia a página em outra porta.**
+  `BASE` estava fixo em `7777` e a CSP `connect-src 'self'` bloqueava. O console
+  ficava em "SEM SESSÃO" sem explicar por quê. Agora herda `location.origin`.
+
+### `847b2a7` — Segredo na aprovação, replay somente leitura, escopos (2026-08-25)
+
+#### Corrigido — segurança
+- **O pedido de aprovação mostrava a senha em claro.** `redactObject` mascara
+  por NOME de campo, e `text` não é nome de campo secreto. Medido com canário
+  adversarial num `<input type="password">` real. Agora sai
+  `[oculto: 24 caractere(s), C…Z]`: tamanho e pontas preservam o que permite
+  DECIDIR sem expor. A trilha em disco já nascia limpa.
+- **Escopos do Live Agent estavam certos por DESCUIDO.** As onze rotas caíam em
+  `ADMIN` pelo *default* de `scopeForRoute`, não por declaração. Abrandar o
+  default — uma linha, um dia, com boa intenção — moveria em silêncio o escopo de
+  aprovar uma ação. Agora são declaradas, e um teste exige declaração explícita
+  para toda rota.
+
+#### Adicionado
+- **Replay somente leitura** em três camadas: não existe verbo de escrita em
+  `/replay` (405 + `Allow: GET`); ler o histórico não ressuscita a sessão; e
+  `read_only` é **declarado** pelo runtime, não deduzido pela tela.
+- Assimetria deliberada de escopo: `pause` e `emergency-stop` são `CONTROL`
+  (parar nunca pode ser mais difícil que agir), `resume` é `ADMIN` (senão a pausa
+  do operador duraria uma linha de laço do agente).
+
+#### Corrigido
+- **`GET /replay` devolvia `200` com replay vazio para sessão que nunca
+  existiu** — forma idêntica à de uma sessão real que gravou pouco. A tela diria
+  "essa sessão não fez nada" sobre algo que nunca houve. Agora é `404`, decidido
+  pela existência do diretório e não pelo conteúdo, que é ambíguo.
+
+### `7bd33ae` — ASK e AUTO numa jornada multipasso (2026-08-25)
+
+#### Adicionado
+- **Aprovar uma `browser.task` não é cheque em branco.** Em `ASK`, cada passo do
+  plano reentra no portão. Isso vale porque o executor de passo fala com a
+  própria API por loopback em vez de chamar `handlerFor()` direto — era
+  comentário no código, agora é medida: dar ao executor um caminho privilegiado
+  derruba o teste.
+
+### `cba488f` — Modos de falha (2026-08-25)
+
+#### Corrigido
+- **Navegador morto era reportado como `TARGET_NOT_FOUND`.** Matando o Chromium,
+  `browser.extract` **e** `browser.screenshot` voltavam "alvo não encontrado" — e
+  um screenshot não tem alvo. O operador caçaria um seletor correto enquanto a
+  verdade era que a página tinha morrido. `getPage()` cobria três situações com
+  o mesmo código; agora sessão sem aba e aba que fechou são
+  `BROWSER_UNAVAILABLE`, e só `page_id` que nunca foi da sessão continua
+  `TARGET_NOT_FOUND`.
+- **`page_id` de aba morta soava como bug do cliente.** A sessão passou a
+  lembrar quais abas foram suas (`closed_pages`, teto de 64) para responder "era
+  sua e fechou" em vez de "não é sua".
+
+### `7cc00d2` · `5473137` · `6964cf0` — Medição, regressão e sala limpa (2026-08-25)
+
+#### Adicionado
+- Medição de latência dos cinco caminhos do console, com fronteira declarada em
+  cada um e **controle de instrumento**: 60 ms de atraso injetado movem só o
+  caminho medido.
+- `scripts/regressao-completa.sh` — 15 etapas, um veredito. Etapa que não pôde
+  rodar sai `NAO_EXECUTADA` e **derruba** o gate: "não rodou" nunca pode se
+  apresentar como "passou".
+- `scripts/clean-room-live-agent.sh` — recusa rodar com árvore suja e constrói a
+  UI a partir do `src` do clone.
+- `scripts/limpar-orfaos.sh` — limpeza por **prova de posse**, nunca por porta.
+
+#### Corrigido — instrumento
+- **`run-suite.sh` só descarregava modelo ANTES dos três arquivos que carregam
+  LLM.** Um arquivo morto por timeout não roda o `after()` dele e deixa o modelo
+  residente com o `keep_alive` longo dos testes; o estrago é sempre para quem vem
+  **depois**. Numa execução real isso deixou 5,02 GB presos e produziu seis
+  arquivos vermelhos que estavam verdes minutos antes. Agora descarrega depois de
+  cada arquivo, usando `lib-memoria.sh`, e registra memória disponível por
+  arquivo para que starvation apareça como medida em vez de dedução.
+
+### Limitações conhecidas nesta versão
+- **`p99` não é reportado** em nenhum caminho de latência: 30 amostras exigem 100.
+  Nenhum máximo observado é chamado de p99.
+- **Não há rota HTTP para emitir token com escopo** — existe na API interna.
+- **O ramo `pr.page.isClosed()` é inalcançável** em operação normal; é defesa de
+  corrida, não cobertura.
+- Validado em macOS/Apple Silicon. Outras plataformas não foram medidas.
 
 ---
 

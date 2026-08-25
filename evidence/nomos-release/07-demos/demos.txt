@@ -1,0 +1,54 @@
+
+────────────────────────────────────────────────────────────────────────
+DEMO A — controle de navegador básico
+────────────────────────────────────────────────────────────────────────
+  [OK] o runtime responde /health — contract=1 browser=starting
+  [OK] sessão criada — ses_1ea39bf985364a54
+  [OK] página aberta num Chromium real — título="Entrar"
+  [OK] conteúdo extraído — #etapa = INICIO
+  [OK] alvo inexistente falha COM CÓDIGO, não em silêncio — code=TARGET_NOT_FOUND
+
+────────────────────────────────────────────────────────────────────────
+DEMO B — modo ASK: o agente pergunta antes de mudar a página
+────────────────────────────────────────────────────────────────────────
+  [OK] LEITURA não pergunta — perguntar para ler treina o dono a aprovar sem ler
+  [OK] AÇÃO pergunta — nível A2 · "clica num elemento da página"
+  [OK] aprovada, a ação acontece
+  [OK] o efeito está na página — #etapa = LOGADO
+
+────────────────────────────────────────────────────────────────────────
+DEMO C — modo AUTO: age sozinho, mas não é bypass
+────────────────────────────────────────────────────────────────────────
+  [OK] navegação passa direto em AUTO
+  [OK] AUTO != BYPASS: upload AINDA pergunta — "a ação envia dado seu para fora, e isso não se retira"
+  [OK] negada, é recusada — code=APPROVAL_DENIED
+
+────────────────────────────────────────────────────────────────────────
+DEMO D — task multipasso: aprovar o objetivo não é cheque em branco
+────────────────────────────────────────────────────────────────────────
+  [OK] modo corrente é AUTO — modo=AUTO
+  [OK] browser.task pede aprovação MESMO em AUTO — nível A5 · "entrega um objetivo ao executor, que decidirá as ações sozinho"
+       (em ASK, cada PASSO do plano reentra no portão — ver tests/task-engine.test.ts)
+
+────────────────────────────────────────────────────────────────────────
+DEMO E — Live Agent Console: o estado que a tela mostra vem do runtime
+────────────────────────────────────────────────────────────────────────
+  [OK] /live devolve estado canônico — runtime_state=ACTING autonomy_mode=AUTO control=agent
+  [OK] declara quais rotas ainda perguntam em AUTO — browser.task, browser.upload
+  [OK] pausar é um controle REAL no backend — runtime_state=PAUSED
+  [OK] pausado, a ação é recusada — code=AGENT_PAUSED
+  [OK] mas OBSERVAR continua permitido — a tela precisa seguir viva para o operador decidir
+
+────────────────────────────────────────────────────────────────────────
+DEMO F — auditoria e replay somente leitura
+────────────────────────────────────────────────────────────────────────
+  [OK] replay da sessão encerrada — 37 ações · selado=true
+  [OK] o runtime DECLARA somente leitura
+  [OK] não existe verbo de escrita em /replay — POST=405 PUT=405 PATCH=405 DELETE=405
+  [OK] "não existe" não vira "não fez nada" — HTTP 404 · SESSION_NOT_FOUND
+  [OK] integridade do replay verificada — integro=true erros=0
+
+════════════════════════════════════════════════════════════════════════
+DEMOS_EXECUTADAS=6
+FALHAS=0
+DEMOS_REPRODUZIVEIS=PASS
