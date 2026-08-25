@@ -61,6 +61,8 @@ export type RouteName =
   | "approvals.approve"
   | "approvals.deny"
   | "live.state"
+  | "agent.pause"
+  | "agent.resume"
   | "emergency.stop"
   | "whoami"
   | "action"
@@ -145,6 +147,8 @@ export const ROUTES: readonly RouteSpec[] = Object.freeze([
   spec("POST", `${P}/approvals/:approval_id/approve`, "approvals.approve", false),
   spec("POST", `${P}/approvals/:approval_id/deny`, "approvals.deny", false),
   spec("GET", `${P}/sessions/:id/live`, "live.state", false),
+  spec("POST", `${P}/sessions/:id/pause`, "agent.pause", false),
+  spec("POST", `${P}/sessions/:id/resume`, "agent.resume", false),
   spec("POST", `${P}/sessions/:id/emergency-stop`, "emergency.stop", false),
   spec("GET", `${P}/whoami`, "whoami", false),
   spec("GET", "/events", "events", false),
@@ -251,6 +255,7 @@ export const HTTP_STATUS: Readonly<Record<ActionErrorCode, number>> = Object.fre
   // com o pedido. Mesma familia de CONTROL_HELD_BY_HUMAN, e resolvivel pelo
   // proprio cliente — basta observar antes.
   REOBSERVE_REQUIRED: 409,
+  AGENT_PAUSED: 409,
   BROWSER_UNAVAILABLE: 503,
   UPLOAD_DENIED: 403,
   DOWNLOAD_DENIED: 403,

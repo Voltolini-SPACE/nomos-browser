@@ -157,6 +157,7 @@
   #autonomia { display:flex; gap:12px; align-items:center; font-size:12px; }
   #autonomia label { display:flex; gap:5px; align-items:center; cursor:pointer; }
   #autonomia .aviso { opacity:.6; font-size:11px; }
+  .ev .meta { font-size:10px; opacity:.5; margin-top:2px; font-family:var(--nomos-mono); }
 
   /* O centro de aprovacao cobre a tela DE PROPOSITO. Uma pergunta que o
      usuario pode ignorar sem ver e' uma pergunta que vai ser respondida pelo
@@ -247,6 +248,7 @@
     <span class="aviso" id="autoAviso"></span>
   </span>
   <button id="btPausar">Pausar</button>
+  <button id="btCancelar">Cancelar ação</button>
   <button id="btControle">Assumir controle</button>
   <button id="btParar" class="perigo">Parar</button>
 </footer>
@@ -323,16 +325,52 @@ function status(txt, conf) {
   $("conf").textContent = (conf === undefined || conf === null) ? "" : "confiança " + Math.round(conf * 100) + "%";
 }
 
-function feed(nome, texto, erro) {
+function feed(nome, texto, erro, campos) {
   const d = document.createElement("div");
   d.className = "ev" + (erro ? " erro" : "");
   const hora = new Date().toLocaleTimeString("pt-BR", { hour12: false });
   d.innerHTML = "<b>" + nome + "</b> " + hora;
   if (texto) { d.appendChild(document.createTextNode(" · " + texto)); }
+  // FASE 8 — cada item carrega action_id, capability, status, risco e duração.
+  // Sem eles o feed é uma narração; com eles é um registro que dá para cruzar
+  // com a trilha do runtime depois.
+  if (campos) {
+    const meta = document.createElement("div");
+    meta.className = "meta";
+    const partes = [];
+    if (campos.action_id) { partes.push("id " + String(campos.action_id).slice(-8)); }
+    if (campos.capability) { partes.push("cap " + campos.capability); }
+    if (campos.status) { partes.push(campos.status); }
+    if (campos.nivel) { partes.push("risco " + campos.nivel); }
+    if (campos.duracao_ms !== undefined && campos.duracao_ms !== null) { partes.push(campos.duracao_ms + "ms"); }
+    meta.textContent = partes.join(" · ");
+    d.appendChild(meta);
+  }
   const f = $("feed");
   f.prepend(d);
   while (f.childElementCount > 300) { f.lastElementChild.remove(); }
 }
+
+// O feed mostra o que o agente FEZ, nunca o que ele pensou. Raciocínio privado
+// do modelo não entra aqui — é a diferença entre operar com transparência e
+// expor a cabeça de quem trabalha para você.
+const ROTULO_OPERACIONAL = {
+  "action.proposed": "Pedindo autorização",
+  "action.approved": "Autorizado por você",
+  "action.denied": "Negado",
+  "autonomy.changed": "Autonomia alterada",
+  "cancel.requested": "Cancelamento pedido",
+  "cancel.accepted": "Cancelamento aceito",
+  "cancel.too_late": "Tarde demais — a ação já havia terminado",
+  "owner.changed": "Controle transferido",
+  "agent.paused": "Agente pausado",
+  "agent.resumed": "Agente retomado",
+  "emergency_stop": "PARADA DE EMERGÊNCIA",
+  "page.loaded": "Página carregada",
+  "action.started": "Executando",
+  "action.completed": "Concluído",
+  "action.failed": "Falhou",
+};
 
 // ── chamadas ao runtime ───────────────────────────────────────────────
 async function acao(tool, corpo) {
@@ -466,6 +504,51 @@ function conectarEventos() {
       case "control.taken":    aplicarControle("human"); break;
       case "control.returned": aplicarControle("agent"); break;
       case "session.created":  sessoes(); break;
+      // ── LIVE AGENT ────────────────────────────────────────────────────
+      case "action.proposed":
+        feed(ROTULO_OPERACIONAL[ev.event], (p.tool || "") + " · " + (p.consequencia || ""), false,
+          { action_id: ev.action_id, capability: p.tool, status: "AGUARDANDO", nivel: p.nivel });
+        estadoVivo();
+        break;
+      case "action.approved":
+      case "action.denied":
+        feed(ROTULO_OPERACIONAL[ev.event], (p.tool || "") + (p.por ? " · por " + p.por : ""), ev.event === "action.denied",
+          { action_id: ev.action_id, capability: p.tool, status: ev.event === "action.approved" ? "APROVADA" : "NEGADA", nivel: p.nivel });
+        estadoVivo();
+        break;
+      case "autonomy.changed":
+        feed(ROTULO_OPERACIONAL[ev.event], (p.de || "—") + " → " + (p.para || "—") + " (" + (p.scope || "") + ")", false,
+          { status: p.para });
+        estadoVivo();
+        break;
+      case "cancel.requested":
+      case "cancel.accepted":
+        feed(ROTULO_OPERACIONAL[ev.event], p.tool || "", false, { action_id: ev.action_id, status: "CANCELANDO" });
+        break;
+      // A UI NUNCA pode dizer "Cancelado" quando o runtime disse `too_late`. A
+      // ação aconteceu; dizer o contrário seria mentir sobre o estado do mundo
+      // para quem acabou de pedir para parar.
+      case "cancel.too_late":
+        feed(ROTULO_OPERACIONAL[ev.event],
+          "A ação já havia sido concluída antes do cancelamento.", true,
+          { action_id: ev.action_id, capability: p.tool, status: "EXECUTADA" });
+        estadoVivo();
+        break;
+      case "owner.changed":
+        feed(ROTULO_OPERACIONAL[ev.event], (p.de || "?") + " → " + (p.para || "?"), false,
+          { status: p.reobservacao_exigida ? "EXIGE REOBSERVAÇÃO" : "OK" });
+        estadoVivo();
+        break;
+      case "agent.paused":
+      case "agent.resumed":
+        feed(ROTULO_OPERACIONAL[ev.event], "", false, { status: ev.event === "agent.paused" ? "PAUSADO" : "ATIVO" });
+        estadoVivo();
+        break;
+      case "emergency_stop":
+        feed(ROTULO_OPERACIONAL[ev.event],
+          "aprovações negadas: " + (p.aprovacoes_negadas ?? 0), true, { status: "PARADO" });
+        estadoVivo();
+        break;
       case "session.closed":   if (p.session_id === S.sessionId) { S.sessionId = null; } sessoes(); break;
     }
     const falhou = ev.event.endsWith(".failed");
@@ -502,17 +585,68 @@ $("btControle").addEventListener("click", async () => {
   } catch (e) { feed("controle.falhou", String(e.message), true); }
 });
 
-$("btPausar").addEventListener("click", () => {
-  S.pausado = !S.pausado;
-  $("btPausar").textContent = S.pausado ? "Retomar" : "Pausar";
-  status(S.pausado ? "agente pausado pelo operador" : "retomado");
-  feed(S.pausado ? "task.paused" : "task.progress", "");
+// PAUSAR — no BACKEND, nao so' na tela.
+//
+// A versao anterior so' parava o espelho local: `S.pausado = !S.pausado`. O
+// agente continuava agindo, e o operador via uma tela congelada achando que
+// tinha parado alguma coisa. Um botao que mente sobre o que faz e' pior que
+// botao nenhum.
+$("btPausar").addEventListener("click", async () => {
+  if (S.sessionId === null) { return; }
+  const pausar = !S.pausadoNoRuntime;
+  try {
+    await gestao("/api/v1/sessions/" + S.sessionId + "/" + (pausar ? "pause" : "resume"), "POST", { by: "console" });
+    S.pausadoNoRuntime = pausar;
+    $("btPausar").textContent = pausar ? "Retomar" : "Pausar";
+    status(pausar ? "agente PAUSADO no runtime" : "agente retomado");
+  } catch (e) {
+    feed("pausa.falhou", String(e && e.message ? e.message : e), true);
+  }
+  await estadoVivo();
 });
 
+// PARAR TUDO — kill switch de verdade, executado inteiro no backend.
+//
+// A versao anterior mandava `browser.task {goal:"", cancel:true}`, que nao
+// para coisa alguma. E, principalmente: se a UI cair no meio, a interrupcao
+// tem de continuar. Por isso e' uma rota, e nao uma sequencia na tela.
 $("btParar").addEventListener("click", async () => {
   if (S.sessionId === null) { return; }
-  try { await acao("browser.task", { goal: "", cancel: true }); feed("task.cancelled", ""); }
-  catch { /* o feed já registrou */ }
+  try {
+    const r = await gestao("/api/v1/sessions/" + S.sessionId + "/emergency-stop", "POST", { by: "console" });
+    feed("emergency_stop", "aprovações negadas: " + (r.aprovacoes_negadas || []).length, true, { status: "PARADO" });
+  } catch (e) {
+    feed("emergency_stop.falhou", String(e && e.message ? e.message : e), true);
+  }
+  await estadoVivo();
+});
+
+// CANCELAR ACAO — usa o barge-in ja validado. A UI NUNCA diz "Cancelado"
+// quando o runtime respondeu `too_late`: nesse caso a acao ACONTECEU, e dizer
+// o contrario seria mentir sobre o estado do mundo para quem pediu para parar.
+$("btCancelar").addEventListener("click", async () => {
+  if (S.sessionId === null) { return; }
+  feed("cancel.requested", "pedido de cancelamento enviado", false, { status: "CANCELANDO" });
+  try {
+    const tarefas = await gestao("/api/v1/tasks?session_id=" + encodeURIComponent(S.sessionId));
+    const viva = (Array.isArray(tarefas) ? tarefas : (tarefas.tasks || []))
+      .find((x) => x.state === "RUNNING" || x.state === "PENDING");
+    if (viva === undefined) {
+      feed("cancel.too_late", "Não havia ação em andamento para cancelar.", true, { status: "NADA A CANCELAR" });
+      return;
+    }
+    const r = await gestao("/api/v1/tasks/" + viva.task_id + "/cancel", "POST", {});
+    const estado = String(r && r.state ? r.state : "");
+    if (/COMPLETED|SUCCEEDED/.test(estado)) {
+      feed("cancel.too_late", "A ação já havia sido concluída antes do cancelamento.", true,
+        { action_id: viva.task_id, status: "EXECUTADA" });
+    } else {
+      feed("cancel.accepted", viva.task_id + " · " + estado, false, { action_id: viva.task_id, status: estado });
+    }
+  } catch (e) {
+    feed("cancel.falhou", String(e && e.message ? e.message : e), true);
+  }
+  await estadoVivo();
 });
 
 $("url").addEventListener("keydown", async (e) => {

@@ -109,6 +109,11 @@ export type ActionErrorCode =
   // um modelo mental vencido e' como clicar de olhos fechados no lugar onde o
   // botao ESTAVA. Antes de agir de novo, ele OLHA.
   | "REOBSERVE_REQUIRED"
+  // O operador pausou o agente. Diferente de CONTROL_HELD_BY_HUMAN: ali o
+  // humano esta PILOTANDO e ate leitura congela; aqui ele so mandou parar de
+  // agir, e observar continua liberado — a tela precisa seguir viva para ele
+  // decidir se retoma.
+  | "AGENT_PAUSED"
   | "BROWSER_UNAVAILABLE"
   | "UPLOAD_DENIED"
   | "DOWNLOAD_DENIED"

@@ -664,6 +664,10 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
   // contrato de quem nunca pediu Live Agent — inclusive dos testes que já
   // fazem takeover→release→agir.
   const precisaReobservar = new Set<string>();
+  // Pausa do operador. NAO e' takeover: aqui ninguem toma o volante, o agente
+  // so para de agir. Observacao continua liberada de proposito — a tela tem de
+  // seguir viva para o operador decidir se retoma.
+  const pausados = new Set<string>();
   const aprovacoes = new RegistroDeAprovacoes();
 
   const services = new RuntimeServices({
@@ -1146,6 +1150,7 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
         // executar coisa nenhuma.
         autonomia.esquecer(id);
         precisaReobservar.delete(id);
+        pausados.delete(id);
         aprovacoes.negarPendentes(id, "session.closed");
         // O contexto é lido ANTES do fechamento: depois dele `sessions.get` já
         // não devolve dono nem context_id, e a linha sairia oca.
@@ -1490,6 +1495,7 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
         const runtime_state =
           info0.control === "human" ? "USER_CONTROL"
             : pend.length > 0 ? "WAITING_APPROVAL"
+            : pausados.has(sid) ? "PAUSED"
             : info0.status === "PAUSED" ? "PAUSED"
             : info0.status === "ACTIVE" ? "ACTING"
             : info0.status === "IDLE" ? "IDLE"
@@ -1513,6 +1519,27 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
           last_event: null,
         };
       }
+      case "agent.pause":
+      case "agent.resume": {
+        const sid = params.id!;
+        const info0 = sessions.get(sid);
+        const quem = typeof body.by === "string" && body.by !== "" ? body.by : "human";
+        const pausar = name === "agent.pause";
+        if (pausar) { pausados.add(sid); } else { pausados.delete(sid); }
+        await services.note({
+          session: sid,
+          event: "control",
+          action: pausar ? "agent.paused" : "agent.resumed",
+          actor: quem,
+          owner: info0.owner,
+          result: "ok",
+          verified: true,
+          policy_decision: pausar ? "deny" : "allow",
+          detail: { by: quem },
+        });
+        services.emit(pausar ? "agent.paused" : "agent.resumed", sid, null, { by: quem }, "human");
+        return { session_id: sid, paused: pausar, by: quem };
+      }
       case "emergency.stop": {
         // PARAR TUDO. Roda no BACKEND de ponta a ponta: se a UI cair no meio,
         // a interrupção continua. Um kill switch que depende da tela viva não
@@ -1520,6 +1547,7 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
         const sid = params.id!;
         const quem = typeof body.by === "string" && body.by !== "" ? body.by : "human";
         const negadas = aprovacoes.negarPendentes(sid, `emergency_stop:${quem}`);
+        pausados.add(sid);
         const congelada = sessions.takeover(sid, quem);
         await services.note({
           session: sid,
@@ -1883,6 +1911,24 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
         httpStatusFor("CONTROL_HELD_BY_HUMAN"),
         fail(action_id, info.status, "CONTROL_HELD_BY_HUMAN", message, t.done(), { session_id }),
       );
+      return;
+    }
+
+    // 2a. PAUSA DO OPERADOR — nenhuma ação NOVA começa; observar continua.
+    if (pausados.has(session_id) && ACTION_CLASS[tool] !== "OBSERVE") {
+      const message = "o agente está pausado pelo operador; retome para voltar a agir";
+      await services.record(
+        auditEntryFor(req, "denied", false, { code: "AGENT_PAUSED" }, {
+          event: "policy",
+          action: "policy.deny",
+          capability,
+          policy_decision: "deny",
+          policy_reason: `AGENT_PAUSED: ${message}`,
+          error: { code: "AGENT_PAUSED", message },
+        }),
+      );
+      jsonResponse(res, httpStatusFor("AGENT_PAUSED"),
+        fail(action_id, info.status, "AGENT_PAUSED", message, t.done(), { tool, session_id }));
       return;
     }
 
