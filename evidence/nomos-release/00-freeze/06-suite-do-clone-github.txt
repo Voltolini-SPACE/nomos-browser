@@ -1,0 +1,32 @@
+aiprovider                   OK      pass=41   fail=0   37s  mem=2.98GB llm=0.0GB
+approvals                    OK      pass=26   fail=0   1s  mem=6.90GB llm=0.0GB
+audit-forense                OK      pass=12   fail=0   2s  mem=6.36GB llm=0.0GB
+auth                         OK      pass=24   fail=0   1s  mem=5.65GB llm=0.0GB
+autonomy                     OK      pass=15   fail=0   0s  mem=5.43GB llm=0.0GB
+backpressure-audit           OK      pass=13   fail=0   6s  mem=5.22GB llm=0.0GB
+cascata-percepcao            OK      pass=18   fail=0   3s  mem=4.87GB llm=0.0GB
+cli                          OK      pass=35   fail=0   5s  mem=4.99GB llm=0.0GB
+click-entrega                OK      pass=21   fail=0   9s  mem=4.42GB llm=0.0GB
+config-schema                OK      pass=16   fail=0   1s  mem=4.53GB llm=0.0GB
+injection-wired              OK      pass=16   fail=0   1s  mem=4.60GB llm=0.0GB
+lease                        OK      pass=37   fail=0   0s  mem=5.12GB llm=0.0GB
+mcp                          OK      pass=36   fail=0   3s  mem=5.29GB llm=0.0GB
+observability                OK      pass=22   fail=0   0s  mem=5.65GB llm=0.0GB
+ownership                    OK      pass=11   fail=0   3s  mem=5.69GB llm=0.0GB
+policy-vault                 OK      pass=14   fail=0   2s  mem=5.63GB llm=0.0GB
+product02-gate               OK      pass=3    fail=0   44s  mem=5.61GB llm=0.0GB
+providers-runtime            OK      pass=14   fail=0   9s  mem=5.66GB llm=0.0GB
+replay-hardening             OK      pass=44   fail=0   0s  mem=4.95GB llm=0.0GB
+sdk-ts                       OK      pass=8    fail=0   0s  mem=5.09GB llm=0.0GB
+skills                       OK      pass=10   fail=0   0s  mem=5.23GB llm=0.0GB
+supervisor                   OK      pass=10   fail=0   2s  mem=5.50GB llm=0.0GB
+task-engine                  OK      pass=21   fail=0   15s  mem=5.49GB llm=0.0GB
+traceability                 OK      pass=7    fail=0   0s  mem=5.63GB llm=0.0GB
+ui-build                     OK      pass=6    fail=0   2s  mem=5.70GB llm=0.0GB
+watchdog-wired               OK      pass=8    fail=0   8s  mem=5.55GB llm=0.0GB
+
+TS_PASS=488
+TS_FAIL=0
+ARQUIVOS_OK=26
+ARQUIVOS_RUINS=0
+RESUMO=/tmp/nomos-do-github/.suite/resumo.tsv

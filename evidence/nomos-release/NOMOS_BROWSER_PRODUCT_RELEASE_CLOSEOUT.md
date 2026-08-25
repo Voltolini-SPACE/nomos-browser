@@ -207,23 +207,27 @@ segredo" sobre um nome de pasta.
 - Plataforma: só macOS/Apple Silicon medido
 - Faixa de estado da interface: polling de 700 ms, não evento
 
-## 15. O que depende do dono
+## 15. O que dependia do dono — decidido
 
-Três atos indelegáveis. Nenhum agente tem autoridade sobre eles:
+Os três atos indelegáveis foram decididos pelo dono em 2026-08-25:
 
-**1. Titular dos direitos autorais.** O `LICENSE` traz um **placeholder**
-derivado mecanicamente da identidade do commit HEAD. O histórico tem duas
-identidades de autoria (44 commits `Voltolini-SPACE <admin@voltolini.space>`, 8
-commits `NOMOS Browser <adm@se7enpay.com.br>`), e nenhuma prova titularidade
-legal.
+| | decisão |
+|---|---|
+| Titular dos direitos autorais | **Voltolini-SPACE** |
+| Licença | **MIT** |
+| Publicação | **remoto público criado** |
 
-**2. Licença.** Hoje: proprietário, todos os direitos reservados, nenhuma
-permissão a terceiros. Publicar o código sem decidir isso é coerente, mas é uma
-decisão, não um default.
+O `LICENSE` trazia até então um titular **placeholder** derivado mecanicamente
+do autor do commit HEAD, e o histórico tem duas identidades de autoria — nenhuma
+prova titularidade legal por si só. Nenhum agente tem autoridade sobre isso, e
+por isso a pergunta foi feita em vez de resolvida por conta própria.
 
-**3. Remoto e publicação.** O repositório não tem remoto; o site tem dois
-commits não empurrados (um meu, um anterior). Criar remoto e empurrar são atos
-do dono.
+A escolha da MIT alinha o produto ao resto do ecossistema (NOMOS e OpenKern
+também são MIT).
+
+**A licença cobre o código.** As marcas "NOMOS" e "NOMOS Browser" e os tokens de
+identidade visual continuam governados à parte e fora do versionamento. Isso
+está dito no [`NOTICE.md`](../../NOTICE.md), não dentro do `LICENSE` — ver §19.
 
 ## 16. Incidente da sessão anterior, mantido no registro
 
@@ -315,3 +319,79 @@ Declarar `READY_FOR_PUBLIC_LAUNCH=YES` com o titular legal indefinido seria
 exatamente o tipo de afirmação que o resto deste trabalho existe para não fazer.
 O produto está **pronto para ser lançado**; o lançamento depende de decisões que
 não são minhas.
+
+
+## 19. Publicação
+
+```
+repositório   github.com/Voltolini-SPACE/nomos-browser   (público)
+licença       MIT · reconhecida pelo GitHub como "mit"
+tags          v0.2.0-rc.1 · v0.2.0 · v0.3.0-rc.1 · v0.3.0-rc.2
+release       v0.3.0-rc.2, marcada como pre-release
+homepage      voltolini.space/browser/
+topics        13
+```
+
+Antes desta fase o repositório **não tinha remoto**: 22 commits além da `v0.2.0`
+existiam apenas numa máquina, sem cópia. Isso era risco operacional antes de ser
+pendência de release.
+
+### Duas correções feitas depois de publicar, e o que elas ensinam
+
+**1. O GitHub classificou a licença como *"Other"*.** Eu havia acrescentado
+notas sobre titular e marca **dentro** do `LICENSE`, e os detectores automáticos
+só reconhecem o texto canônico.
+
+Uma licença que as máquinas não conseguem ler falha em metade do trabalho dela,
+e a metade que falha é justamente a que alcança quem nunca vai abrir o arquivo:
+o badge do repositório, o campo de licença do pacote, os scanners de compliance
+de quem for adotar.
+
+`LICENSE` voltou ao texto MIT puro; tudo o que estava anexado foi para
+`NOTICE.md`, que registra também **por que existe**, para que ninguém tente
+"melhorar" o `LICENSE` de novo acrescentando texto útil.
+
+**2. `v0.3.0-rc.1` ficou com o estado legal errado.** Ela foi marcada quando o
+`LICENSE` ainda dizia *todos os direitos reservados*, e já tinha sido empurrada.
+
+**Tag publicada não se move.** Por isso existe `v0.3.0-rc.2` em vez de um `rc.1`
+corrigido: mover seria conveniente e seria exatamente o que a regra proíbe. Quem
+baixa o artefato precisa encontrar nele o estado legal que vale, não uma nota
+dizendo "a licença mudou três commits depois".
+
+### Verificação a partir do que o GitHub entrega
+
+Não de um clone local, do remoto publicado:
+
+```
+git clone --branch v0.3.0-rc.2 github.com/Voltolini-SPACE/nomos-browser
+  HEAD                        f716f5a
+  npm ci --include=dev        ok
+  tsc --noEmit                sem erro
+  verificar-versao-coerente   0.3.0-rc.2 em 13 declarantes
+  verificar-links-docs        DOCS_LINKS_OK=YES
+  verificar-segredos-publicos PUBLIC_REPO_SECRET_LEAK=0
+  nomos-web --version         0.3.0-rc.2
+  LICENSE                     "MIT License"
+  run-suite.sh --fast         TS_PASS=488  TS_FAIL=0  26/26 arquivos
+```
+
+`RELEASE_ARTIFACT_REPRODUCIBLE=YES`
+
+## 20. Estado final revisado
+
+```
+NOMOS_BROWSER_TECHNICAL_PRODUCT=COMPLETE
+NOMOS_BROWSER_MARKETING=COMPLETE
+NOMOS_BROWSER_GITHUB=COMPLETE
+NOMOS_BROWSER_RELEASE=COMPLETE (v0.3.0-rc.2, pre-release)
+NOMOS_BROWSER_SITE=BUILT_NOT_PUBLISHED
+PRODUCT_FINALIZED=YES
+READY_FOR_PUBLIC_LAUNCH=YES
+```
+
+**Uma ressalva, e ela é do dono, não técnica:** a página `/browser/` está pronta
+e commitada no repositório do site, mas **não foi empurrada** — o dono escolheu
+criar o remoto do produto e não publicar o site nesta rodada. `git push` no
+`voltolini-space-site` publica a página e as correções de auditoria quando ele
+quiser.
