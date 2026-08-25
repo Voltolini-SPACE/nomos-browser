@@ -381,3 +381,77 @@ test("encerramento: nenhum Chromium vaza", async () => {
   assert.equal(existsSync(path.join(DEFAULT_PROFILES_ROOT, PROFILE_B)), true);
   assert.equal(manager.poolStats().hook_errors, 0, "hook onEvent não pode ter quebrado");
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FASE 25 — "a página sumiu" não é "o alvo não foi encontrado"
+//
+// `getPage()` cobria três situações com o MESMO código de erro, e duas delas
+// não eram erro de alvo nenhum. Medido no E2E de modos de falha: matando o
+// Chromium, `browser.extract` E `browser.screenshot` voltavam `TARGET_NOT_FOUND`
+// — e um screenshot não TEM alvo. Quem lesse a trilha iria caçar um seletor que
+// estava correto, enquanto a verdade era que a página tinha morrido.
+//
+// A distinção que estes testes travam:
+//   · página fechou / não há página  ⇒ BROWSER_UNAVAILABLE (condição do runtime)
+//   · page_id que não é desta sessão ⇒ TARGET_NOT_FOUND    (erro de quem pediu)
+// ─────────────────────────────────────────────────────────────────────────────
+
+test("FASE 25 — página fechada por baixo vira BROWSER_UNAVAILABLE, não TARGET_NOT_FOUND", async () => {
+  const s = await manager.createSession({ owner: "dono-pagina", profile: PROFILE_A });
+  const page = manager.getPage(s.session_id);
+  const idDaAba = manager.pageIdOf(page);
+  await page.goto(fixture.base);
+
+  // Controle positivo: com a página viva, `getPage` devolve a página. Sem ele,
+  // o erro abaixo poderia vir de a sessão nunca ter funcionado.
+  assert.equal(manager.getPage(s.session_id).isClosed(), false);
+
+  // A página morre por baixo — como quando o Chromium é morto.
+  await page.close();
+
+  // Sem `page_id`: a sessão ficou sem aba nenhuma.
+  //
+  // A mensagem é asserida EXATAMENTE. Um regex frouxo (`/fechada|página aberta/`)
+  // aceitava os dois ramos do `getPage`, e por isso não percebeu que este teste
+  // nunca tocava o ramo que eu pensava estar cobrindo — a mutação passou verde.
+  // Asserção que aceita duas causas diferentes não distingue nenhuma delas.
+  assert.throws(
+    () => manager.getPage(s.session_id),
+    (e: unknown) =>
+      isSessionError(e) &&
+      e.code === "BROWSER_UNAVAILABLE" &&
+      /não tem página aberta/.test(e.message),
+    "sessão sem aba é condição do navegador, não erro de alvo",
+  );
+
+  // COM o `page_id` da aba que morreu: o cliente que guardou o id recebia
+  // "não pertence à sessão" — que soa como bug dele. A sessão lembra quais abas
+  // foram suas, então a resposta agora é "era sua e fechou".
+  assert.throws(
+    () => manager.getPage(s.session_id, idDaAba!),
+    (e: unknown) =>
+      isSessionError(e) && e.code === "BROWSER_UNAVAILABLE" && /era desta sessão e já fechou/.test(e.message),
+    "aba que morreu não pode ser reportada como aba de outra pessoa",
+  );
+
+  await manager.closeSession(s.session_id, "fim do caso");
+});
+
+test("FASE 25 — mas page_id de outra sessão CONTINUA sendo erro de quem pediu", async () => {
+  const a = await manager.createSession({ owner: "dono-a", profile: PROFILE_A });
+  const b = await manager.createSession({ owner: "dono-b", profile: PROFILE_B });
+  const paginaDeB = manager.pageIdOf(manager.getPage(b.session_id));
+  assert.ok(paginaDeB !== null && paginaDeB !== undefined, "sessão B precisa ter uma página");
+
+  // Pedir a aba de OUTRA sessão é erro do chamador — e tem que continuar
+  // dizendo isso. Se a correção acima tivesse virado um renomeio geral, este
+  // teste cairia, e é para isso que ele existe.
+  assert.throws(
+    () => manager.getPage(a.session_id, paginaDeB),
+    (e: unknown) => isSessionError(e) && e.code === "TARGET_NOT_FOUND",
+    "aba de outra sessão é erro de alvo, não do navegador",
+  );
+
+  await manager.closeSession(a.session_id, "fim do caso");
+  await manager.closeSession(b.session_id, "fim do caso");
+});

@@ -1,0 +1,17 @@
+[PASS] 1. alvo inexistente falha COM CÓDIGO, não em silêncio — http=404 code=TARGET_NOT_FOUND "alvo não resolvido após 1 estratégia(s): selector"
+[PASS] 1b. controle: a sessão sobrevive ao erro de ação — success=true
+[PASS] 2. página que nunca responde vira ERRO COM PRAZO, não travamento — 6008ms · code=TIMEOUT
+[PASS] 3. navegador morto: a ação seguinte falha honestamente, sem inventar resultado — matou [66328] · success=false code=BROWSER_UNAVAILABLE
+[PASS] 3c. e o código diz NAVEGADOR INDISPONÍVEL, não 'alvo não encontrado' — extract=BROWSER_UNAVAILABLE screenshot=BROWSER_UNAVAILABLE
+[PASS] 3b. e o runtime não anuncia a sessão como se nada tivesse acontecido — antes=ACTING/http://127.0.0.1:8971/ depois=IDLE/null
+[PASS] 4. controle: com runtime vivo, a tela MOSTRA o modo AUTO real — modo=AUTO
+[PASS] 5. runtime caído: a tela DIZ que está desconectada — status=DISCONNECTED
+[PASS] 6. runtime caído: a tela NUNCA mostra AUTO — cai para desconhecido — modo=? radios marcados=[] aviso="estado desconhecido — tratando como PERGUNTAR"
+[PASS] 6b. e explica o que vai fazer enquanto não sabe — aviso="estado desconhecido — tratando como PERGUNTAR"
+[PASS] 7. reconectado: a autonomia NÃO volta a AUTO por memória da tela — modo=? texto="DESCONHECIDA" status=DISCONNECTED
+[PASS] 8. sessão que não existe mais não é pintada como viva — status=DISCONNECTED texto="DESCONECTADO"
+[PASS] 9. nenhum erro de JS durante toda a sequência de falhas — console limpo
+
+FAILSAFE_AUTONOMIA=NUNCA_AUTO_SEM_PROVA
+FAILURE_MODES_E2E=PASS
+FALHAS=0

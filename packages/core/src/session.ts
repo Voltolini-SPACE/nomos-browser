@@ -225,9 +225,25 @@ interface SessionRecord {
   control: "agent" | "human";
   attached_client: string | null;
   pages: Map<string, PageRecord>;
+  /**
+   * Abas que FORAM desta sessão e já fecharam.
+   *
+   * Existe para separar duas perguntas que, sem ela, têm a mesma resposta:
+   * "esta aba morreu" e "esta aba nunca foi sua". Um cliente que guardou um
+   * `page_id` e o usa depois de o navegador cair recebia "não pertence à
+   * sessão" — que soa como bug dele, quando o que houve foi o navegador morrer.
+   *
+   * Limitada a `MAX_ABAS_FECHADAS`: memória de aba morta é conveniência de
+   * diagnóstico, não registro histórico, e não pode crescer sem teto numa
+   * sessão longa que abre e fecha abas.
+   */
+  closed_pages: Set<string>;
   active_page_id: string | null;
   needs_reobservation: boolean;
 }
+
+/** Teto da memória de abas fechadas por sessão. */
+const MAX_ABAS_FECHADAS = 64;
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -334,6 +350,7 @@ export class SessionManager {
         owner: opts.owner,
         profile,
         permissions: normalizeCapabilities(opts.capabilities),
+        closed_pages: new Set<string>(),
         created_at: nowIso(),
         last_activity: nowIso(),
         context_key: entry.key,
@@ -589,6 +606,12 @@ export class SessionManager {
 
     page.on("close", () => {
       rec.pages.delete(page_id);
+      rec.closed_pages.add(page_id);
+      // FIFO simples: o mais antigo sai quando o teto estoura.
+      if (rec.closed_pages.size > MAX_ABAS_FECHADAS) {
+        const maisAntigo = rec.closed_pages.values().next().value;
+        if (maisAntigo !== undefined) rec.closed_pages.delete(maisAntigo);
+      }
       if (rec.active_page_id === page_id) {
         rec.active_page_id = rec.pages.keys().next().value ?? null;
       }
@@ -604,6 +627,7 @@ export class SessionManager {
     for (const [page_id, pr] of [...rec.pages.entries()]) {
       if (pr.page.isClosed()) {
         rec.pages.delete(page_id);
+        rec.closed_pages.add(page_id);
         continue;
       }
       pr.info.url = pr.page.url();
@@ -629,12 +653,35 @@ export class SessionManager {
     if (rec.status === "CLOSED") {
       throw new SessionError("SESSION_NOT_ACTIVE", `sessão ${session_id} está CLOSED`, { session_id });
     }
+    // TRÊS situações diferentes moravam no mesmo código de erro, e isso mandava
+    // o operador caçar o bug errado.
+    //
+    // "não tem página aberta" e "a página fechou" NÃO são erro de alvo: são o
+    // navegador tendo sumido por baixo da sessão. Medido na FASE 25: matando o
+    // Chromium, `browser.extract` E `browser.screenshot` voltavam
+    // `TARGET_NOT_FOUND` — e screenshot não TEM alvo. Quem lesse a trilha
+    // concluiria "meu seletor está errado" quando a verdade era "a página que
+    // você estava vendo não existe mais".
+    //
+    // `BROWSER_UNAVAILABLE` (503) já é o código dessa condição neste mesmo
+    // arquivo, duas funções abaixo, para "contexto não está mais vivo". O que
+    // continua sendo `TARGET_NOT_FOUND` é só o caso em que o CHAMADOR pediu uma
+    // aba que não é dele — esse, sim, é erro de quem pediu.
     const id = page_id ?? rec.active_page_id;
     if (id === null || id === undefined) {
-      throw new SessionError("TARGET_NOT_FOUND", `sessão ${session_id} não tem página aberta`, { session_id });
+      throw new SessionError("BROWSER_UNAVAILABLE", `sessão ${session_id} não tem página aberta`, { session_id });
     }
     const pr = rec.pages.get(id);
     if (pr === undefined) {
+      // Era desta sessão e morreu ⇒ condição do navegador. Nunca foi ⇒ erro de
+      // quem pediu. Mesma ausência no mapa, causas opostas, e mandar as duas
+      // para o mesmo código faz o cliente caçar o bug errado.
+      if (rec.closed_pages.has(id)) {
+        throw new SessionError("BROWSER_UNAVAILABLE", `page_id ${id} era desta sessão e já fechou`, {
+          session_id,
+          page_id: id,
+        });
+      }
       throw new SessionError("TARGET_NOT_FOUND", `page_id ${id} não pertence à sessão ${session_id}`, {
         session_id,
         page_id: id,
@@ -642,7 +689,7 @@ export class SessionManager {
     }
     if (pr.page.isClosed()) {
       rec.pages.delete(id);
-      throw new SessionError("TARGET_NOT_FOUND", `page_id ${id} já está fechada`, { session_id, page_id: id });
+      throw new SessionError("BROWSER_UNAVAILABLE", `page_id ${id} já está fechada`, { session_id, page_id: id });
     }
     rec.last_activity = nowIso();
     return pr.page;

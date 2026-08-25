@@ -4,7 +4,7 @@
 [PASS] 3. o canário digitado NÃO aparece no replay inteiro — 11154 bytes varridos, limpo
 [PASS] 4. nem os arquivos gravados da sessão — nenhum arquivo
 [PASS] 5. nenhum verbo de escrita existe em /replay — POST=405 PUT=405 PATCH=405 DELETE=405
-[PASS] 6. o painel de histórico desenha a linha do tempo real — 17 itens · ses_8af792ae7d324ed9 · 17 ações · 0 eventos · 0 req · 0 imagens · sela
+[PASS] 6. o painel de histórico desenha a linha do tempo real — 17 itens · ses_2fc3636cf2e34e0a · 17 ações · 0 eventos · 0 req · 0 imagens · sela
 [PASS] 7. o selo SOMENTE LEITURA acende pelo runtime — data-ro=1
 [PASS] 8. o painel não contém NENHUM controle que aja — só o botão de recarregar (leitura)
 [PASS] 9. o canário não aparece na tela renderizada — DOM limpo
@@ -12,7 +12,7 @@
 [PASS] 10b. a tela DIZ que não conseguiu ler, e não acende o selo — itens=0 selo=0 · "não foi possível ler o histórico desta sessão"
 [PASS] 11. nenhum erro de JS na operação do painel — console limpo
 
-CANARIO=CANARIO-REPLAY-RXH6X23T
+CANARIO=CANARIO-REPLAY-SQWQLJ3P
 REPLAY_MODE=READ_ONLY
 SECRET_LEAK_IN_REPLAY=0
 FALHAS=0

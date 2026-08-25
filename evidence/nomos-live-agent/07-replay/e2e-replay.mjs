@@ -57,7 +57,28 @@ async function limpar() {
   try { FIXTURE?.close(); } catch { /* já foi */ }
 }
 
+/**
+ * Constrói a UI antes de medir.
+ *
+ * O daemon serve `packages/ui/dist/index.html`, que é ARTEFATO DE BUILD e não
+ * entra no git. Editar `src/app.html` e rodar este teste direto mede a versão
+ * ANTERIOR da tela — foi assim que uma mutação deliberada na UI "passou" sem
+ * derrubar caso nenhum, o que teria feito o teste parecer cego quando o cego
+ * era o instrumento. Construir aqui é a diferença entre medir a tela que existe
+ * e medir a que existia da última vez que alguém rodou a suíte.
+ */
+async function construirUI() {
+  const { execSync } = await import("node:child_process");
+  try {
+    execSync("node packages/ui/build.ts", { cwd: RAIZ, stdio: "pipe" });
+  } catch (e) {
+    console.error("ERRO DO INSTRUMENTO: build da UI falhou —", String(e.stderr ?? e.message).slice(0, 300));
+    process.exit(2);
+  }
+}
+
 async function main() {
+  await construirUI();
   for (const d of [DIR, SESSOES]) { fs.rmSync(d, { recursive: true, force: true }); fs.mkdirSync(d, { recursive: true }); }
   FIXTURE = http.createServer((_q, r) => { r.writeHead(200, { "content-type": "text/html; charset=utf-8" }); r.end(HTML); });
   await new Promise((r) => FIXTURE.listen(PORTA_FIX, "127.0.0.1", r));
