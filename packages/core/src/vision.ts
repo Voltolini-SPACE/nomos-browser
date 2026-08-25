@@ -64,6 +64,27 @@ export const VISION_CASCADE: readonly VisionRung[] = Object.freeze([
 ] as const);
 
 export const DEFAULT_VISION_THRESHOLD = 0.7;
+
+/**
+ * FASE 6c — ONDE MIRAR dentro do que a visão devolveu.
+ *
+ *   box_center       centro da caixa estimada (comportamento histórico)
+ *   point            o ponto que o modelo apontou; sem ponto, falha o degrau
+ *   point_then_box   usa o ponto quando ele existe E cai dentro da caixa;
+ *                    senão, centro da caixa
+ *
+ * A distinção existe por uma medição: `qwen2.5vl:3b` erra a LARGURA da caixa em
+ * ~1,8x, e o centro de uma caixa inflada escorrega para fora do alvo. A família
+ * Qwen2.5-VL é treinada para APONTAR (`point_2d`) além de CAIXAR (`bbox_2d`), e
+ * a hipótese é que o ponto não herde a inflação da caixa.
+ */
+export type VisionAim = "box_center" | "point" | "point_then_box";
+
+export const VISION_AIMS: readonly VisionAim[] = Object.freeze(["box_center", "point", "point_then_box"]);
+
+export function isVisionAim(v: unknown): v is VisionAim {
+  return typeof v === "string" && (VISION_AIMS as readonly string[]).includes(v);
+}
 export const DEFAULT_VISION_TIMEOUT_MS = 20_000;
 /** Caixa maior que isto não é um alvo, é a página. Palpite de modelo perdido. */
 export const DEFAULT_MAX_AREA_FRACTION = 0.9;
@@ -184,7 +205,15 @@ export class VisionError extends Error {
 // Observação rica
 // ─────────────────────────────────────────────────────────────────────────────
 
+/** Ponto de mira em px do referencial da imagem entregue ao modelo. */
+export interface VisionPoint {
+  x: number;
+  y: number;
+}
+
 export interface VisionCandidate {
+  /** `point_2d` deste candidato, já em px do viewport. `null` = não veio. */
+  point?: VisionPoint | null;
   box: BoundingBox;
   confidence: number;
   label: string;
@@ -204,6 +233,12 @@ export interface VisionObservation {
   boundingBox: BoundingBox;
   /** Espelho de `boundingBox` para compatibilidade com o contrato v1. */
   box: BoundingBox;
+  /**
+   * `point_2d` do modelo, quando houve um utilizável. `null` NÃO significa "o
+   * modelo não aponta" — significa "não veio ponto legível nesta resposta", e
+   * quem decide o que fazer com isso é a política de mira, não este parser.
+   */
+  point: VisionPoint | null;
   confidence: number;
   /** Texto do provedor. AUDITORIA — nenhuma decisão deste módulo o lê. */
   reason: string;
@@ -661,6 +696,54 @@ export function readBox(v: unknown): BoxRead {
   };
 }
 
+/**
+ * Lê `bbox_2d` — a convenção NOMEADA da família Qwen2.5-VL: `[x1,y1,x2,y2]`.
+ *
+ * `readBox` recusa array cru de propósito, porque `[10,20,30,40]` pode ser
+ * `xywh` ou cantos. Aqui NÃO há ambiguidade: quem escolheu o nome `bbox_2d`
+ * escolheu junto a convenção de cantos, e ela está documentada pelo modelo. A
+ * regra continua a mesma — nunca adivinhar a partir de números soltos; ler a
+ * convenção a partir da CHAVE que os nomeia.
+ */
+function readBbox2d(v: unknown): BoxRead {
+  if (!Array.isArray(v)) return { ok: false, code: "NO_BOX", reason: "bbox_2d não é array" };
+  if (v.length !== 4) {
+    return { ok: false, code: "BAD_NUMBER", reason: `bbox_2d deveria ter 4 números, tem ${v.length}` };
+  }
+  const n = v.map((x) => num(x));
+  if (n.some((x) => x === null)) {
+    return { ok: false, code: "BAD_NUMBER", reason: "bbox_2d com elemento não numérico" };
+  }
+  const [x0, y0, x1, y1] = n as [number, number, number, number];
+  if (!(x1 > x0) || !(y1 > y0)) {
+    return { ok: false, code: "DEGENERATE_BOX", reason: `bbox_2d com cantos invertidos ou iguais (${x0},${y0})-(${x1},${y1})` };
+  }
+  return { ok: true, box: { x: x0, y: y0, width: x1 - x0, height: y1 - y0 } };
+}
+
+/**
+ * Lê um ponto de mira.
+ *
+ * Aceita `[x,y]` sob chave nomeada — e isto NÃO contradiz a recusa de arrays em
+ * `readBox`. A recusa lá existe porque quatro números têm duas leituras que
+ * apontam para lugares DIFERENTES (`xywh` vs cantos). Dois números sob a chave
+ * `point_2d` têm uma leitura só. Onde não há ambiguidade não há palpite.
+ *
+ * `null` para qualquer coisa que não seja um par finito de números.
+ */
+export function readPoint(v: unknown): VisionPoint | null {
+  if (Array.isArray(v)) {
+    if (v.length !== 2) return null;
+    const x = num(v[0]);
+    const y = num(v[1]);
+    return x === null || y === null ? null : { x, y };
+  }
+  if (!isPlainObject(v)) return null;
+  const x = num(keyed(v, ["x", "cx", "left", "px"]));
+  const y = num(keyed(v, ["y", "cy", "top", "py"]));
+  return x === null || y === null ? null : { x, y };
+}
+
 /** Retira `<think>` do qwen3.5, cercas markdown e prefixo conversacional. */
 export function stripModelNoise(text: string): string {
   return text
@@ -831,10 +914,13 @@ export function parseVisionResponse(raw: unknown, ctx: ParseContext): ParseResul
   let lastFailure: { code: VisionRejectCode; reason: string } | null = null;
 
   for (const item of rawList) {
+    // `bbox_2d` primeiro, e por CHAVE: é a convenção nomeada do Qwen2.5-VL e a
+    // única forma de um array de 4 números ser lido sem adivinhação.
+    const bbox2d = isPlainObject(item) ? keyed(item, ["bbox2d", "bbox2dpixels"]) : undefined;
     const holder = isPlainObject(item)
       ? (keyed(item, ["box", "bbox", "boundingbox", "rect", "region", "coordinates", "position"]) ?? item)
       : item;
-    const read = readBox(holder);
+    const read = bbox2d !== undefined ? readBbox2d(bbox2d) : readBox(holder);
     if (!read.ok) {
       lastFailure = { code: read.code, reason: read.reason };
       continue;
@@ -848,7 +934,34 @@ export function parseVisionResponse(raw: unknown, ctx: ParseContext): ParseResul
     }
     const conf = readConfidence(item);
     if (conf.note !== "") notes.push(conf.note);
-    candidates.push({ box, confidence: conf.value, label: readReason(item) });
+
+    /**
+     * PONTO DE MIRA. Passa pelas MESMAS conversões da caixa — se a resposta
+     * veio normalizada, o ponto também está normalizado, e escalar um e não o
+     * outro produziria uma mira em (0,0) com confiança alta.
+     *
+     * Fora do viewport ⇒ DESCARTADO, não corrigido. Um ponto que o modelo
+     * colocou fora da tela é um palpite que ele mesmo não conseguiu situar;
+     * pinçá-lo para dentro da borda inventaria uma resposta que ninguém deu.
+     */
+    const pontoBruto = isPlainObject(item) ? readPoint(keyed(item, ["point2d", "point", "center", "centroid", "click"])) : null;
+    let ponto: VisionPoint | null = null;
+    if (pontoBruto !== null) {
+      const p = normalized
+        ? { x: pontoBruto.x * ctx.viewport.width, y: pontoBruto.y * ctx.viewport.height }
+        : pontoBruto;
+      const dentroDaTela =
+        Number.isFinite(p.x) &&
+        Number.isFinite(p.y) &&
+        p.x >= 0 &&
+        p.y >= 0 &&
+        p.x <= ctx.viewport.width &&
+        p.y <= ctx.viewport.height;
+      if (dentroDaTela) ponto = { x: p.x, y: p.y };
+      else notes.push(`point_2d fora do viewport (${Math.round(p.x)},${Math.round(p.y)}) — descartado`);
+    }
+
+    candidates.push({ box, confidence: conf.value, label: readReason(item), point: ponto });
   }
 
   if (candidates.length === 0) {
@@ -863,6 +976,7 @@ export function parseVisionResponse(raw: unknown, ctx: ParseContext): ParseResul
     observation: {
       boundingBox: top.box,
       box: top.box,
+      point: top.point ?? null,
       confidence: top.confidence,
       reason: reasonParts.length > 0 ? scrubExcerpt(reasonParts.join(" | ")) : "modelo não explicou a escolha",
       provider: ctx.provider,
@@ -921,15 +1035,70 @@ export interface OllamaVisionOptions {
   fetchImpl?: typeof fetch;
   /** Endpoint fora do loopback exige consentimento explícito (SECURITY.md T7). */
   allow_remote?: boolean;
+  /**
+   * Semente do amostrador do backend. Default `0` — FIXA de propósito.
+   *
+   * DEFEITO MEDIDO (FASE 6): `temperature: 0` sozinho NÃO torna a inferência
+   * repetível no Ollama. Duas chamadas consecutivas, mesma imagem, mesmo
+   * prompt, deram caixas diferentes:
+   *   browser.find  → {x:412,y:150,w:280,h:100}  centro (552,200)
+   *   browser.click → caixa diferente,            centro (569,207)
+   * Ou seja: `find` e `click` sobre o MESMO alvo discordavam sobre onde ele
+   * está. Para um runtime cuja tese é "o rastro é a verdade", isso é grave por
+   * si só — a evidência gravada não descreve o gesto que foi despachado.
+   *
+   * A semente conserta a REPRODUTIBILIDADE, e só ela. Não melhora a precisão do
+   * modelo, e nada aqui finge que melhora: o erro em px continua sendo o que a
+   * medição disser.
+   */
+  seed?: number;
+  /**
+   * Política de REFINO POR RECORTE que este provider declara ao resolvedor de
+   * alvo (`target.ts` a lê como `ComPoliticaDeRefino`).
+   *
+   * Mora no provider, e não numa opção de chamada, porque o provider é o objeto
+   * que o dono configurou: quem escolheu `qwen2.5vl:3b` escolheu junto quantas
+   * inferências está disposto a pagar por clique. Passar isso por fora
+   * obrigaria todo chamador da cascata a repassar, e o primeiro que esquecesse
+   * voltaria a clicar na estimativa grosseira sem ninguém notar.
+   *
+   * O refino em si NÃO é executado aqui: `locate()` recebe uma imagem, não uma
+   * `Page`, e recortar exige o navegador. Ver `runVision` em `target.ts`.
+   */
+  refine_passes?: number;
+  refine_factor?: number;
+  /**
+   * Onde MIRAR dentro do que a visão devolveu. Ver `VisionAim`. Lido por
+   * `target.ts` (`ComPoliticaDeMira`) pelo mesmo motivo do refino: o provider é
+   * o objeto que o dono configurou.
+   */
+  aim?: VisionAim;
 }
 
+/** Ver `OllamaVisionOptions.seed`. */
+export const DEFAULT_VISION_SEED = 0;
+
+/**
+ * FASE 6c: o prompt pede CAIXA e PONTO.
+ *
+ * `bbox_2d` e `point_2d` são os nomes que a família Qwen2.5-VL usa no próprio
+ * treino — pedir com o vocabulário do modelo custa nada e evita que ele traduza
+ * para um esquema que nunca viu. O `point_2d` existe porque a caixa deste
+ * modelo vem inflada (~1,8x em largura, medido) e o centro de uma caixa inflada
+ * escorrega para fora do alvo; apontar é uma tarefa diferente de delimitar.
+ *
+ * `box` continua aceita pelo parser: nenhum provider antigo quebra por causa
+ * deste prompt.
+ */
 export function visionPrompt(goal: string, viewport: { width: number; height: number }): string {
   return [
-    `Você recebe UMA captura de tela de ${viewport.width}x${viewport.height} pixels CSS.`,
+    `Você recebe UMA captura de tela de ${viewport.width}x${viewport.height} pixels.`,
     `Localize: "${goal}".`,
     "Responda SOMENTE com JSON, sem texto ao redor, neste formato exato:",
-    '{"found": true, "box": {"x": <number>, "y": <number>, "width": <number>, "height": <number>},',
+    '{"found": true, "bbox_2d": [x1, y1, x2, y2], "point_2d": [x, y],',
     ' "confidence": <0..1>, "coordinate_space": "pixels", "reason": "<curto>"}',
+    '"bbox_2d" são os cantos superior-esquerdo e inferior-direito do alvo.',
+    '"point_2d" é UM ponto no MEIO do alvo — o lugar exato onde clicar nele.',
     'Se o alvo NÃO estiver visível, responda {"found": false, "reason": "<curto>"}.',
     "Nunca invente coordenada. Coordenadas em pixels a partir do canto superior esquerdo.",
   ].join("\n");
@@ -958,6 +1127,12 @@ export class OllamaVisionProvider extends BaseVisionProvider {
   readonly endpoint: string;
   readonly timeout_ms: number;
   readonly json_mode: boolean;
+  readonly seed: number;
+  /** Lidos por `target.ts` (`ComPoliticaDeRefino`). `undefined` = use o default de lá. */
+  readonly refine_passes: number | undefined;
+  readonly refine_factor: number | undefined;
+  /** Lido por `target.ts` (`ComPoliticaDeMira`). */
+  readonly aim: VisionAim | undefined;
 
   readonly #fetch: typeof fetch;
 
@@ -969,6 +1144,13 @@ export class OllamaVisionProvider extends BaseVisionProvider {
     this.model = opts.model ?? DEFAULT_VISION_MODEL;
     this.timeout_ms = opts.timeout_ms ?? DEFAULT_VISION_TIMEOUT_MS;
     this.json_mode = opts.json_mode !== false;
+    this.seed = opts.seed ?? DEFAULT_VISION_SEED;
+    this.refine_passes = opts.refine_passes;
+    this.refine_factor = opts.refine_factor;
+    if (opts.aim !== undefined && !isVisionAim(opts.aim)) {
+      throw new VisionError("INVALID_REQUEST", `vision aim desconhecido: ${String(opts.aim)}`);
+    }
+    this.aim = opts.aim;
     const f = opts.fetchImpl ?? globalThis.fetch;
     if (typeof f !== "function") {
       throw new VisionError("INVALID_REQUEST", "nenhum fetch disponível para o OllamaVisionProvider");
@@ -1001,7 +1183,8 @@ export class OllamaVisionProvider extends BaseVisionProvider {
           images: [image.toString("base64")],
           stream: false,
           ...(this.json_mode ? { format: "json" } : {}),
-          options: { temperature: 0 },
+          // `temperature: 0` sozinho não bastou — ver `OllamaVisionOptions.seed`.
+          options: { temperature: 0, seed: this.seed },
         }),
       });
     } catch (e) {
@@ -1068,6 +1251,8 @@ export class OllamaVisionProvider extends BaseVisionProvider {
 
 export interface ScriptedEntry {
   box?: BoundingBox;
+  /** `point_2d` simulado. `undefined` = o roteiro não aponta (só caixa). */
+  point?: VisionPoint | null;
   confidence?: number;
   reason?: string;
   /** Mais de um ⇒ o provedor viu alvos parecidos e não desempata sozinho. */
@@ -1168,7 +1353,7 @@ export class ScriptedVisionProvider extends BaseVisionProvider {
       entry.candidates !== undefined && entry.candidates.length > 0
         ? entry.candidates.map((c) => ({ ...c, box: { ...c.box } }))
         : entry.box !== undefined
-          ? [{ box: { ...entry.box }, confidence: entry.confidence ?? 1, label: entry.reason ?? "" }]
+          ? [{ box: { ...entry.box }, confidence: entry.confidence ?? 1, label: entry.reason ?? "", point: entry.point ?? null }]
           : [];
 
     if (candidates.length === 0) {
@@ -1187,6 +1372,7 @@ export class ScriptedVisionProvider extends BaseVisionProvider {
     return {
       boundingBox: { ...top.box },
       box: { ...top.box },
+      point: entry.point ?? top.point ?? null,
       confidence: entry.confidence ?? top.confidence,
       reason: entry.reason ?? top.label ?? "roteiro",
       provider: this.name,

@@ -14,8 +14,15 @@
 #   e2e         gates ponta a ponta
 #   adversarial segurança e ataques
 #   guards      marca, segredos, desacoplamento
+#   providers   FASE 5 — providers de modelo ligados ao runtime
 #
-# Uso: scripts/ci.sh [fast|integration|e2e|adversarial|guards|all]
+# `providers` é estágio PRÓPRIO por causa da memória, não do tempo: é o único
+# passo que pode carregar um modelo de vários GB, e nesta máquina (M2, 16 GB)
+# dois modelos residentes ao mesmo tempo já mataram os serviços NOMOS de
+# produção por jetsam. Isolado, ele descarrega antes e depois e confere a
+# assinatura dos serviços vizinhos — ver `scripts/lib-memoria.sh`.
+#
+# Uso: scripts/ci.sh [fast|integration|e2e|adversarial|guards|providers|all]
 set -uo pipefail
 RAIZ="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$RAIZ"
@@ -38,7 +45,15 @@ checar() {
 testes() { node --test "$@"; }
 
 RAPIDOS="auth lease skills traceability observability replay-hardening bench sdk-ts mcp cli policy-vault security-files-secrets security-net-injection ui-build"
-INTEGRACAO="session perception pointer-keyboard target-verifier click-entrega api"
+# `cascata-percepcao` fica AQUI e não em `providers`: ele usa um VisionProvider
+# espião determinístico e não carrega modelo nenhum. O que ele prova é o FIO —
+# que a cascata chega ao 5º degrau em produção; quem prova o modelo é o estágio
+# `providers` e o e2e de visão.
+# `task-engine` (FASE 9) fica na INTEGRAÇÃO e não em `fast`: ele sobe daemon com
+# Chromium real, derruba um `BrowserContext` por baixo de uma sessão e mata um
+# processo filho com SIGKILL. Nenhuma dessas coisas cabe em "unidade pura" — e
+# nenhuma delas carrega modelo, então também não pertence ao estágio `providers`.
+INTEGRACAO="session perception pointer-keyboard target-verifier click-entrega cascata-percepcao api task-engine"
 E2E="e2e-gate product02-gate"
 ADVERSARIAIS="security-net-injection security-files-secrets recovery-watchdog injection-wired audit-forense"
 
@@ -139,6 +154,31 @@ if [ "$ESTAGIO" = "e2e" ] || [ "$ESTAGIO" = "all" ]; then
   for t in $E2E; do
     [ -f "tests/$t.test.ts" ] && checar "test:$t" testes "tests/$t.test.ts"
   done
+fi
+
+if [ "$ESTAGIO" = "providers" ] || [ "$ESTAGIO" = "all" ]; then
+  titulo "providers — modelos ligados ao runtime (FASE 5)"
+  # shellcheck source=lib-memoria.sh
+  . "$RAIZ/scripts/lib-memoria.sh"
+
+  PROD_ANTES="$(producao_assinatura)"
+  # Um run interrompido deixa modelo residente. Começar limpo não é higiene
+  # opcional: foi com 5,13 GB presos que o gate anterior estourou por timeout.
+  descarregar_todos >/dev/null 2>&1 || true
+  printf '%-46s%s\n' "memoria:disponivel-antes" "$(mem_disponivel_gb) GB (livre $(mem_livre_pct)%)"
+
+  checar "test:providers-runtime" testes "tests/providers-runtime.test.ts"
+
+  descarregar_todos >/dev/null 2>&1 || true
+  RESIDENTES="$(residentes | tr '\n' ' ')"
+  checar "memoria:nenhum-modelo-residente" bash -c "[ -z \"$RESIDENTES\" ]"
+  printf '%-46s%s\n' "memoria:disponivel-depois" "$(mem_disponivel_gb) GB (livre $(mem_livre_pct)%)"
+
+  # Guarda de produção: os serviços NOMOS têm de sair vivos e com os MESMOS
+  # PIDs. Assinatura diferente = algum deles morreu e o launchd o reiniciou —
+  # exatamente o que passou despercebido numa missão anterior.
+  PROD_DEPOIS="$(producao_assinatura)"
+  checar "producao:sobreviveu-intacta" bash -c "[ \"$PROD_ANTES\" = \"$PROD_DEPOIS\" ]"
 fi
 
 titulo "resultado"

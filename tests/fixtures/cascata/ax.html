@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><title>cascata — degrau 3 (accessibility)</title>
+<style>html,body{margin:0;font:14px system-ui;background:#fff}button{padding:8px 14px}svg{display:block}</style></head>
+<body>
+<!--
+  DEGRAU 3 — ACESSIBILIDADE.
+
+  O alvo é um botão de ÍCONE: sem `id`, sem classe útil, sem texto visível.
+  A única identidade que ele tem é `role=button` + `aria-label`. Consequência
+  medida, degrau a degrau, para o descritor `{ text: "Enviar formulario agora" }`:
+
+    selector       não é aplicável (o descritor não traz seletor)
+    role_text      getByText() casa CONTEÚDO DE TEXTO; este botão não tem nenhum
+                   → MISS, com razão registrada
+    accessibility  getByLabel() casa o NOME ACESSÍVEL → HIT
+
+  O descritor não traz `role` de propósito: com `role:"button"` o Playwright
+  casaria pelo nome acessível já em `role_text`, e a página deixaria de exercitar
+  o degrau que ela existe para exercitar.
+-->
+<p><button type="button">Voltar</button></p>
+<p>
+  <button type="button" aria-label="Enviar formulario agora">
+    <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true" focusable="false">
+      <path d="M2 9 L16 2 L12 16 L9 10 Z" fill="#1478dc"></path>
+    </svg>
+  </button>
+</p>
+<p><button type="button">Ajuda</button></p>
+<div id="recibo">nada</div>
+<script>
+document.querySelector('button[aria-label]').addEventListener('click', function (e) {
+  document.getElementById('recibo').textContent = 'clique isTrusted=' + e.isTrusted;
+});
+</script>
+</body></html>

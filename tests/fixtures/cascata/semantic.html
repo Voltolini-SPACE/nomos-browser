@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><title>cascata — degrau 4 (semantic)</title>
+<style>html,body{margin:0;font:14px system-ui;background:#fff}button{padding:8px 14px}</style></head>
+<body>
+<!--
+  DEGRAU 4 — SEMÂNTICO.
+
+  O alvo diz "Prosseguir"; quem pede diz "avançar". Não há `id`, não há
+  `aria-label`, e o texto pedido NÃO é o texto da página — nenhum casamento
+  literal alcança este botão. Só a tabela de intenções de `target.ts`
+  (`next: [..., "avancar", ..., "prosseguir"]`) fecha a distância.
+
+  Os irmãos casam OUTRAS intenções (`cancel`, `previous`) e por isso pontuam
+  zero para `next`: sem eles, "achou o único botão" passaria por "entendeu a
+  intenção".
+
+  O descritor do teste carrega um seletor MORTO (`#alvo-que-sumiu`) — o caso
+  real de cura: o agente guardou um seletor que a página não tem mais. É o que
+  faz o degrau 1 ser TENTADO e falhar, em vez de nem constar do rastro.
+-->
+<p><button type="button">Cancelar</button></p>
+<p><button type="button">Voltar</button></p>
+<p><button type="button">Prosseguir</button></p>
+<div id="recibo">nada</div>
+<script>
+document.querySelectorAll('button').forEach(function (b) {
+  b.addEventListener('click', function (e) {
+    document.getElementById('recibo').textContent =
+      'clique em "' + b.textContent.trim() + '" isTrusted=' + e.isTrusted;
+  });
+});
+</script>
+</body></html>

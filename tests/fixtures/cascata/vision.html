@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><title>cascata — degrau 5 (vision)</title>
+<style>
+  /* Sem animação, sem transição, sem fonte web: duas capturas da mesma página
+     têm de ser byte-idênticas, senão a visão mediria ruído de renderização. */
+  html,body{margin:0;padding:0;background:#fff}
+  canvas{display:block}
+  #clicado{position:absolute;left:0;top:0;width:1px;height:1px;overflow:hidden;color:#fff}
+</style></head>
+<body>
+<!--
+  DEGRAU 5 — VISÃO.
+
+  O botão "COMPRAR" é DESENHADO no canvas. Não é nó do DOM: não tem role, não
+  tem nome acessível, não tem texto, não tem tabindex e não entra na lista de
+  elementos interativos do TargetResolver. A página inteira não tem UM elemento
+  interativo. Logo:
+
+    selector / role_text / accessibility  não são sequer aplicáveis ao descritor
+    semantic                              enumera zero candidatos → MISS
+    vision                                único degrau que pode resolver
+
+  VERDADE CONHECIDA: { x: 400, y: 120, w: 160, h: 100 }. A fixture é a única
+  fonte sobre onde desenhou — o teste PERGUNTA (`window.__alvoBox()`), não
+  adivinha, e mede o erro do clique em px contra esse retângulo.
+-->
+<canvas id="tela" width="1280" height="800"></canvas>
+<div id="clicado">nada</div>
+<script>
+var ALVO = { x: 400, y: 120, w: 160, h: 100 };
+var c = document.getElementById('tela'), g = c.getContext('2d');
+g.fillStyle = '#ffffff'; g.fillRect(0, 0, 1280, 800);
+
+/**
+ * Desenha um botão CONVINCENTE: retângulo com rótulo CENTRALIZADO.
+ *
+ * CONSERTO DE INSTRUMENTO, medido — ver `../../../evidence/nomos-browser-final-loop/06-cascata/diag-visao.ts`:
+ * a primeira versão desta fixture era um retângulo solitário com o texto colado
+ * na esquerda, e `qwen2.5vl:3b` devolveu {462,165,392,112} — 185px fora, com
+ * confiança 0,99. A MESMA pergunta sobre uma página com botões de DOM de
+ * verdade deu 41,7px e caiu dentro. A diferença não era o modelo nem o prompt:
+ * era a IMAGEM. Um alvo que nem parece botão, sozinho numa tela branca, não dá
+ * ao modelo nem forma nem escala — e medir a visão contra um desenho ruim mede
+ * o desenho, não a visão.
+ *
+ * Os dois irmãos existem pelo mesmo motivo, e endurecem o teste em vez de
+ * afrouxá-lo: dão referência de escala E obrigam o modelo a DISCRIMINAR entre
+ * três botões em vez de apontar o único objeto da tela.
+ */
+function botao(x, y, w, h, cor, rotulo) {
+  g.fillStyle = cor;
+  g.fillRect(x, y, w, h);
+  g.strokeStyle = 'rgba(0,0,0,0.25)';
+  g.lineWidth = 2;
+  g.strokeRect(x + 1, y + 1, w - 2, h - 2);
+  // CONSERTO DE INSTRUMENTO (FASE 6b): o rotulo ESCALA com o botao.
+  // A versao anterior desenhava 'bold 22px' fixo; num botao de 80x50 o texto
+  // transbordava para fora do retangulo e o alvo deixava de PARECER um botao —
+  // medir a visao contra isso mediria o desenho, nao a visao.
+  var px = Math.max(8, Math.min(22, Math.round(h * 0.28)));
+  for (; px > 8; px -= 1) {
+    g.font = 'bold ' + px + 'px system-ui, sans-serif';
+    if (g.measureText(rotulo).width <= w * 0.8) break;
+  }
+  g.font = 'bold ' + px + 'px system-ui, sans-serif';
+  if (g.measureText(rotulo).width > w * 0.92) return;
+  g.fillStyle = '#ffffff';
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.fillText(rotulo, x + w / 2, y + h / 2);
+}
+
+botao(ALVO.x, ALVO.y, ALVO.w, ALVO.h, 'rgb(220,40,40)', 'COMPRAR');
+botao(120, 400, 150, 60, 'rgb(40,140,80)', 'VOLTAR');
+botao(880, 600, 150, 60, 'rgb(90,90,110)', 'AJUDA');
+
+window.__alvoBox = function () {
+  var r = c.getBoundingClientRect();
+  return { x: r.x + ALVO.x, y: r.y + ALVO.y, width: ALVO.w, height: ALVO.h };
+};
+
+c.addEventListener('click', function (e) {
+  document.getElementById('clicado').textContent =
+    'clique em ' + Math.round(e.offsetX) + ',' + Math.round(e.offsetY) + ' isTrusted=' + e.isTrusted;
+});
+</script>
+</body></html>

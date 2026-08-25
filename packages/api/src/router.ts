@@ -27,6 +27,10 @@ export type RouteName =
   | "sessions.handoff"
   | "sessions.takeover"
   | "sessions.release"
+  | "tasks.list"
+  | "tasks.get"
+  | "tasks.cancel"
+  | "tasks.resume"
   | "action"
   | "events";
 
@@ -72,6 +76,14 @@ export const ROUTES: readonly RouteSpec[] = Object.freeze([
   spec("POST", `${P}/sessions/:id/handoff`, "sessions.handoff", false),
   spec("POST", `${P}/sessions/:id/takeover`, "sessions.takeover", false),
   spec("POST", `${P}/sessions/:id/release`, "sessions.release", false),
+  // FASE 9 — gestão de task. `envelope:false` porque são rotas de GESTÃO, e
+  // `docs/API.md` reserva o envelope `ActionResponse` para AÇÕES. Uma listagem
+  // de tasks não tem `session state` nem `timing` de ação; embrulhá-la seria
+  // inventar campos para satisfazer uma forma que não é a dela.
+  spec("GET", `${P}/tasks`, "tasks.list", false),
+  spec("GET", `${P}/tasks/:task_id`, "tasks.get", false),
+  spec("POST", `${P}/tasks/:task_id/cancel`, "tasks.cancel", false),
+  spec("POST", `${P}/tasks/:task_id/resume`, "tasks.resume", false),
   spec("GET", "/events", "events", false),
 ]);
 

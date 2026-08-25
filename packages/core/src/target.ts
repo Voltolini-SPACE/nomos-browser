@@ -47,6 +47,88 @@ export const DEFAULT_MAX_CANDIDATES = 60;
 export const DEFAULT_VISION_MIN_CONFIDENCE = 0.5;
 
 /**
+ * FASE 6b — REFINO POR RECORTE.
+ *
+ * O DEFEITO MEDIDO: `qwen2.5vl:3b` sobre a tela inteira (1280x800) superestima a
+ * largura do alvo ~1,8x e desloca y ~+30 px. Num alvo de 160x100 o centro da
+ * caixa cai 9 px FORA da borda direita — o clique erra.
+ *
+ * A CAUSA: o codificador visual de um VL pequeno reamostra a imagem para uma
+ * grade fixa. Um alvo de 160 px numa imagem de 1280 px ocupa 12% da largura;
+ * depois da reamostragem sobram pouquíssimos patches sobre ele, e o erro
+ * ABSOLUTO cresce com o tamanho da IMAGEM, não com o do alvo.
+ *
+ * A HIPÓTESE: perguntar duas vezes. A 1ª passada localiza grosso na tela
+ * inteira; a 2ª repete a MESMA pergunta sobre um RECORTE em volta da estimativa,
+ * onde o alvo ocupa uma fração maior da imagem.
+ *
+ * A HIPÓTESE FOI REFUTADA PELA MEDIÇÃO, DUAS VEZES, e o default segue a medição.
+ *
+ * (a) Sob o prompt ANTIGO (que pedia `box: {x,y,width,height}`), 3 tamanhos ×
+ *     3 ajustes × 3 execuções — erro do centro em px (mediana), "dentro":
+ *
+ *       tamanho          passes=0            passes=1            passes=2
+ *       grande 320x200   65,6px  3/3         121,7px  3/3        40,8px  3/3
+ *       medio  160x100   82,6px  3/3         161,8px  0/3 FORA   77,5px  3/3
+ *       pequeno 80x50    22,9px  3/3          23,6px  3/3        23,6px  3/3
+ *
+ * (b) Sob o prompt ATUAL (FASE 6c, `bbox_2d`+`point_2d`), com `point_then_box`:
+ *
+ *       tamanho          passes=0            passes=1
+ *       grande 320x200    4,5px  2/2          59,2px  2/2   (piorou 13x)
+ *       medio  160x100    4,1px  2/2           4,1px  2/2   (refino REJEITADO)
+ *       pequeno 80x50     2,8px  2/2           2,8px  2/2   (refino REJEITADO)
+ *
+ * Recortar NÃO amplia: o alvo continua com os mesmos pixels. Sob o prompt novo
+ * o erro já é de ~4px, então não sobra nada para o refino corrigir — ele só
+ * arrisca. Nos dois regimes, uma passada é neutra ou pior.
+ *
+ * ATENÇÃO ao ler a tabela (a): aqueles 65-82px de erro eram do PROMPT, não do
+ * modelo. Ver `visionPrompt` em `vision.ts` — pedir o esquema nativo
+ * (`bbox_2d` em cantos) derrubou o erro de 82,6px para 5,0px no mesmo alvo,
+ * com a mesma imagem e o mesmo modelo. A tabela (a) fica registrada porque foi
+ * o que motivou o refino, não porque ainda descreva o produto.
+ *
+ * Default `0`: ligar por default um degrau que a medição mostra neutro-ou-pior
+ * nos dois regimes seria melhorar por intuição. A capacidade fica disponível,
+ * medida e auditável, para quem tiver outro modelo ou outra página.
+ */
+export const DEFAULT_VISION_REFINE_PASSES = 0;
+export const MAX_VISION_REFINE_PASSES = 2;
+export const DEFAULT_VISION_REFINE_FACTOR = 2.5;
+/** Abaixo disto o recorte é menor que o próprio ruído do modelo. */
+export const MIN_LADO_DE_RECORTE_PX = 32;
+/** Lado mínimo de uma caixa REFINADA. Menor que isso é ruído, não alvo. */
+export const MIN_BOX_SIDE_DE_REFINO = 2;
+/** Mudança relativa abaixo da qual as passadas convergiram e param. */
+export const REFINO_CONVERGENCIA = 0.02;
+
+/**
+ * FASE 6c — ONDE MIRAR dentro do que a visão devolveu. Ver `VisionAim` em
+ * `vision.ts`; o tipo é redeclarado aqui como união literal porque `vision.ts`
+ * IMPORTA este módulo, e importar de volta fecharia um ciclo.
+ *
+ * MEDIDO (`medir-refino.ts`, dimensão `aim`; `qwen2.5vl:3b`, seed fixo,
+ * `refine_passes=0`, 3 tamanhos × 3 modos × 3 execuções). Erro do ponto mirado
+ * até o centro do alvo (mediana) e MARGEM até a borda mais próxima:
+ *
+ *   tamanho          box_center        point             point_then_box
+ *   grande 320x200   4,2px  m=97px     4,5px  m=98px     4,5px  m=98px
+ *   medio  160x100   5,0px  m=46px     4,1px  m=49px     4,1px  m=49px
+ *   pequeno 80x50    5,4px  m=22px     2,8px  m=23px     2,8px  m=23px
+ *
+ * Todos 3/3 dentro do alvo, todos estáveis entre execuções, 1 inferência.
+ *
+ * `point` vence nos dois tamanhos menores (4,1 vs 5,0 e 2,8 vs 5,4) e perde por
+ * 0,3px no maior — ruído. `point_then_box` empatou com `point` em TODAS as
+ * células porque o ponto sempre caiu dentro da caixa; ele é o default por
+ * carregar a rede de proteção de graça: sem ponto, ou com o modelo se
+ * contradizendo, cai no centro da caixa em vez de falhar.
+ */
+export type AimMode = "box_center" | "point" | "point_then_box";
+export const DEFAULT_VISION_AIM: AimMode = "point_then_box";
+
+/**
  * Universo de candidatos da etapa `semantic`. `label` fica de fora de propósito:
  * o rótulo e o campo que ele rotula são o MESMO controle lógico, e listar os dois
  * fabricaria uma ambiguidade que não existe na página.
@@ -232,6 +314,39 @@ export function isTargetResolutionError(e: unknown): e is TargetResolutionError 
 
 export type AttemptOutcome = "hit" | "miss" | "skipped" | "ambiguous" | "error";
 
+/**
+ * Registro do refino por recorte. Vai INTEIRO para `AttemptTrace.detail` do
+ * degrau `vision`: gastar uma segunda inferência é uma decisão, e decisão sem
+ * rastro é decisão que ninguém pode contestar depois.
+ */
+export interface RefinoTrace {
+  /** Passadas de refino ACEITAS (0 = só a estimativa grosseira valeu). */
+  passadas: number;
+  /** Caixa da 1ª passada, em CSS px do viewport. */
+  box_p1: BoundingBox;
+  /** Caixa final. Igual a `box_p1` quando nenhum refino foi aceito. */
+  box_refinada: BoundingBox;
+  /** Distância entre os centros de `box_p1` e `box_refinada`. */
+  deslocamento_px: number;
+  /** área(p1) / área(refinada). > 1 = o refino ENCOLHEU a caixa. */
+  area_ratio_p1_p2: number;
+  refino: "usado" | "rejeitado" | "desligado";
+  motivo: string | null;
+  /** Inferências gastas no degrau, refino incluído. */
+  inferencias: number;
+  regiao_de_recorte: BoundingBox | null;
+  /** Modo pedido pela configuração. */
+  aim_modo: AimMode;
+  /** O que de fato mirou. `point` só quando havia ponto utilizável. */
+  aim: "point" | "box_center";
+  /** Ponto CRU do modelo, em CSS px do viewport. `null` = não veio. */
+  aim_point: { x: number; y: number } | null;
+  /** Caixa CRUA do modelo, antes de qualquer recentragem pela mira. */
+  aim_box_bruta: BoundingBox;
+  /** Por que a mira caiu no centro da caixa, quando caiu. */
+  aim_motivo: string | null;
+}
+
 export interface AttemptTrace {
   strategy: TargetStrategy;
   outcome: AttemptOutcome;
@@ -240,6 +355,8 @@ export interface AttemptTrace {
   candidates: number;
   reason?: string;
   duration_ms: number;
+  /** Estruturado e específico do degrau. Hoje só `vision` preenche (`RefinoTrace`). */
+  detail?: Record<string, unknown>;
 }
 
 export interface ResolveOptions {
@@ -249,6 +366,31 @@ export interface ResolveOptions {
   timeout_ms?: number;
   vision_min_confidence?: number;
   max_candidates?: number;
+  /**
+   * Passadas de REFINO por recorte (0..2). Ausente ⇒ o resolvedor pergunta ao
+   * PRÓPRIO provider (`refine_passes`), e só então cai no default.
+   *
+   * A ordem é essa porque quem configura a visão é o dono, e o objeto que ele
+   * configurou é o provider — mandar a política por fora do provider obrigaria
+   * cada chamador da cascata a repassá-la, e o primeiro que esquecesse voltaria
+   * a clicar na estimativa grosseira sem ninguém perceber.
+   */
+  vision_refine_passes?: number;
+  /** Lado do recorte = maior lado da caixa × isto. Ver `MIN_LADO_DE_RECORTE_PX`. */
+  vision_refine_factor?: number;
+  /** Onde mirar dentro do que a visão devolveu. Mesma precedência do refino. */
+  vision_aim?: AimMode;
+}
+
+/**
+ * Provider que declara a própria política de refino. Opcional e estrutural: um
+ * `VisionProvider` do contrato v1 continua válido sem isto.
+ */
+export interface ComPoliticaDeRefino {
+  readonly refine_passes?: number;
+  readonly refine_factor?: number;
+  /** Ver `AimMode`. */
+  readonly aim?: AimMode;
 }
 
 export interface DetailedResolution {
@@ -565,6 +707,8 @@ interface StrategyHit {
   description: string;
   probe: string;
   candidates: number;
+  /** Detalhe estruturado do degrau. Hoje só `vision` preenche (`RefinoTrace`). */
+  detail?: Record<string, unknown>;
 }
 interface StrategyMiss {
   kind: "miss";
@@ -686,11 +830,113 @@ async function runSemantic(page: Page, d: TargetDescriptor, max: number): Promis
   return await finishHit(page.locator(INTERACTIVE_SELECTOR), chosen.meta.index, chosen.meta, "semantic", probeLabel, res.total);
 }
 
+/**
+ * Largura e altura de um PNG, lidas do IHDR. `null` quando não é PNG.
+ *
+ * Oito linhas em vez de uma dependência: o cabeçalho PNG é fixo — assinatura de
+ * 8 bytes, depois o IHDR com largura e altura em big-endian nos offsets 16 e 20.
+ */
+function dimensoesPng(buf: Buffer): { width: number; height: number } | null {
+  if (buf.length < 24) return null;
+  if (buf.readUInt32BE(0) !== 0x89504e47 || buf.readUInt32BE(4) !== 0x0d0a1a0a) return null;
+  const width = buf.readUInt32BE(16);
+  const height = buf.readUInt32BE(20);
+  return width > 0 && height > 0 ? { width, height } : null;
+}
+
+/** Distância entre os centros de duas caixas, em px. */
+function distanciaDeCentros(a: BoundingBox, b: BoundingBox): number {
+  const dx = a.x + a.width / 2 - (b.x + b.width / 2);
+  const dy = a.y + a.height / 2 - (b.y + b.height / 2);
+  return Math.hypot(dx, dy);
+}
+
+function areaDe(b: BoundingBox): number {
+  return Math.max(0, b.width) * Math.max(0, b.height);
+}
+
+/** Converte uma caixa do referencial da IMAGEM para CSS px, dividindo pela escala. */
+function paraCss(b: BoundingBox, escala: number): BoundingBox {
+  if (escala === 1) return { x: b.x, y: b.y, width: b.width, height: b.height };
+  return { x: b.x / escala, y: b.y / escala, width: b.width / escala, height: b.height / escala };
+}
+
+/**
+ * Região quadrada centrada na estimativa, com margem, presa às bordas do
+ * viewport.
+ *
+ * QUADRADA de propósito: o codificador visual reamostra para uma grade, e um
+ * recorte muito alongado desperdiça patches na dimensão longa — que é
+ * justamente o eixo em que este modelo já superestima.
+ *
+ * PRESA às bordas, não deslizante: um recorte que sai do viewport faria o
+ * Playwright recusar a captura ("clipped area outside the resulting image"), e
+ * um alvo colado na borda é o caso comum, não a exceção.
+ */
+function regiaoDeRecorte(
+  b: BoundingBox,
+  fator: number,
+  viewport: { width: number; height: number },
+): BoundingBox | null {
+  const maiorLado = Math.max(b.width, b.height);
+  if (!Number.isFinite(maiorLado) || maiorLado <= 0) return null;
+  const teto = Math.min(viewport.width, viewport.height);
+  const lado = Math.min(Math.max(maiorLado * fator, MIN_LADO_DE_RECORTE_PX), teto);
+  if (lado < MIN_LADO_DE_RECORTE_PX || lado <= 0) return null;
+  // Recorte do tamanho do viewport não é recorte: seria gastar uma inferência
+  // para repetir exatamente a pergunta da 1ª passada.
+  if (lado >= viewport.width && lado >= viewport.height) return null;
+  const cx = b.x + b.width / 2;
+  const cy = b.y + b.height / 2;
+  const x = Math.min(Math.max(cx - lado / 2, 0), Math.max(viewport.width - lado, 0));
+  const y = Math.min(Math.max(cy - lado / 2, 0), Math.max(viewport.height - lado, 0));
+  // Inteiros: `clip` fracionário produz imagem de tamanho arredondado e a
+  // escala de volta deixaria de fechar.
+  return { x: Math.round(x), y: Math.round(y), width: Math.round(lado), height: Math.round(lado) };
+}
+
+/**
+ * Ponto de mira de uma resposta de visão, se houver.
+ *
+ * Leitura DEFENSIVA e por duck typing: o contrato v1 de `VisionProvider.locate`
+ * promete `{box, confidence}` e nada mais. Um provider rico (`vision.ts`)
+ * devolve também `point`; um provider de terceiro pode não devolver. Exigir o
+ * campo no tipo quebraria o contrato; ignorá-lo desperdiçaria a informação mais
+ * precisa que este modelo produz.
+ */
+function pontoDaResposta(v: unknown): { x: number; y: number } | null {
+  if (v === null || typeof v !== "object") return null;
+  const p = (v as { point?: unknown }).point;
+  if (p === null || typeof p !== "object") return null;
+  const x = (p as { x?: unknown }).x;
+  const y = (p as { y?: unknown }).y;
+  if (typeof x !== "number" || typeof y !== "number") return null;
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+  return { x, y };
+}
+
+function pontoDentroDaCaixa(p: { x: number; y: number }, b: BoundingBox, tol = 0): boolean {
+  return p.x >= b.x - tol && p.x <= b.x + b.width + tol && p.y >= b.y - tol && p.y <= b.y + b.height + tol;
+}
+
+/** Caixa `b` cabe em `r`? Tolerância de 1 px para arredondamento do recorte. */
+function contidaEm(b: BoundingBox, r: BoundingBox, tol = 1): boolean {
+  return (
+    b.x >= r.x - tol &&
+    b.y >= r.y - tol &&
+    b.x + b.width <= r.x + r.width + tol &&
+    b.y + b.height <= r.y + r.height + tol
+  );
+}
+
 async function runVision(
   page: Page,
   d: TargetDescriptor,
   provider: VisionProvider | null | undefined,
   minConfidence: number,
+  refinePasses: number,
+  refineFactor: number,
+  aimModo: AimMode,
 ): Promise<StrategyOutcome> {
   const goal = visionGoal(d) ?? "";
   if (provider === null || provider === undefined) {
@@ -701,9 +947,35 @@ async function runVision(
   const probeLabel = `vision:${provider.name}("${goal}")`;
   const viewport = page.viewportSize() ?? { width: 0, height: 0 };
   let found: { box: BoundingBox; confidence: number } | null;
+  let escala = 1;
   try {
     const screenshot = await page.screenshot();
-    found = await provider.locate({ screenshot, goal, viewport });
+
+    /**
+     * DEFEITO MEDIDO (FASE 6): o runtime mentia para o modelo em DPR ≠ 1.
+     *
+     *   deviceScaleFactor=1 → viewportSize 1280x800, PNG 1280x800
+     *   deviceScaleFactor=2 → viewportSize 1280x800, PNG 2560x1600
+     *
+     * `page.screenshot()` devolve PIXELS DE DISPOSITIVO; `viewportSize()`
+     * devolve CSS px. O código antigo entregava a imagem de 2560x1600 e dizia
+     * ao modelo "esta captura tem 1280x800" — depois tratava a resposta, que
+     * vem no referencial da IMAGEM, como se fosse CSS px. Em DPR 2 toda
+     * coordenada saía com metade do valor certo, e o clique caía longe (ou a
+     * caixa era recusada por sair do viewport).
+     *
+     * O buraco só não tinha vítima porque o degrau `vision` NUNCA executava em
+     * produção — é a mesma ausência de injeção que esta fase fecha. Ligar a
+     * visão sem isto seria trocar um defeito silencioso por um ativo.
+     *
+     * Conserto: dizer ao modelo o tamanho REAL da imagem que ele recebeu, e
+     * converter a caixa de volta para CSS px pela escala medida. Em DPR 1 a
+     * escala é 1 e nada muda.
+     */
+    const imagem = dimensoesPng(screenshot);
+    if (imagem !== null && viewport.width > 0) escala = imagem.width / viewport.width;
+    if (!Number.isFinite(escala) || escala <= 0) escala = 1;
+    found = await provider.locate({ screenshot, goal, viewport: imagem ?? viewport });
   } catch (e) {
     return { kind: "miss", reason: `provider falhou: ${(e as Error).message.split("\n")[0]}`, probe: probeLabel, candidates: 0 };
   }
@@ -716,12 +988,172 @@ async function runVision(
       candidates: 1,
     };
   }
+  // Caixa da 1ª passada, já em CSS px do viewport.
+  const boxP1 = paraCss(found.box, escala);
+  // O ponto vem no MESMO referencial da caixa (pixels da imagem) e sofre a
+  // MESMA conversão. Converter um e não o outro é como o defeito de DPR da
+  // FASE 6, só que mais silencioso.
+  const p1 = pontoDaResposta(found);
+  let pontoAtual: { x: number; y: number } | null =
+    p1 === null ? null : { x: p1.x / escala, y: p1.y / escala };
+
+  // ── REFINO POR RECORTE ────────────────────────────────────────────────────
+  const passesMax = Math.min(Math.max(Math.trunc(refinePasses), 0), MAX_VISION_REFINE_PASSES);
+  const fator = Number.isFinite(refineFactor) && refineFactor > 1 ? refineFactor : DEFAULT_VISION_REFINE_FACTOR;
+  const refino: RefinoTrace = {
+    passadas: 0,
+    box_p1: boxP1,
+    box_refinada: boxP1,
+    deslocamento_px: 0,
+    area_ratio_p1_p2: 1,
+    refino: passesMax === 0 ? "desligado" : "rejeitado",
+    motivo: passesMax === 0 ? "vision_refine_passes = 0" : null,
+    inferencias: 1,
+    regiao_de_recorte: null,
+    aim_modo: aimModo,
+    aim: "box_center",
+    aim_point: null,
+    aim_box_bruta: boxP1,
+    aim_motivo: null,
+  };
+  let confianca = found.confidence;
+  let atual = boxP1;
+
+  for (let passada = 1; passada <= passesMax; passada += 1) {
+    const R = regiaoDeRecorte(atual, fator, viewport);
+    if (R === null) {
+      refino.motivo = "região de recorte degenerada ou do tamanho do viewport";
+      break;
+    }
+    refino.regiao_de_recorte = R;
+
+    let candidato: BoundingBox | null = null;
+    let candidatoPonto: { x: number; y: number } | null = null;
+    try {
+      // `clip` do Playwright é em CSS px do VIEWPORT (medido: um clip em
+      // coordenadas de PÁGINA numa página rolada é recusado com "clipped area
+      // outside the resulting image"). A imagem devolvida tem clip×DPR pixels,
+      // então a escala de volta é a mesma normalização da 1ª passada.
+      const recorte = await page.screenshot({ clip: R });
+      const dimsC = dimensoesPng(recorte);
+      let escalaC = 1;
+      if (dimsC !== null && R.width > 0) escalaC = dimsC.width / R.width;
+      if (!Number.isFinite(escalaC) || escalaC <= 0) escalaC = 1;
+      refino.inferencias += 1;
+      const achado = await provider.locate({
+        screenshot: recorte,
+        goal,
+        viewport: dimsC ?? { width: R.width, height: R.height },
+      });
+      if (achado === null) {
+        refino.motivo = "provider não localizou o alvo no recorte";
+        break;
+      }
+      if (achado.confidence < minConfidence) {
+        refino.motivo = `confiança ${achado.confidence.toFixed(2)} no recorte abaixo do mínimo ${minConfidence.toFixed(2)}`;
+        break;
+      }
+      const noRecorte = paraCss(achado.box, escalaC);
+      candidato = {
+        x: R.x + noRecorte.x,
+        y: R.y + noRecorte.y,
+        width: noRecorte.width,
+        height: noRecorte.height,
+      };
+      const pN = pontoDaResposta(achado);
+      candidatoPonto =
+        pN === null ? null : { x: R.x + pN.x / escalaC, y: R.y + pN.y / escalaC };
+      confianca = achado.confidence;
+    } catch (e) {
+      refino.motivo = `recorte falhou: ${(e as Error).message.split("\n")[0]}`;
+      break;
+    }
+
+    // CRITÉRIO DE ACEITE. Uma caixa que não cabe no recorte que a produziu, ou
+    // que ocupa o recorte inteiro, não é refinamento — é o modelo dizendo "está
+    // em algum lugar aí". Nesse caso a estimativa grosseira, que ao menos viu a
+    // página toda, é a resposta menos ruim.
+    if (candidato.width < MIN_BOX_SIDE_DE_REFINO || candidato.height < MIN_BOX_SIDE_DE_REFINO) {
+      refino.motivo = "caixa refinada degenerada (lado sub-pixel)";
+      break;
+    }
+    if (!contidaEm(candidato, R)) {
+      refino.motivo = "caixa refinada não cabe na região recortada";
+      break;
+    }
+    if (areaDe(candidato) > areaDe(R)) {
+      refino.motivo = "caixa refinada maior que a região recortada";
+      break;
+    }
+
+    const mudanca = distanciaDeCentros(candidato, atual) / Math.max(R.width, 1);
+    atual = candidato;
+    // O ponto acompanha a caixa que foi ACEITA. Guardar o ponto de uma passada
+    // e a caixa de outra misturaria duas leituras diferentes da mesma tela.
+    pontoAtual = candidatoPonto;
+    refino.passadas = passada;
+    refino.refino = "usado";
+    refino.motivo = null;
+    if (mudanca < REFINO_CONVERGENCIA) {
+      refino.motivo = `convergiu: centro moveu ${(mudanca * 100).toFixed(1)}% do recorte`;
+      break;
+    }
+  }
+
+  refino.box_refinada = atual;
+  refino.deslocamento_px = Number(distanciaDeCentros(atual, boxP1).toFixed(2));
+  refino.area_ratio_p1_p2 = Number((areaDe(boxP1) / Math.max(areaDe(atual), 1)).toFixed(3));
+
+  // ── MIRA (FASE 6c) ────────────────────────────────────────────────────────
+  //
+  // A cascata devolve UMA caixa, e quem clica usa o CENTRO dela. Para mirar no
+  // ponto sem mudar essa convenção — e sem tocar no caminho do clique — a caixa
+  // é RECENTRADA no ponto, preservando a extensão estimada pelo modelo. O que
+  // muda é onde o gesto cai; o tamanho continua sendo o palpite do modelo, e o
+  // rastro guarda a caixa CRUA e o ponto CRU para que nada disso seja opaco.
+  refino.aim_modo = aimModo;
+  refino.aim_box_bruta = atual;
+  refino.aim_point = pontoAtual;
+
+  let alvoFinal = atual;
+  if (aimModo === "box_center") {
+    refino.aim = "box_center";
+    refino.aim_motivo = "configuração pede o centro da caixa";
+  } else if (pontoAtual === null) {
+    refino.aim = "box_center";
+    refino.aim_motivo = "modelo não devolveu point_2d utilizável";
+  } else if (aimModo === "point_then_box" && !pontoDentroDaCaixa(pontoAtual, atual)) {
+    // Ponto fora da própria caixa que o modelo desenhou é o modelo se
+    // contradizendo. `point_then_box` prefere a resposta em que as duas
+    // leituras concordam; `point` puro confia no ponto e assume o risco.
+    refino.aim = "box_center";
+    refino.aim_motivo = "point_2d cai fora da bbox_2d do próprio modelo";
+  } else {
+    refino.aim = "point";
+    refino.aim_motivo = null;
+    alvoFinal = {
+      x: pontoAtual.x - atual.width / 2,
+      y: pontoAtual.y - atual.height / 2,
+      width: atual.width,
+      height: atual.height,
+    };
+  }
+
   return {
     kind: "hit",
-    box: found.box,
-    description: `região apontada por ${provider.name} (confiança ${found.confidence.toFixed(2)}) via vision`,
+    box: alvoFinal,
+    description:
+      `região apontada por ${provider.name} (confiança ${confianca.toFixed(2)}) via vision` +
+      (escala === 1 ? "" : ` — caixa convertida de pixels de imagem para CSS px (escala ${escala})`) +
+      (refino.refino === "usado"
+        ? ` — refinada em ${refino.passadas} passada(s) de recorte (${refino.inferencias} inferências, centro moveu ${refino.deslocamento_px}px)`
+        : "") +
+      (refino.aim === "point"
+        ? ` — mirando o point_2d (${Math.round(refino.aim_point!.x)}, ${Math.round(refino.aim_point!.y)})`
+        : ` — mirando o centro da caixa (${refino.aim_motivo ?? "?"})`),
     probe: probeLabel,
     candidates: 1,
+    detail: refino as unknown as Record<string, unknown>,
   };
 }
 
@@ -736,6 +1168,14 @@ export async function resolveDetailed(
 ): Promise<DetailedResolution> {
   const max = opts.max_candidates ?? DEFAULT_MAX_CANDIDATES;
   const minConf = opts.vision_min_confidence ?? DEFAULT_VISION_MIN_CONFIDENCE;
+  // Precedência do refino: opção explícita → política DO PRÓPRIO PROVIDER → default.
+  // O provider é o objeto que o dono configurou; perguntar a ele evita que a
+  // política tenha de ser repassada por todo chamador da cascata (e que o
+  // primeiro que esquecesse voltasse a clicar na estimativa grosseira).
+  const politica = (opts.vision ?? null) as ComPoliticaDeRefino | null;
+  const refinePasses = opts.vision_refine_passes ?? politica?.refine_passes ?? DEFAULT_VISION_REFINE_PASSES;
+  const refineFactor = opts.vision_refine_factor ?? politica?.refine_factor ?? DEFAULT_VISION_REFINE_FACTOR;
+  const aimModo = opts.vision_aim ?? politica?.aim ?? DEFAULT_VISION_AIM;
   const trace: AttemptTrace[] = [];
   const attempted: TargetStrategy[] = [];
 
@@ -772,7 +1212,7 @@ export async function resolveDetailed(
     if (strategy === "semantic") {
       outcome = await runSemantic(page, descriptor, max);
     } else if (strategy === "vision") {
-      outcome = await runVision(page, descriptor, opts.vision, minConf);
+      outcome = await runVision(page, descriptor, opts.vision, minConf, refinePasses, refineFactor, aimModo);
     } else if (strategy === "coordinates") {
       const c = descriptor.coordinates!;
       const soZinha = plan.length === 1;
@@ -813,7 +1253,14 @@ export async function resolveDetailed(
     }
 
     if (outcome.kind === "hit") {
-      trace.push({ strategy, outcome: "hit", probe: outcome.probe, candidates: outcome.candidates, duration_ms });
+      trace.push({
+        strategy,
+        outcome: "hit",
+        probe: outcome.probe,
+        candidates: outcome.candidates,
+        duration_ms,
+        ...(outcome.detail !== undefined ? { detail: outcome.detail } : {}),
+      });
       return {
         target: {
           strategy,

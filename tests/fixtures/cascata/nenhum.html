@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><title>cascata — controle negativo</title>
+<style>html,body{margin:0;font:14px system-ui;background:#fff}button{padding:8px 14px}</style></head>
+<body>
+<!--
+  CONTROLE NEGATIVO DA CASCATA.
+
+  A página é legítima e tem elementos interativos de verdade — só não tem o alvo
+  pedido ("finalizar compra"). Nenhum degrau pode resolver, e nenhum pode
+  INVENTAR: sem `coordinates` no descritor, o degrau 6 nem é aplicável, e a
+  cascata tem de terminar em TARGET_NOT_FOUND com o rastro completo.
+
+  Uma página vazia não serviria: "não achou nada em página sem nada" passa por
+  vacuidade. Aqui há o que achar — só não o que foi pedido.
+-->
+<p><button type="button">Sobre nós</button></p>
+<p><button type="button">Ajuda</button></p>
+<p><a href="#politica">Política de privacidade</a></p>
+<p><input type="text" aria-label="Assinar a newsletter"></p>
+</body></html>

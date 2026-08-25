@@ -59,6 +59,18 @@ export interface JsonlReadResult<T> {
  * nome longo demais. Não corrige — recusa.
  */
 export function assertSafeSessionId(session_id: string): string {
+  // DEFEITO MEDIDO (FASE 5): `RUNTIME_BUCKET` é declarado NESTE arquivo e era
+  // recusado por ESTA função — `SAFE_SESSION_ID` exige alfanumérico no primeiro
+  // caractere e o balde começa com `_`. Consequência: toda entrada sem sessão
+  // (`entry.session === null`) morria em `append()`, virava um
+  // `[api] audit.append falhou` em stderr e SUMIA da trilha. A primeira produtora
+  // real dessas linhas — `provider.degraded` do roteamento de providers — foi o
+  // que revelou o buraco.
+  //
+  // A exceção é para a CONSTANTE, não para o padrão `_*`: um id de sessão
+  // continua tendo de começar com alfanumérico, porque quem escolhe esse nome é
+  // o cliente e o balde do runtime não pode ser sequestrado por ele.
+  if (session_id === RUNTIME_BUCKET) return session_id;
   if (typeof session_id !== "string" || !SAFE_SESSION_ID.test(session_id)) {
     throw new Error(
       `audit: session_id inválido ${JSON.stringify(session_id)} — permitido [A-Za-z0-9._-], até 128 chars, sem separador de caminho`,

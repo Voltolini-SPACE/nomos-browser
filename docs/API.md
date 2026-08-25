@@ -58,6 +58,34 @@ Corpo sempre inclui `session_id`.
 | `browser.network` | `{limit?}` | `{requests[]}` (com redaction) |
 | `browser.task` | `{goal, profile?}` | `BrowserTask` |
 
+## Gestão de task (FASE 9)
+
+Rotas de GESTÃO: respondem o objeto direto, **sem** o envelope `ActionResponse`
+(o envelope é das AÇÕES). Autenticadas como as demais — `OBSERVE` para ler,
+`CONTROL` para cancelar e retomar.
+
+| Rota | Corpo / query | Resposta |
+|---|---|---|
+| `GET /api/v1/tasks` | `?session_id=&state=` | `{tasks[], total, filter}` |
+| `GET /api/v1/tasks/:task_id` | `?session_id=` | `TaskRecord` (estado + checkpoint) |
+| `POST /api/v1/tasks/:task_id/cancel` | `{reason?}` | `TaskRecord` em `CANCELLED` |
+| `POST /api/v1/tasks/:task_id/resume` | `{session_id?}` | `TaskRecord` |
+
+`browser.task` aceita `idempotency_key`. Duas chamadas com a mesma chave enquanto
+a primeira está viva compartilham UMA execução; depois de `COMPLETED`, a segunda
+devolve o resultado guardado sem reexecutar — inclusive entre reinícios do
+processo, porque a reserva da chave é gravada em disco.
+
+Estados: `QUEUED RUNNING WAITING RETRYING PAUSED CANCELLED FAILED COMPLETED
+RECOVERING`. As transições válidas estão declaradas em `TASK_TRANSICOES`
+(`packages/core/src/taskengine.ts`); transição fora da tabela é erro, não
+silêncio. `resume` de uma task em estado final devolve o resultado guardado e
+não reexecuta nada.
+
+`resume` aceita `session_id` para religar a task a uma sessão NOVA — necessário
+depois de um crash, quando a sessão original não pôde ser reconstituída. A troca
+fica registrada na linha do tempo das duas sessões.
+
 `browser.wait` **não** aceita duração fixa como condição principal — `condition`
 é `url_contains` / `element_visible` / `element_hidden` / `network_idle` / `text_present`.
 

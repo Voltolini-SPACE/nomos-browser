@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><title>cascata — degrau 1 (selector)</title>
+<style>html,body{margin:0;font:14px system-ui;background:#fff}button{padding:8px 14px}</style></head>
+<body>
+<!--
+  DEGRAU 1 — DOM. O alvo tem `id` único e estável. Nenhum outro degrau precisa
+  existir para esta página, e é isso que o teste prova: `attempted` tem UM item.
+
+  Os irmãos abaixo existem para que "achou o certo" não seja trivial — um
+  resolvedor que devolvesse "o primeiro botão da página" acertaria numa página
+  com um botão só e o teste não perceberia.
+-->
+<p><button type="button">Antes</button></p>
+<p><button id="alvo-unico" type="button">Confirmar pedido</button></p>
+<p><button type="button">Depois</button></p>
+<div id="recibo">nada</div>
+<script>
+document.getElementById('alvo-unico').addEventListener('click', function (e) {
+  document.getElementById('recibo').textContent =
+    'clique isTrusted=' + e.isTrusted + ' em ' + Math.round(e.clientX) + ',' + Math.round(e.clientY);
+});
+</script>
+</body></html>

@@ -34,6 +34,7 @@ import {
   API_PREFIX,
   CONTRACT_VERSION,
   fail,
+  makeAuditEntry,
   newActionId,
   ok,
   timer,
@@ -43,9 +44,14 @@ import {
   type Capabilities,
   type HealthResponse,
   type RuntimeEvent,
+  type PlanStep,
   type SessionInfo,
   type SessionState,
+  type VerificationResult,
+  type VisionProvider,
 } from "../../core/src/contract.ts";
+import { agentFromAIProvider, type AIProvider } from "../../core/src/aiprovider.ts";
+import { buildAiProvider, buildVisionProvider, descreverProviders } from "./providers.ts";
 import { SessionManager, normalizeCapabilities } from "../../core/src/session.ts";
 import { CapabilityEngine, policyFromName } from "../../core/src/policy.ts";
 import { PerceptionEngine } from "../../core/src/perception.ts";
@@ -66,6 +72,7 @@ import {
   auditActionDetail,
   auditEntryFor,
   capabilityFor,
+  handleTaskRoute,
   handlerFor,
   toActionError,
   type ActionRequest,
@@ -188,13 +195,25 @@ export interface DaemonHandle {
   /** Segredo do token raiz. Devolvido UMA vez; nunca vai para log. */
   readonly token: string | null;
   readonly tokenPath: string | null;
+  /** FASE 5 — o que de fato foi ligado. `null` é resposta, não omissão. */
+  readonly ai: AIProvider | null;
+  readonly vision: VisionProvider | null;
   health(): HealthResponse;
   close(reason?: string): Promise<void>;
 }
 
 export interface StartDaemonOptions extends LoadConfigOptions {
-  /** Provedor de agente para `browser.task`. Ausente ⇒ a rota falha explicitamente. */
+  /**
+   * Provedor de agente para `browser.task`.
+   *
+   * AUSENTE (`undefined`) e `null` são coisas diferentes desde a FASE 5:
+   *   undefined ⇒ construa a partir da config (`ai_provider`); nula ⇒ nenhum.
+   *   null      ⇒ NENHUM agente, mesmo que a config peça um.
+   * Quem injeta o seu em teste continua vencendo sobre a config, que é o ponto.
+   */
   agent?: AgentProvider | null;
+  /** Mesma regra do `agent`: `undefined` constrói da config, `null` desliga. */
+  vision?: VisionProvider | null;
   /**
    * Instala handlers de SIGINT/SIGTERM. Default false: um daemon embutido em
    * teste que sequestrasse os sinais do processo seria efeito colateral escondido.
@@ -296,9 +315,58 @@ function capabilitiesFromBody(body: Body): Partial<Capabilities> | undefined {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function startDaemon(opts: StartDaemonOptions = {}): Promise<DaemonHandle> {
-  const { agent = null, install_signal_handlers = false, auth_disabled = false, runtime_dir, ...configOpts } = opts;
+  const {
+    agent: agenteInjetado,
+    vision: visaoInjetada,
+    install_signal_handlers = false,
+    auth_disabled = false,
+    runtime_dir,
+    ...configOpts
+  } = opts;
   const config = loadConfig(configOpts);
   const startedAt = Date.now();
+
+  // ── FASE 5 — providers reais ────────────────────────────────────────────────
+  //
+  // Construídos AQUI, antes de qualquer socket abrir, porque config inválida
+  // (`ai_provider: "gpt4:foo"`) tem de derrubar o arranque com mensagem clara em
+  // vez de virar um `browser.task` que falha meia hora depois. `loadConfig` já
+  // valida o formato; estas chamadas validam o que só se descobre construindo.
+  let ai: AIProvider | null = null;
+  let vision: VisionProvider | null = visaoInjetada ?? null;
+  let agent: AgentProvider | null = agenteInjetado ?? null;
+
+  if (agenteInjetado === undefined) {
+    ai = buildAiProvider(config, {
+      // A degradação é do PROVIDER, não de uma sessão: o roteamento vive no
+      // daemon, acima de qualquer sessão. A linha vai para o bucket `_runtime`
+      // da trilha — forjar um session_id aqui inventaria um vínculo que não há.
+      onDegraded: (d) => {
+        void services.record(
+          makeAuditEntry({
+            event: "provider",
+            action: "provider.degraded",
+            session: null,
+            actor: "runtime",
+            provider: d.provider_id,
+            result: "error",
+            verified: false,
+            error: { code: d.code, message: d.motivo },
+            detail: {
+              provider_id: d.provider_id,
+              motivo: d.motivo,
+              fallback_usado: d.fallback_usado,
+              fallback_provider_id: d.fallback_provider_id,
+              fallback_ok: d.fallback_ok,
+              code: d.code,
+              latency_ms: d.latency_ms,
+            },
+          }),
+        );
+      },
+    });
+  }
+  if (visaoInjetada === undefined) vision = buildVisionProvider(config);
 
   const auth = new AuthManager({
     disabled: auth_disabled,
@@ -390,6 +458,95 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
     },
   });
 
+  /**
+   * Executor REAL dos passos do plano (FASE 5.3).
+   *
+   * Fala com a PRÓPRIA API por loopback, autenticado com o token raiz, em vez de
+   * chamar `handlerFor()` direto. A razão é de segurança, não de estilo: o
+   * caminho HTTP é onde moram a checagem de capability, o congelamento por
+   * controle humano, o lease, a fila por sessão e a linha de auditoria. Um
+   * executor que chamasse o handler direto daria AO MODELO um caminho
+   * privilegiado que nenhum cliente humano tem — exatamente o privilégio que
+   * este runtime existe para não conceder.
+   *
+   * Sem ele, `agentFromAIProvider` devolve `CAPABILITY_DENIED` em todo passo, e
+   * `browser.task` com provider configurado falharia no primeiro passo de todo
+   * plano — um modelo de texto não clica, e fingir que sim seria a mentira mais
+   * cara possível neste projeto.
+   */
+  const CHAVE_DO_VALOR: Readonly<Record<string, string>> = Object.freeze({
+    "browser.open": "url",
+    "browser.goto": "url",
+    "browser.type": "text",
+    "browser.press": "key",
+    "browser.wait": "value",
+  });
+
+  const executarPasso = async (ctx: { session_id: string; step: PlanStep }): Promise<ActionResponse> => {
+    const t = timer();
+    const ferramenta = ctx.step.action;
+    const negar = (code: ActionErrorCode, msg: string): ActionResponse =>
+      fail(newActionId(), "ACTIVE", code, msg, t.done(), { step: ctx.step.id, action: ferramenta });
+
+    if (handlerFor(ferramenta) === null) {
+      return negar("INVALID_REQUEST", `ação fora do contrato: ${ferramenta}`);
+    }
+    if (ferramenta === "browser.task") {
+      // Plano que abre outra task é recursão sem fundo, e cada nível consome
+      // uma vaga da fila da mesma sessão.
+      return negar("INVALID_REQUEST", "passo de plano não pode abrir outra task");
+    }
+
+    const corpo: Record<string, unknown> = { session_id: ctx.session_id };
+    if (ctx.step.target !== undefined) corpo.target = ctx.step.target;
+    if (ctx.step.verification !== undefined) corpo.verification = ctx.step.verification;
+    // `value` é um campo genérico do plano; cada ferramenta tem o SEU nome de
+    // parâmetro. A tabela é curta e explícita de propósito: adivinhar o nome
+    // para as demais faria o runtime inventar pedido em nome do modelo.
+    const chave = CHAVE_DO_VALOR[ferramenta];
+    if (chave !== undefined && ctx.step.value !== undefined) corpo[chave] = ctx.step.value;
+
+    // `0.0.0.0`/`::` são endereços de ESCUTA, não de destino.
+    const destino = config.host === "0.0.0.0" || config.host === "::" ? "127.0.0.1" : config.host;
+    try {
+      const r = await fetch(`http://${destino}:${boundPort}${API_PREFIX}/${ferramenta}`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          // A trilha passa a dizer que quem agiu foi o MODELO, não "agent".
+          "x-nomos-client": agent?.name ?? "agent",
+          ...(rootToken !== null ? { authorization: `Bearer ${rootToken.secret}` } : {}),
+        },
+        body: JSON.stringify(corpo),
+      });
+      return (await r.json()) as ActionResponse;
+    } catch (e) {
+      return negar("INTERNAL", `passo não chegou à API do runtime: ${(e as Error).message}`);
+    }
+  };
+
+  if (agenteInjetado === undefined && ai !== null) {
+    agent = agentFromAIProvider(ai, {
+      timeout_ms: config.ai_timeout_ms,
+      execute: executarPasso,
+      // `verify` devolve o que o RUNTIME verificou, não o que o modelo acha.
+      // Ausência de verificação vira `verified:false` — não verificado é
+      // diferente de verificado-falso, e nenhum dos dois é "deu certo".
+      check: async ({ step, response }) => {
+        const v = (response.result as { verification?: VerificationResult } | null)?.verification;
+        if (v !== undefined && v !== null) return v;
+        return {
+          executed: response.success,
+          verified: false,
+          confidence: 0,
+          kind: step.verification?.kind ?? "NONE",
+          observed: null,
+          retries: 0,
+        };
+      },
+    });
+  }
+
   const services = new RuntimeServices({
     config,
     sessions,
@@ -404,6 +561,41 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
       ? new AuditLog(config.sessions_root !== null ? { root: config.sessions_root } : {})
       : null,
     agent,
+    vision,
+    /**
+     * FASE 9 — o que o MOTOR não pode soltar, e o que ele não DEVE soltar.
+     *
+     * A tentação era liberar o lease da identidade da task. Está errado: o lease
+     * pertence ao AGENTE, não à task, e `LeaseManager.release()` exige `lease_id`
+     * justamente porque soltar por nome de holder deixaria qualquer um derrubar o
+     * controle alheio. Um agente pode rodar três tasks sob um lease; derrubá-lo
+     * no fim da primeira quebraria as outras duas.
+     *
+     * Então este hook NÃO libera o que a task não adquiriu. Ele MEDE, no instante
+     * exato do encerramento, o que ficou de pé — abas, lease, fila — e devolve
+     * isso para dentro da linha `task.cleanup`. É a diferença entre afirmar
+     * "limpei" e mostrar o que sobrou: se algum dia uma task vazar aba ou lease,
+     * a prova estará na trilha em vez de depender de alguém suspeitar.
+     */
+    onTaskCleanup: (rec) => {
+      const fila = queues.get(rec.session_id);
+      let abas: number | null = null;
+      try {
+        abas = sessions.get(rec.session_id).pages.length;
+      } catch {
+        // Sessão já fechada: zero abas é a resposta honesta, e `null` diria
+        // "não sei" quando na verdade sabemos que não há sessão.
+        abas = 0;
+      }
+      const lease = leases.snapshot(rec.session_id);
+      return {
+        pages_open: abas,
+        lease_holder: lease?.current_holder ?? null,
+        lease_count: lease?.leases.length ?? 0,
+        queue_running: fila?.running ?? 0,
+        queue_waiting: fila?.waiting ?? 0,
+      };
+    },
   });
 
   const queues = new Map<string, SessionQueue>();
@@ -442,6 +634,11 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
     body: Body,
     client: string | null,
     subject: string | null,
+    /**
+     * FASE 9 — a query string. `GET /tasks?session_id=...&state=RUNNING` não tem
+     * corpo, e sem isto o filtro só existiria na documentação.
+     */
+    search: URLSearchParams,
   ): Promise<unknown> {
     // Quem PEDIU a operação de controle. O header do cliente ganha do sujeito
     // do token porque é o mais específico dos dois; nunca cai em "unknown".
@@ -506,6 +703,13 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
         });
         return info;
       }
+      // FASE 9 — gestão de task. O handler vive em `handlers.ts` junto do motor;
+      // aqui só se decide o ator, como nas demais rotas de controle.
+      case "tasks.list":
+      case "tasks.get":
+      case "tasks.cancel":
+      case "tasks.resume":
+        return handleTaskRoute(services, name, params, body, search, ator);
       case "sessions.get":
         return sessions.observe(params.id!);
       case "sessions.delete": {
@@ -1123,6 +1327,7 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
           body,
           client,
           autenticado.token.subject,
+          url.searchParams,
         );
         jsonResponse(res, route.name === "sessions.create" ? 201 : 200, result);
       } catch (e) {
@@ -1218,6 +1423,24 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
   boundPort = port;
   const host = config.host;
 
+  // ── FASE 9 — crash recovery de task ────────────────────────────────────────
+  //
+  // Roda DEPOIS do listen: as tasks que forem retomáveis precisam da API de pé,
+  // porque o executor de passo fala com a própria API por loopback. Roda ANTES
+  // de `runtime.started` chegar aos assinantes? Não — e é de propósito: a
+  // varredura toca disco e não pode atrasar o arranque. O que ela GARANTE é que
+  // nenhuma task fica `RUNNING` mentindo; quem retoma é um `POST /resume`.
+  try {
+    const recuperadas = await services.taskEngine.recuperar();
+    if (recuperadas.length > 0) {
+      console.error(`[daemon] FASE 9: ${recuperadas.length} task(s) em RECOVERING após queda do runtime`);
+    }
+  } catch (e) {
+    // Falhar a varredura não pode impedir o daemon de subir: um disco com um
+    // arquivo ruim tornaria o runtime inarrancável.
+    console.error("[daemon] crash recovery de task falhou:", (e as Error).message);
+  }
+
   bus.publish("runtime.started", {
     source: "runtime",
     payload: { host, port, contract: CONTRACT_VERSION, version: config.version, headless: config.headless },
@@ -1239,6 +1462,18 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
       await new Promise<void>((r) => wss.close(() => r()));
       // Nenhum Chromium fica para trás.
       await sessions.closeAll(reason);
+      // Nenhum MODELO fica para trás, tampouco. Um daemon que encerra deixando
+      // 5 GB residentes no backend é o cenário medido que faz o jetsam do macOS
+      // matar os serviços vizinhos. `release()` nunca lança (I6/AIProvider).
+      try {
+        await ai?.release?.();
+      } catch {
+        // Backend já fora do ar: não há nada a liberar, e isso não é falha de
+        // encerramento.
+      }
+      // Nenhum timer de graça e nenhum AbortController de task ficam vivos: um
+      // `setTimeout` pendurado segura o event loop e faz o processo não morrer.
+      await services.taskEngine.encerrarTudo();
       services.disposeAll();
       queues.clear();
       bus.close();
@@ -1260,6 +1495,8 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
     leases,
     token: rootToken?.secret ?? null,
     tokenPath: auth.tokenPath,
+    ai,
+    vision,
     health,
     close,
   };
@@ -1301,6 +1538,10 @@ export async function main(): Promise<void> {
       `headless=${String(handle.config.headless)}, política=${handle.config.default_policy}`,
   );
   console.error(`eventos: ws://${handle.host}:${handle.port}${EVENTS_PATH}`);
+  // FASE 5 — silêncio sobre qual modelo está ligado não é opção. "sem
+  // AIProvider" / "sem VisionProvider" é uma resposta e vai para o log; a
+  // ausência de linha nenhuma era a única saída inaceitável, e era a de antes.
+  console.error(`providers: ${descreverProviders(handle.config, handle.ai, handle.vision)}`);
   // O caminho, nunca o segredo. Quem tem permissão de ler o arquivo já tem o
   // token; imprimi-lo o colocaria em log, histórico de terminal e captura de tela.
   if (authOff) {

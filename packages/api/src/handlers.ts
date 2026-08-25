@@ -49,9 +49,11 @@ import {
   type Suspeita,
   type SuspeitaSeveridade,
   type TargetDescriptor,
+  type TargetStrategy,
   type UploadRecord,
   type VerificationResult,
   type VerificationSpec,
+  type VisionProvider,
 } from "../../core/src/contract.ts";
 import { SessionManager, isSessionError, toActionError as sessionToActionError } from "../../core/src/session.ts";
 import { InputError, PointerEngine, type Point } from "../../core/src/pointer.ts";
@@ -62,7 +64,12 @@ import {
   type NetworkLog,
   type ScreenshotScope,
 } from "../../core/src/perception.ts";
-import { isTargetResolutionError, resolveDetailed } from "../../core/src/target.ts";
+import {
+  isTargetResolutionError,
+  resolveDetailed,
+  type AttemptTrace,
+  type DetailedResolution,
+} from "../../core/src/target.ts";
 import {
   armarSondaDeEntrega,
   entregaComprovada,
@@ -77,10 +84,24 @@ import { capture as captureSnapshot, verify as verifyAction } from "../../core/s
 import { CapabilityEngine, PolicyError, checkPath, checkUrl } from "../../core/src/policy.ts";
 import { sanitizeObservation, sanitizeText, type ObservacaoSanitizada } from "../../core/src/sanitize.ts";
 import { FileVault, VaultError } from "../../core/src/vault.ts";
-import { AuditLog } from "../../observability/src/audit.ts";
+import {
+  TASK_ESTADOS,
+  TaskEngine,
+  estadoFinal,
+  type StepExecutor,
+  type TaskAuditEvent,
+  type TaskEngineState,
+  type TaskPlanner,
+  type TaskRecord,
+} from "../../core/src/taskengine.ts";
+import { AuditLog, SESSIONS_ROOT } from "../../observability/src/audit.ts";
 import { SessionRecorder } from "../../observability/src/replay.ts";
 import { EventBus } from "../../observability/src/eventbus.ts";
 import type { DaemonConfig, RawWebContentPolicy } from "./config.ts";
+// `HTTP_STATUS` é a única projeção em tempo de EXECUÇÃO do enum `ActionErrorCode`.
+// Usá-la para perguntar "este código existe no contrato?" evita redigitar o enum
+// aqui — e uma segunda lista divergiria no dia em que o contrato ganhasse um código.
+import { HTTP_STATUS } from "./router.ts";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Erro da camada de API
@@ -351,6 +372,22 @@ export interface RuntimeServicesOptions {
   audit?: AuditLog | null;
   /** FASE 33/34. Ausente ⇒ `browser.task` falha explicitamente (fail closed). */
   agent?: AgentProvider | null;
+  /**
+   * FASE 5/6 — o 4º degrau da cascata de alvo.
+   *
+   * Ausente ⇒ `vision` sai `skipped` com razão explícita no trace, que é o
+   * comportamento honesto e o que o runtime fazia ANTES desta fase — a diferença
+   * é que agora existe um caminho pelo qual ele deixa de ser o único possível.
+   */
+  vision?: VisionProvider | null;
+  /**
+   * FASE 9 — liberação de recurso do lado do DAEMON quando uma task termina.
+   *
+   * Fica aqui, e não dentro do motor, porque o que precisa ser solto (lease,
+   * fila da sessão) vive no daemon. O motor solta o que é dele — controlador,
+   * timers, mapa de execução — e chama isto para o resto.
+   */
+  onTaskCleanup?: (rec: Readonly<TaskRecord>) => void | Record<string, unknown> | Promise<void | Record<string, unknown>>;
 }
 
 export class RuntimeServices {
@@ -361,6 +398,9 @@ export class RuntimeServices {
   readonly policy: CapabilityEngine;
   readonly audit: AuditLog | null;
   readonly agent: AgentProvider | null;
+  readonly vision: VisionProvider | null;
+  /** FASE 9 — motor de task persistente. Sempre existe; sem ele não há checkpoint. */
+  readonly taskEngine: TaskEngine;
 
   /** Um par pointer/keyboard por sessão, refeito quando a página ativa muda. */
   readonly #engines = new Map<string, PageEngines>();
@@ -386,6 +426,64 @@ export class RuntimeServices {
       });
     this.audit = opts.audit ?? null;
     this.agent = opts.agent ?? null;
+    this.vision = opts.vision ?? null;
+
+    // FASE 9 — o motor nasce COM o serviço, não sob demanda.
+    //
+    // Construí-lo no primeiro `browser.task` faria o crash recovery do arranque
+    // não ter em quem chamar `recuperar()` — e o daemon subiria sem varrer o
+    // disco, que é justamente o buraco que esta fase fecha.
+    const raizTasks = opts.config.tasks_root ?? opts.config.sessions_root ?? SESSIONS_ROOT;
+    this.taskEngine = new TaskEngine({
+      root: raizTasks,
+      policy: {
+        max_attempts: opts.config.task_max_attempts,
+        base_ms: opts.config.task_retry_base_ms,
+        max_ms: opts.config.task_retry_max_ms,
+        jitter: true,
+      },
+      step_timeout_ms: opts.config.task_step_timeout_ms,
+      total_timeout_ms: opts.config.task_total_timeout_ms,
+      recover_grace_ms: opts.config.task_recover_grace_ms,
+      // A sessão só é reconstituível se o SessionManager ainda a conhece. Depois
+      // de um SIGKILL o Chromium filho morreu junto, então isto é `false` — e a
+      // task fica RECOVERING esperando um `resume` explícito, em vez de fingir
+      // que voltou sozinha.
+      canResume: (session_id) => this.sessions.has(session_id),
+      onCleanup: opts.onTaskCleanup ?? (() => undefined),
+      onAudit: (ev) => this.#trilhaDeTask(ev),
+    });
+  }
+
+  /**
+   * Leva cada fato do motor para a trilha forense da FASE 3.
+   *
+   * `event: "task"` e o `action` do motor; `task`, `owner` e `provider` no topo
+   * da linha; `step_index` e `attempt` no detalhe. Sem os dois últimos, a
+   * pergunta "em que passo e em que tentativa isso aconteceu?" só teria resposta
+   * relendo o JSON da task — e depois de um cleanup ninguém relê.
+   */
+  async #trilhaDeTask(ev: TaskAuditEvent): Promise<void> {
+    await this.note({
+      session: ev.task.session_id,
+      event: "task",
+      action: ev.action,
+      actor: ev.task.owner ?? "runtime",
+      owner: ev.task.owner,
+      provider: ev.task.provider,
+      task: ev.task.task_id,
+      result: ev.result,
+      verified: ev.result === "ok" ? true : false,
+      error: ev.error,
+      detail: {
+        ...ev.detail,
+        task_id: ev.task.task_id,
+        run_id: ev.task.run_id,
+        step_index: ev.step_index,
+        attempt: ev.attempt,
+        state: ev.task.state,
+      },
+    });
   }
 
   emit(event: EventName, session_id: string | null, action_id: string | null, payload: Record<string, unknown>, source = "runtime"): void {
@@ -609,6 +707,17 @@ function urlGuard(svc: RuntimeServices, url: string): string {
   return d.url ?? url;
 }
 
+/**
+ * O operador definiu esta chave, ou ela ainda é o default de fábrica?
+ *
+ * `config.sources` carrega a procedência de cada chave ("default" | "file:…" |
+ * "env:…" | "override"). É o que permite distinguir "o operador quer 0" de
+ * "ninguém falou nada e o default é 0" — indistinguíveis olhando só o valor.
+ */
+function refinoEscolhido(svc: RuntimeServices, chave: string): boolean {
+  return (svc.config.sources[chave] ?? "default") !== "default";
+}
+
 async function resolveOn(
   svc: RuntimeServices,
   req: ActionRequest,
@@ -616,10 +725,84 @@ async function resolveOn(
   descriptor: TargetDescriptor,
   timeout_ms: number | null,
 ): Promise<ResolvedTarget> {
-  const res = await resolveDetailed(page, descriptor, {
-    timeout_ms: timeout_ms ?? 0,
-    max_candidates: 60,
-  });
+  /**
+   * O trace vai para a TRILHA quando a cascata desceu até a visão — resolvendo
+   * por ela, falhando nela, ou pulando-a por falta de provider. Um degrau que
+   * gasta um modelo multimodal (ou que é PULADO por não haver um) é exatamente
+   * o fato que a auditoria precisa registrar. Os degraus de DOM já se explicam
+   * pelo `strategy` da linha da ação; gravar o trace de toda resolução
+   * transformaria a trilha em ruído e ninguém leria nenhuma das duas coisas.
+   */
+  const anotarCascata = async (
+    trace: readonly AttemptTrace[],
+    strategy: TargetStrategy | null,
+    attempted: readonly TargetStrategy[],
+  ): Promise<void> => {
+    const degrau = trace.find((t) => t.strategy === "vision");
+    if (degrau === undefined) return;
+    await svc.note({
+      session: req.session_id,
+      event: "action",
+      action: "target.cascade",
+      actor: actorOf(req),
+      provider: svc.vision?.name ?? null,
+      page: req.page_id ?? null,
+      action_id: req.action_id,
+      result: strategy === null ? "error" : "ok",
+      verified: strategy === "vision",
+      detail: {
+        tool: req.tool,
+        strategy,
+        attempted: [...attempted],
+        vision_outcome: degrau.outcome,
+        vision_reason: degrau.reason ?? null,
+        vision_min_confidence: svc.config.vision_min_confidence,
+        vision_provider: svc.vision?.name ?? null,
+        trace: [...trace],
+      },
+    });
+  };
+
+  let res: DetailedResolution;
+  try {
+    // FASE 5/6: é AQUI que o 4º degrau passa a existir em produção. Antes desta
+    // linha o resolvedor era chamado sem `vision`, e toda cascata que chegava lá
+    // terminava em `{"strategy":"vision","outcome":"skipped"}` — uma verdade
+    // registrada que nenhuma configuração conseguia mudar.
+    res = await resolveDetailed(page, descriptor, {
+      timeout_ms: timeout_ms ?? 0,
+      max_candidates: 60,
+      vision: svc.vision,
+      vision_min_confidence: svc.config.vision_min_confidence,
+      // FASE 6b — repasse das opções de refino de visão, POR PROCEDÊNCIA.
+      //
+      // Sem repasse nenhum, `vision_refine_passes`/`vision_refine_factor` eram
+      // configuração morta: existiam na config e nunca chegavam à cascata.
+      //
+      // Mas repassá-las incondicionalmente quebra outra coisa, e isto foi
+      // MEDIDO (`cascata-percepcao` caiu: 2 inferências viraram 1). A
+      // precedência em `resolveDetailed` é
+      //     opts.vision_refine_passes ?? politica?.refine_passes ?? DEFAULT
+      // ou seja, o que vem daqui GANHA da preferência do próprio VisionProvider.
+      // Como o default da config é 0, mandá-lo sempre DESLIGA em silêncio o
+      // refino de um provider que pede 2 passadas — o operador não escolheu
+      // isso, o default escolheu por ele.
+      //
+      // `sources` responde exatamente a pergunta certa: "o operador falou?".
+      // Enquanto a chave for "default", quem manda é o provider; assim que
+      // alguém a define (arquivo, env ou override), a config manda.
+      ...(refinoEscolhido(svc, "vision_refine_passes") ? { vision_refine_passes: svc.config.vision_refine_passes } : {}),
+      ...(refinoEscolhido(svc, "vision_refine_factor") ? { vision_refine_factor: svc.config.vision_refine_factor } : {}),
+    });
+  } catch (e) {
+    // A cascata que FALHOU é a que mais interessa auditar: é ela que responde
+    // "por que o runtime não achou o alvo?" sem depender de alguém ter guardado
+    // o corpo da resposta HTTP.
+    if (isTargetResolutionError(e)) await anotarCascata(e.trace, null, e.attempted);
+    throw e;
+  }
+  await anotarCascata(res.trace, res.target.strategy, res.target.attempted);
+
   if (res.target.healed) {
     svc.emit("target.healed", null, null, {
       strategy: res.target.strategy,
@@ -1627,53 +1810,45 @@ const handleUpload: ActionHandler = async (svc, req) => {
 // Task (FASE 33/34) — exige AgentProvider; sem ele, fail closed
 // ─────────────────────────────────────────────────────────────────────────────
 
-const handleTask: ActionHandler = async (svc, req) => {
-  const goal = reqStr(req.body, "goal");
-  const agent = svc.agent;
-  const now = nowIso();
-  const task: BrowserTask = {
-    task_id: newId("tsk"),
-    session_id: req.session_id,
-    goal,
-    state: "QUEUED",
-    plan: null,
-    actions: [],
-    retries: 0,
-    evidence: [],
-    result: null,
-    created_at: now,
-    updated_at: now,
-  };
-  svc.registerTask(task);
-  // A partir daqui as linhas desta task carregam SEU task_id, nao o da sessao.
-  req.task = task.task_id;
-  req.provider = agent?.name ?? null;
-
-  if (agent === null) {
-    task.state = "FAILED";
-    task.updated_at = nowIso();
-    await svc.note({
-      session: req.session_id,
-      event: "task",
-      action: "task.failed",
-      actor: actorOf(req),
-      task: task.task_id,
-      action_id: req.action_id,
-      result: "error",
-      verified: false,
-      error: { code: "INVALID_REQUEST", message: "nenhum AgentProvider injetado" },
-      detail: { code: "INVALID_REQUEST", task_id: task.task_id, goal, state: task.state },
-    });
-    // Devolver um QUEUED que ninguém executará seria mentir por omissão.
-    throw new ApiError(
-      "INVALID_REQUEST",
-      "browser.task exige um AgentProvider registrado no daemon; nenhum foi injetado",
-      { task_id: task.task_id, goal },
-    );
+/**
+ * Tradução do código do motor para o enum FECHADO do contrato v1.
+ *
+ * `docs/API.md` é explícito: "não inventar código novo sem subir a versão do
+ * contrato". O motor produz códigos que o contrato não tem (`CANCELLED`,
+ * `RUNTIME_CRASH`, `SESSION_NOT_RECONSTITUTED`), então eles caem no código mais
+ * próximo e o ORIGINAL viaja em `detail.task_code` — perder a causa exata seria
+ * o pior dos dois mundos.
+ */
+function codigoDoContrato(code: string | null | undefined): ActionErrorCode {
+  if (typeof code === "string" && Object.hasOwn(HTTP_STATUS, code)) return code as ActionErrorCode;
+  switch (code) {
+    case "SESSION_NOT_RECONSTITUTED":
+      return "SESSION_NOT_FOUND";
+    // `ABORTED`/`CANCELLED` não existem no enum v1. 499 não é status de contrato
+    // e 4xx sugeriria pedido malformado, o que é falso: o pedido estava certo e
+    // alguém mandou parar.
+    case "ABORTED":
+    case "CANCELLED":
+    case "RUNTIME_CRASH":
+    default:
+      return "INTERNAL";
   }
+}
 
-  const page = pageOf(svc, req);
-  svc.emit("task.started", req.session_id, req.action_id, { task_id: task.task_id, goal }, agent.name);
+/**
+ * Constrói o PLANEJADOR e o EXECUTOR de passo para uma task.
+ *
+ * Os dois fecham sobre `svc`/`req`/`agent` e não sobre uma task específica: é o
+ * `ctx.task.session_id` que diz em que sessão agir. Isso é o que permite ao
+ * `resume` reusar exatamente o mesmo par depois de um crash — inclusive quando a
+ * task foi religada a uma sessão NOVA.
+ */
+function tarefaIO(
+  svc: RuntimeServices,
+  req: ActionRequest,
+  agent: AgentProvider,
+  goal: string,
+): { plan: TaskPlanner; execute: StepExecutor } {
   const nota = async (
     action: string,
     event: AuditEvent,
@@ -1687,7 +1862,7 @@ const handleTask: ActionHandler = async (svc, req) => {
       action,
       actor: actorOf(req),
       provider: agent.name,
-      task: task.task_id,
+      task: req.task ?? null,
       page: req.page_id ?? null,
       action_id: req.action_id,
       result,
@@ -1696,11 +1871,11 @@ const handleTask: ActionHandler = async (svc, req) => {
       detail,
     });
   };
+
   /**
-   * Toda chamada ao provider passa por aqui. E o ponto — e o unico — em que a
-   * RESPOSTA do provider e avaliada, entao e onde `provider.degraded` nasce:
-   * erro ou timeout do modelo vira linha de trilha em vez de sumir dentro de um
-   * `catch` generico da task.
+   * Todo contato com o provider passa por aqui — e é o ÚNICO ponto onde a
+   * resposta dele é avaliada, então é onde `provider.degraded` nasce. Erro ou
+   * timeout do modelo vira linha de trilha em vez de sumir num `catch` genérico.
    */
   const viaProvider = async <T>(etapa: string, fn: () => Promise<T>): Promise<T> => {
     const inicio = Date.now();
@@ -1717,72 +1892,229 @@ const handleTask: ActionHandler = async (svc, req) => {
       throw e;
     }
   };
-  await nota("task.started", "task", "ok", { task_id: task.task_id, goal, state: "QUEUED" });
-  try {
-    task.state = "PLANNING";
-    const raw = await svc.perception.observe(page, { limit: svc.config.observe_limit });
-    const observation = await viaProvider("observe", () => agent.observe({ session_id: req.session_id, observation: raw }));
-    const reasoning = await viaProvider("reason", () => agent.reason({ goal, observation }));
-    const plan: Plan = await viaProvider("plan", () => agent.plan({ goal, observation, reasoning }));
-    task.plan = plan;
-    task.state = "RUNNING";
 
-    for (const step of plan.steps) {
-      const response = await viaProvider("act", () => agent.act({ session_id: req.session_id, step }));
-      task.actions.push(response.action_id);
-      svc.emit("task.progress", req.session_id, response.action_id, {
-        task_id: task.task_id,
-        step: step.id,
-        success: response.success,
-      }, agent.name);
-      const passoErro = response.success
-        ? null
-        : { code: String(response.error?.code ?? "INTERNAL"), message: String(response.error?.message ?? "passo falhou") };
-      await nota("task.progress", "task", response.success ? "ok" : "error", {
-        task_id: task.task_id,
-        step: step.id,
-        success: response.success,
-        state: task.state,
-        ...(passoErro === null ? {} : { code: passoErro.code }),
-      }, passoErro);
-      if (!response.success) {
-        task.state = "FAILED";
-        task.result = response.error;
-        task.updated_at = nowIso();
-        svc.emit("task.failed", req.session_id, req.action_id, { task_id: task.task_id, step: step.id }, agent.name);
-        await nota("task.failed", "task", "error", {
-          code: passoErro!.code,
-          task_id: task.task_id,
-          step: step.id,
-          state: task.state,
-        }, passoErro);
-        return task;
-      }
-      const v = await viaProvider("verify", () => agent.verify({ step, response }));
-      task.evidence.push(`${step.id}:${v.kind}:${v.verified ? "verified" : "unverified"}`);
+  /**
+   * PLANEJAR NÃO É RETENTADO — decisão do motor, reforçada aqui pelo comentário
+   * porque é contraintuitivo: um provider que acabou de dizer "estou fora" não
+   * volta em 500 ms, e três tentativas produziriam três `provider.degraded` para
+   * a MESMA falha, poluindo a trilha e gastando três inferências.
+   */
+  const plan: TaskPlanner = async ({ task }) => {
+    const page = pageOf(svc, req);
+    const raw = await svc.perception.observe(page, { limit: svc.config.observe_limit });
+    const observation = await viaProvider("observe", () => agent.observe({ session_id: task.session_id, observation: raw }));
+    const reasoning = await viaProvider("reason", () => agent.reason({ goal, observation }));
+    return viaProvider("plan", () => agent.plan({ goal, observation, reasoning }));
+  };
+
+  const execute: StepExecutor = async ({ task, step, index, attempt }) => {
+    // `agent.act` devolve um `ActionResponse` FALHO em vez de lançar quando o
+    // passo é recusado — por isso a falha de passo não vira `provider.degraded`:
+    // o modelo respondeu, quem recusou foi o runtime. Só uma EXCEÇÃO (modelo
+    // fora do ar, timeout de inferência) degrada o provider.
+    const response = await viaProvider("act", () => agent.act({ session_id: task.session_id, step }));
+    svc.emit("task.progress", task.session_id, response.action_id, {
+      task_id: task.task_id,
+      step: step.id,
+      step_index: index,
+      attempt,
+      success: response.success,
+    }, agent.name);
+
+    if (!response.success) {
+      return {
+        ok: false,
+        action_id: response.action_id ?? null,
+        code: String(response.error?.code ?? "INTERNAL"),
+        message: String(response.error?.message ?? "passo falhou"),
+        verified: false,
+      };
     }
-    task.state = "COMPLETED";
-    task.updated_at = nowIso();
-    svc.emit("task.completed", req.session_id, req.action_id, { task_id: task.task_id, steps: plan.steps.length }, agent.name);
-    await nota("task.completed", "task", "ok", {
-      task_id: task.task_id,
-      steps: plan.steps.length,
-      state: task.state,
-      evidence: task.evidence.length,
+    const v = await viaProvider("verify", () => agent.verify({ step, response }));
+    return {
+      ok: true,
+      action_id: response.action_id ?? null,
+      code: null,
+      message: null,
+      verified: v.verified === true,
+      result: response.result,
+    };
+  };
+
+  return { plan, execute };
+}
+
+/** Levanta o erro guardado de uma task que não terminou em COMPLETED. */
+function lancarSeNaoCompletou(rec: TaskRecord): void {
+  if (rec.state === "COMPLETED") return;
+  const bruto = rec.last_error?.code ?? "INTERNAL";
+  throw new ApiError(codigoDoContrato(bruto), rec.last_error?.message ?? `task terminou em ${rec.state}`, {
+    task_id: rec.task_id,
+    run_id: rec.run_id,
+    state: rec.state,
+    // O código VERDADEIRO do motor, preservado mesmo quando o enum do contrato
+    // não o comporta.
+    task_code: bruto,
+    step_index: rec.last_error?.step_index ?? rec.step_index,
+    attempt: rec.last_error?.attempt ?? rec.attempt,
+    retries: rec.retries,
+    checkpoint_step_index: rec.checkpoint.step_index,
+  });
+}
+
+const handleTask: ActionHandler = async (svc, req) => {
+  const goal = reqStr(req.body, "goal");
+  const idempotency_key = str(req.body, "idempotency_key");
+  const agent = svc.agent;
+  const engine = svc.taskEngine;
+
+  if (agent === null) {
+    // Fail closed, e agora PERSISTIDO: a task existe, está FAILED em disco e
+    // diz por quê. Antes ela só existia em memória e sumia com o processo.
+    const { record } = await engine.create({
+      session_id: req.session_id,
+      goal,
+      owner: req.owner ?? null,
+      provider: null,
+      idempotency_key,
+      inputs: { reason: "sem AgentProvider" },
     });
-    return task;
-  } catch (e) {
-    task.state = "FAILED";
-    task.updated_at = nowIso();
-    const err = toActionError(e);
-    svc.emit("task.failed", req.session_id, req.action_id, { task_id: task.task_id, error: err.code }, agent.name);
-    await nota("task.failed", "task", "error", {
-      code: err.code,
-      task_id: task.task_id,
-      state: task.state,
-    }, { code: err.code, message: err.message });
-    throw e;
+    req.task = record.task_id;
+    await engine.falhar(record.task_id, "INVALID_REQUEST", "browser.task exige um AgentProvider registrado no daemon; nenhum foi injetado");
+    svc.emit("task.failed", req.session_id, req.action_id, { task_id: record.task_id, code: "INVALID_REQUEST" }, "runtime");
+    // Devolver um QUEUED que ninguém executará seria mentir por omissão.
+    throw new ApiError(
+      "INVALID_REQUEST",
+      "browser.task exige um AgentProvider registrado no daemon; nenhum foi injetado",
+      { task_id: record.task_id, goal },
+    );
   }
+
+  const { record, reused } = await engine.create({
+    session_id: req.session_id,
+    goal,
+    owner: req.owner ?? null,
+    provider: agent.name,
+    idempotency_key,
+  });
+  // A partir daqui as linhas desta task carregam SEU task_id, não o da sessão.
+  req.task = record.task_id;
+  req.provider = agent.name;
+
+  // IDEMPOTÊNCIA: chave já usada e task já terminada ⇒ devolve o que foi
+  // guardado, sem tocar no navegador. É esta linha que faz a promessa valer
+  // ENTRE REINÍCIOS, porque `create` consultou a reserva em DISCO.
+  if (reused && estadoFinal(record.state)) {
+    lancarSeNaoCompletou(record);
+    return record;
+  }
+
+  svc.emit("task.started", req.session_id, req.action_id, { task_id: record.task_id, goal }, agent.name);
+  const io = tarefaIO(svc, req, agent, goal);
+  // `run` devolve a MESMA promessa para uma task já em voo: duas chamadas
+  // simultâneas com a mesma chave compartilham uma execução, não duas.
+  const final = await engine.run(record.task_id, io);
+
+  if (final.state === "COMPLETED") {
+    svc.emit("task.completed", req.session_id, req.action_id, {
+      task_id: final.task_id,
+      steps: final.checkpoint.total_steps,
+      retries: final.retries,
+    }, agent.name);
+    return final;
+  }
+  svc.emit("task.failed", req.session_id, req.action_id, {
+    task_id: final.task_id,
+    state: final.state,
+    code: final.last_error?.code ?? null,
+  }, agent.name);
+  lancarSeNaoCompletou(final);
+  return final; // inalcançável; mantém o tipo honesto
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FASE 9 — rotas de GESTÃO de task
+//
+// Respondem o objeto DIRETO, sem envelope `ActionResponse`, como `docs/API.md`
+// manda para rotas de gestão: uma listagem de tasks não tem `state` de sessão
+// nem `timing` de ação, e embrulhá-la inventaria campos.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type TaskRouteName = "tasks.list" | "tasks.get" | "tasks.cancel" | "tasks.resume";
+
+export async function handleTaskRoute(
+  svc: RuntimeServices,
+  name: TaskRouteName,
+  params: Record<string, string>,
+  body: Body,
+  search: URLSearchParams,
+  actor: string,
+): Promise<unknown> {
+  const engine = svc.taskEngine;
+  // Sem hidratar, a listagem mostraria só as tasks criadas DESDE o arranque — e
+  // depois de um crash é exatamente a task antiga que o operador procura.
+  await engine.hidratar();
+
+  if (name === "tasks.list") {
+    const session_id = (typeof body.session_id === "string" ? body.session_id : null) ?? search.get("session_id");
+    const state = (typeof body.state === "string" ? body.state : null) ?? search.get("state");
+    if (state !== null && state !== "" && !(TASK_ESTADOS as readonly string[]).includes(state)) {
+      throw new ApiError("INVALID_REQUEST", `estado desconhecido: ${state}`, { state, known: [...TASK_ESTADOS] });
+    }
+    const tasks = engine.list({ session_id, state });
+    return { tasks, total: tasks.length, filter: { session_id, state } };
+  }
+
+  const task_id = params.task_id ?? "";
+  if (task_id === "") throw new ApiError("INVALID_REQUEST", "task_id ausente na rota");
+  const sessaoDica = (typeof body.session_id === "string" ? body.session_id : null) ?? search.get("session_id");
+  const rec = await engine.fetch(task_id, sessaoDica);
+  if (rec === null) {
+    // 404 honesto: a task não existe nem em memória nem em disco.
+    throw new ApiError("SESSION_NOT_FOUND", `task desconhecida: ${task_id}`, { task_id });
+  }
+
+  if (name === "tasks.get") return rec;
+
+  if (name === "tasks.cancel") {
+    const reason = typeof body.reason === "string" && body.reason !== "" ? body.reason : `cancelada por ${actor}`;
+    return engine.cancel(task_id, reason);
+  }
+
+  // tasks.resume
+  const agent = svc.agent;
+  if (estadoFinal(rec.state)) {
+    // Não reexecuta. O resultado guardado É a resposta — e sem AgentProvider
+    // este caminho continua valendo, porque não há nada a executar.
+    return engine.resume(task_id, { plan: naoPlaneja, execute: naoExecuta });
+  }
+  if (agent === null) {
+    throw new ApiError("INVALID_REQUEST", "resume exige um AgentProvider registrado no daemon; nenhum foi injetado", { task_id });
+  }
+  const novaSessao = typeof body.session_id === "string" && body.session_id !== "" ? body.session_id : null;
+  const sessaoAlvo = novaSessao ?? rec.session_id;
+  const reqSintetico: ActionRequest = {
+    tool: "browser.task",
+    action_id: newActionId(),
+    session_id: sessaoAlvo,
+    body: {},
+    client: actor,
+    subject: actor,
+    owner: rec.owner ?? null,
+    task: rec.task_id,
+    provider: agent.name,
+  };
+  const io = tarefaIO(svc, reqSintetico, agent, rec.goal);
+  const final = await engine.resume(task_id, io, { session_id: novaSessao });
+  return final;
+}
+
+/** Planejador/executor inertes: usados só no ramo que NÃO reexecuta nada. */
+const naoPlaneja: TaskPlanner = async () => {
+  throw new ApiError("INTERNAL", "planejador inerte foi chamado: uma task em estado final não deveria replanejar");
+};
+const naoExecuta: StepExecutor = async () => {
+  throw new ApiError("INTERNAL", "executor inerte foi chamado: uma task em estado final não deveria executar passo");
 };
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -89,6 +89,15 @@ export const ROUTE_SCOPE: Readonly<Record<string, Scope>> = Object.freeze({
   "sessions.handoff": "CONTROL",
   "sessions.takeover": "ADMIN",
   "sessions.release": "ADMIN",
+  // FASE 9 — ler o estado de uma task é OBSERVAR; cancelar ou retomar é ATO DE
+  // CONTROLE sobre trabalho em curso, no mesmo nível de `sessions.delete`. Sem
+  // estas linhas as quatro rotas cairiam no default ADMIN de `scopeForRoute` —
+  // fail closed correto, porém rígido demais: um agente com escopo de agente
+  // não conseguiria nem consultar a própria task.
+  "tasks.list": "OBSERVE",
+  "tasks.get": "OBSERVE",
+  "tasks.cancel": "CONTROL",
+  "tasks.resume": "CONTROL",
   "events": "OBSERVE",
 });
 
