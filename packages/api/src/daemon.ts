@@ -57,7 +57,7 @@ import { CapabilityEngine, policyFromName } from "../../core/src/policy.ts";
 import { PerceptionEngine } from "../../core/src/perception.ts";
 import { EventBus } from "../../observability/src/eventbus.ts";
 import { AuditLog } from "../../observability/src/audit.ts";
-import { loadConfig, type DaemonConfig, type LoadConfigOptions } from "./config.ts";
+import { REDACAO, configSchema, loadConfig, redigirConfig, type DaemonConfig, type LoadConfigOptions } from "./config.ts";
 import { EVENTS_PATH, httpStatusFor, matchRoute, parseEventFilter } from "./router.ts";
 import {
   DEFAULT_RUNTIME_DIR,
@@ -792,6 +792,35 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
     switch (name) {
       case "health":
         return health();
+      // FASE 17 — a FORMA da configuração, sem valor algum. `valores_efetivos`
+      // sai `false` no corpo para que ninguém confunda o default de fábrica com
+      // o que está valendo neste daemon: quem quer o efetivo pede `config.get`,
+      // que exige ADMIN.
+      case "config.schema":
+        return { versao_schema: 1, valores_efetivos: false, chaves: configSchema() };
+      // Os valores EFETIVOS, com os sensíveis redigidos. A proveniência viaja
+      // junto (`sources`) porque "por que está assim?" é a pergunta que essa
+      // rota existe para responder, e um valor sem origem só a responde pela
+      // metade. Proveniência não é segredo: dizer `env:NOMOS_BROWSER_AUDIT`
+      // nomeia a variável, nunca o conteúdo dela.
+      case "config.get":
+        return {
+          versao_schema: 1,
+          valores_efetivos: true,
+          redacao: REDACAO,
+          // `valores` é a projeção FIEL de `DaemonConfig`: exatamente as chaves
+          // que `GET /config/schema` descreve, nem uma a mais. Essa correspondência
+          // é o que torna as duas rotas legíveis juntas.
+          valores: redigirConfig(config),
+          // O que só EXISTE depois do listen mora aqui, e não dentro de `valores`.
+          //
+          // `port: 0` não é a porta: é o pedido "escolha uma efêmera". Publicar
+          // só o pedido faria uma rota que se anuncia como efetiva responder a
+          // pergunta errada — e sobrescrever `valores.port` com a porta ligada
+          // apagaria o fato de que o operador pediu efêmera. As duas verdades
+          // cabem, em campos diferentes.
+          runtime: { port: boundPort, bind: `${config.host}:${boundPort}` },
+        };
       case "whoami": {
         // O SEGREDO NUNCA SAI DAQUI. Só identidade, poderes e prazo — que é
         // exatamente o que um cliente precisa para se autolimitar, e nada do

@@ -1,7 +1,7 @@
 {
   "name": "@nomos/browser-cli",
   "version": "0.1.0",
-  "description": "CLI nomos-web — cliente HTTP do NOMOS Browser Runtime (contrato v1)",
+  "description": "CLI nomos-web \u2014 cliente HTTP do NOMOS Browser Runtime (contrato v1)",
   "type": "module",
   "private": true,
   "bin": {
@@ -15,5 +15,14 @@
   },
   "dependencies": {
     "ws": "8.21.3"
-  }
+  },
+  "license": "SEE LICENSE IN LICENSE",
+  "repository": {
+    "type": "git",
+    "url": "git+file:../..",
+    "directory": "packages/cli"
+  },
+  "files": [
+    "src"
+  ]
 }

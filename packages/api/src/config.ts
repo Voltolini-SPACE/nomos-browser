@@ -820,7 +820,19 @@ export function validarBaseDeProviders(raw: string, allowRemote: boolean, origin
 export function loadConfig(opts: LoadConfigOptions = {}): DaemonConfig {
   const env = opts.env ?? process.env;
   const cfg = baseDefaults();
-  for (const k of Object.keys(cfg)) if (k !== "sources") cfg.sources[k] = "default";
+  // Proveniência inicial no MESMO vocabulário de `applyKey`: chaves de topo E
+  // achatadas. Antes, `viewport.width` nascia SEM proveniência — `sources` só
+  // ganhava a entrada depois que alguém a configurava, e "de onde veio a
+  // largura?" só tinha resposta quando a resposta não era "de fábrica". Um
+  // registro de proveniência com buraco é pior que nenhum: ele parece completo.
+  for (const k of Object.keys(cfg)) {
+    if (k === "sources") continue;
+    cfg.sources[k] = "default";
+    const v = (cfg as unknown as Record<string, unknown>)[k];
+    if (v !== null && typeof v === "object" && !Array.isArray(v)) {
+      for (const sub of Object.keys(v as Record<string, unknown>)) cfg.sources[`${k}.${sub}`] = "default";
+    }
+  }
 
   // 1. arquivo
   if (opts.read_file !== false) {
@@ -849,7 +861,18 @@ export function loadConfig(opts: LoadConfigOptions = {}): DaemonConfig {
   for (const [key, varName] of Object.entries(ENV_KEYS)) {
     const raw = env[varName];
     if (raw === undefined || raw === "") continue;
-    applyKey(cfg, key, raw, `env:${varName}`);
+    // FASE 17 — DEFEITO CORRIGIDO: o retorno de `applyKey` era descartado aqui.
+    // Uma entrada de `ENV_KEYS` que `applyKey` não trata fazia o operador
+    // exportar a variável, o daemon subir, e NADA acontecer — sem erro, sem
+    // aviso, sem proveniência. É a mesma família do `--token` silenciosamente
+    // ignorado que sobreviveu a 551 testes verdes. Agora é erro de arranque:
+    // a tabela e o `switch` divergirem é defeito do produto, não do operador.
+    if (!applyKey(cfg, key, raw, `env:${varName}`)) {
+      throw new ConfigError(
+        `${varName} está declarada em ENV_KEYS mas a chave "${key}" não é aplicável — tabela e applyKey divergiram`,
+        { key, env: varName },
+      );
+    }
   }
 
   // 3. overrides programáticos
@@ -925,4 +948,263 @@ export function loadConfig(opts: LoadConfigOptions = {}): DaemonConfig {
 export function describeConfig(cfg: DaemonConfig): Record<string, unknown> {
   const { sources, ...rest } = cfg;
   return { ...rest, sources };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FASE 17 — SCHEMA DE CONFIGURAÇÃO
+//
+// POR QUE ISTO MORA AQUI, e não num arquivo de documentação separado:
+//
+// Uma tabela de configuração escrita à mão em outro arquivo diverge do código no
+// primeiro dia — alguém acrescenta uma chave em `applyKey`, esquece a tabela, e
+// a documentação passa a descrever um produto que não existe. Então a única
+// coisa DECLARADA aqui é o que o código não sabe dizer sozinho: o TIPO, a FAIXA
+// (que hoje só existe dentro de um `asInt(...)`), a SENSIBILIDADE e o resumo.
+//
+// Tudo o mais é LIDO do próprio módulo, nunca redigitado:
+//
+//   default → `baseDefaults()`, o mesmo objeto que o daemon usa ao subir
+//   env     → `ENV_KEYS`, a mesma tabela que `loadConfig` percorre
+//   enums   → `NAMED_POLICIES`, `RAW_WEB_CONTENT_POLICIES`, `VISION_AIMS`
+//   tetos   → as constantes importadas (`MAX_VISION_REFINE_PASSES`, …)
+//
+// E `tests/config-schema.test.ts` fecha a última fresta: ele PROVA a faixa
+// declarada empurrando `min-1` e `max+1` contra `applyKey` e exigindo recusa, e
+// PROVA a env aplicando `exemplo` por variável de ambiente e exigindo que a
+// proveniência saia `env:<VAR>`. Faixa mentirosa e env não tratada param de ser
+// possíveis — não por disciplina, por instrumento.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type ConfigTipo = "string" | "boolean" | "inteiro" | "fracao" | "caminho" | "enum" | "provider-ref" | "url";
+
+export interface ConfigKeySpec {
+  tipo: ConfigTipo;
+  /** Limites INCLUSIVOS de `asInt`/`asFraction`. Provados por `config-schema.test.ts`. */
+  min?: number;
+  max?: number;
+  /** Enum fechado. Vem da constante do módulo dono, nunca redigitado. */
+  valores?: readonly string[];
+  /** Valor VÁLIDO. O teste o usa para provar que `applyKey` trata a env desta chave. */
+  exemplo: string;
+  /**
+   * Sai `[REDIGIDO]` de `GET /api/v1/config`. Ver `redigirConfig` para o critério.
+   */
+  sensivel: boolean;
+  /** `null` é aceito (raiz opcional desligada, provider ausente). */
+  anulavel?: boolean;
+  resumo: string;
+}
+
+const POLITICAS = Object.freeze(Object.keys(NAMED_POLICIES));
+
+/** Chave de configuração ACHATADA → forma. Mesmo espaço de chaves de `applyKey`. */
+export const CONFIG_SCHEMA: Readonly<Record<string, ConfigKeySpec>> = Object.freeze({
+  host: { tipo: "string", exemplo: "127.0.0.1", sensivel: false, resumo: "Endereço de bind do daemon. Loopback por default; sair dele é ato explícito." },
+  port: { tipo: "inteiro", min: 0, max: 65535, exemplo: "7777", sensivel: false, resumo: "Porta HTTP. 0 = efêmera escolhida pelo SO." },
+  version: { tipo: "string", exemplo: "0.1.0", sensivel: false, resumo: "Versão anunciada em /health. Lida do package.json da raiz; sem variável de ambiente de propósito — versão não se configura, se publica." },
+  headless: { tipo: "boolean", exemplo: "true", sensivel: false, resumo: "Chromium sem janela. Default false: takeover humano precisa de janela visível." },
+  "viewport.width": { tipo: "inteiro", min: 1, max: 20000, exemplo: "1440", sensivel: false, resumo: "Largura CSS do viewport." },
+  "viewport.height": { tipo: "inteiro", min: 1, max: 20000, exemplo: "900", sensivel: false, resumo: "Altura CSS do viewport." },
+  profiles_root: { tipo: "caminho", exemplo: "/tmp/nomos-perfis", sensivel: true, anulavel: true, resumo: "Raiz dos perfis persistentes do Chromium (cookies e sessão do dono)." },
+  max_workers: { tipo: "inteiro", min: 1, max: 1024, exemplo: "8", sensivel: false, resumo: "Teto de sessões vivas no pool." },
+  max_concurrency: { tipo: "inteiro", min: 1, max: 1024, exemplo: "4", sensivel: false, resumo: "Ações simultâneas POR SESSÃO." },
+  max_queue: { tipo: "inteiro", min: 0, max: 100000, exemplo: "64", sensivel: false, resumo: "Ações aguardando POR SESSÃO. Estourou ⇒ BACKPRESSURE_REJECTED." },
+  action_timeout_ms: { tipo: "inteiro", min: 1, max: 3_600_000, exemplo: "30000", sensivel: false, resumo: "Prazo total por ação (fila + execução). Estourou ⇒ TIMEOUT." },
+  observe_limit: { tipo: "inteiro", min: 1, max: 100000, exemplo: "200", sensivel: false, resumo: "Teto de elementos devolvidos por browser.observe." },
+  event_buffer: { tipo: "inteiro", min: 0, max: 1_000_000, exemplo: "1000", sensivel: false, resumo: "Buffer circular do EventBus (reconexão de WebSocket)." },
+  max_body_bytes: { tipo: "inteiro", min: 1, max: 268_435_456, exemplo: "1048576", sensivel: false, resumo: "Teto do corpo de requisição HTTP." },
+  default_policy: { tipo: "enum", valores: POLITICAS, exemplo: "observe", sensivel: false, resumo: "Política de capacidades default. `full` não é dizível aqui de propósito." },
+  allow_internal_urls: { tipo: "boolean", exemplo: "true", sensivel: false, resumo: "Permitir navegar em 127.0.0.1/rede interna (anti-SSRF). Default false." },
+  allow_unleased: { tipo: "boolean", exemplo: "true", sensivel: false, resumo: "Operar sessão sem lease. Default false: quem cria a sessão vira dono no mesmo ato." },
+  watchdog_enabled: { tipo: "boolean", exemplo: "false", sensivel: false, resumo: "Vigia interno. Default true — supervisor que nasce desligado é supervisor que ninguém liga." },
+  watchdog_interval_ms: { tipo: "inteiro", min: 50, max: 3_600_000, exemplo: "5000", sensivel: false, resumo: "Período entre sondagens. Piso 50 ms: abaixo disso o vigia custa mais que o vigiado." },
+  watchdog_max_restarts: { tipo: "inteiro", min: 0, max: 1000, exemplo: "3", sensivel: false, resumo: "Recuperações da MESMA falha antes de DEGRADAR (T10). 0 = detecta e reporta, nunca recupera." },
+  watchdog_task_stall_ms: { tipo: "inteiro", min: 100, max: 86_400_000, exemplo: "120000", sensivel: false, resumo: "Task RUNNING sem avançar checkpoint por mais que isto é task estagnada." },
+  watchdog_worker_stall_ms: { tipo: "inteiro", min: 100, max: 86_400_000, exemplo: "60000", sensivel: false, resumo: "Ação em execução há mais que isto é worker preso." },
+  upload_root: { tipo: "caminho", exemplo: "/tmp/nomos-upload", sensivel: true, anulavel: true, resumo: "Raiz permitida para upload. Fora dela ⇒ UPLOAD_DENIED." },
+  download_root: { tipo: "caminho", exemplo: "/tmp/nomos-download", sensivel: true, anulavel: true, resumo: "Raiz permitida para download. Fora dela ⇒ DOWNLOAD_DENIED." },
+  sessions_root: { tipo: "caminho", exemplo: "/tmp/nomos-sessoes", sensivel: true, anulavel: true, resumo: "Raiz do audit log JSONL e dos snapshots de sessão." },
+  audit: { tipo: "boolean", exemplo: "false", sensivel: false, resumo: "Trilha de auditoria. Default true." },
+  task_max_attempts: { tipo: "inteiro", min: 1, max: 100, exemplo: "3", sensivel: false, resumo: "Tentativas TOTAIS por passo, contando a primeira. 1 desliga a retentativa." },
+  task_step_timeout_ms: { tipo: "inteiro", min: 1, max: 3_600_000, exemplo: "45000", sensivel: false, resumo: "Prazo de UM passo. Não pode ser maior que task_total_timeout_ms." },
+  task_total_timeout_ms: { tipo: "inteiro", min: 1, max: 86_400_000, exemplo: "600000", sensivel: false, resumo: "Prazo da task inteira." },
+  task_retry_base_ms: { tipo: "inteiro", min: 0, max: 3_600_000, exemplo: "500", sensivel: false, resumo: "Base do backoff exponencial. Não pode ser maior que task_retry_max_ms." },
+  task_retry_max_ms: { tipo: "inteiro", min: 0, max: 3_600_000, exemplo: "30000", sensivel: false, resumo: "Teto do backoff exponencial." },
+  task_recover_grace_ms: { tipo: "inteiro", min: 0, max: 3_600_000, exemplo: "30000", sensivel: false, resumo: "Janela para retomar task RECOVERING após crash. Passada ⇒ FAILED com razão." },
+  tasks_root: { tipo: "caminho", exemplo: "/tmp/nomos-tasks", sensivel: true, anulavel: true, resumo: "Raiz dos arquivos de task. null ⇒ dentro de sessions_root." },
+  raw_web_content: { tipo: "enum", valores: RAW_WEB_CONTENT_POLICIES, exemplo: "always", sensivel: false, resumo: "O que fazer com o texto CRU da web quando há injeção detectada." },
+  scroll_into_view: { tipo: "boolean", exemplo: "false", sensivel: false, resumo: "Rolar o alvo para dentro do viewport antes do gesto. Default true." },
+  stability_samples: { tipo: "inteiro", min: 2, max: 100, exemplo: "3", sensivel: false, resumo: "Amostras CONSECUTIVAS iguais da bounding box para declará-la assentada. Mínimo 2: com 1 não se compara nada." },
+  stability_interval_ms: { tipo: "inteiro", min: 0, max: 10_000, exemplo: "50", sensivel: false, resumo: "Intervalo entre amostras de estabilização." },
+  click_delivery_check: { tipo: "boolean", exemplo: "false", sensivel: false, resumo: "Exigir prova de que o evento de clique chegou ao alvo. Default true." },
+  device_scale_factor: { tipo: "inteiro", min: 1, max: 8, exemplo: "2", sensivel: false, resumo: "DPR do contexto do Chromium. 1 = tela comum, 2 = retina." },
+  ai_provider: { tipo: "provider-ref", exemplo: "ollama:qwen2.5-coder:7b", sensivel: false, anulavel: true, resumo: '"<backend>:<modelo>". Default null: runtime não fala com LLM sem o dono pedir.' },
+  ai_provider_fallback: { tipo: "provider-ref", exemplo: "ollama:qwen2.5-coder:7b", sensivel: false, anulavel: true, resumo: "Secundário acionado só em DEGRADAÇÃO do principal. Nunca em cancelamento." },
+  ai_timeout_ms: { tipo: "inteiro", min: 1, max: 3_600_000, exemplo: "120000", sensivel: false, resumo: "Prazo de uma inferência de texto." },
+  ai_think: { tipo: "boolean", exemplo: "false", sensivel: false, anulavel: true, resumo: "`think` do backend. null = deixa o provider decidir." },
+  vision_provider: { tipo: "provider-ref", exemplo: "ollama:qwen2.5vl:3b", sensivel: false, anulavel: true, resumo: "Ausente ⇒ degrau `vision` PULADO, com razão registrada." },
+  vision_timeout_ms: { tipo: "inteiro", min: 1, max: 3_600_000, exemplo: "20000", sensivel: false, resumo: "Prazo de uma inferência de visão." },
+  vision_min_confidence: { tipo: "fracao", min: 0, max: 1, exemplo: "0.7", sensivel: false, resumo: "Abaixo disto a visão é descartada como palpite." },
+  vision_refine_passes: { tipo: "inteiro", min: 0, max: MAX_VISION_REFINE_PASSES, exemplo: "2", sensivel: false, resumo: "Passadas de refino por recorte. Default 0 POR MEDIÇÃO (ver target.ts)." },
+  vision_refine_factor: { tipo: "fracao", min: 1.2, max: 6, exemplo: "2.5", sensivel: false, resumo: "Lado do recorte = maior lado da caixa grosseira × isto." },
+  vision_aim: { tipo: "enum", valores: VISION_AIMS, exemplo: "box_center", sensivel: false, resumo: "Onde mirar dentro do que a visão devolveu." },
+  providers_base_url: { tipo: "url", exemplo: "http://127.0.0.1:11434", sensivel: true, resumo: "Backend dos providers. Loopback obrigatório salvo providers_allow_remote." },
+  providers_allow_remote: { tipo: "boolean", exemplo: "true", sensivel: false, resumo: "Consentimento explícito para mandar prompt e SCREENSHOT para fora desta máquina." },
+});
+
+/** Uma linha do schema legível: forma + default REAL + env REAL. */
+export interface ConfigSchemaEntry {
+  chave: string;
+  tipo: ConfigTipo;
+  /** Valor de fábrica LIDO de `baseDefaults()`. Não é o valor efetivo do daemon. */
+  default: unknown;
+  /** "0..65535", "box_center|point|point_then_box" ou null quando não há restrição. */
+  faixa: string | null;
+  /** Variável de ambiente, LIDA de `ENV_KEYS`. null = chave não configurável por env. */
+  env: string | null;
+  sensivel: boolean;
+  anulavel: boolean;
+  exemplo: string;
+  resumo: string;
+}
+
+/** Lê o default achatado de uma chave a partir do objeto de defaults. */
+function defaultAchatado(d: DaemonConfig, chave: string): unknown {
+  const ponto = chave.indexOf(".");
+  if (ponto < 0) return (d as unknown as Record<string, unknown>)[chave];
+  const pai = (d as unknown as Record<string, unknown>)[chave.slice(0, ponto)];
+  return pai !== null && typeof pai === "object" ? (pai as Record<string, unknown>)[chave.slice(ponto + 1)] : undefined;
+}
+
+function faixaDe(spec: ConfigKeySpec): string | null {
+  if (spec.valores !== undefined) return spec.valores.join("|");
+  if (spec.min !== undefined && spec.max !== undefined) return `${spec.min}..${spec.max}`;
+  if (spec.tipo === "boolean") return "true|false|1|0|yes|no|on|off";
+  if (spec.tipo === "provider-ref") return `${PROVIDER_BACKENDS.join("|")}:<modelo>`;
+  if (spec.tipo === "url") return "http|https, loopback salvo providers_allow_remote";
+  return null;
+}
+
+/**
+ * O schema COMPLETO, montado na hora a partir do código vivo.
+ *
+ * Nada aqui é uma cópia: `default` sai de `baseDefaults()` e `env` sai de
+ * `ENV_KEYS`. Se alguém acrescentar uma chave e esquecer o `CONFIG_SCHEMA`,
+ * quem denuncia é `tests/config-schema.test.ts`, não este getter — porque um
+ * getter que "conserta" a lacuna sozinho esconderia a lacuna.
+ */
+export function configSchema(): ConfigSchemaEntry[] {
+  const d = baseDefaults();
+  return Object.entries(CONFIG_SCHEMA)
+    .map(([chave, spec]) => ({
+      chave,
+      tipo: spec.tipo,
+      default: defaultAchatado(d, chave),
+      faixa: faixaDe(spec),
+      env: ENV_KEYS[chave] ?? null,
+      sensivel: spec.sensivel,
+      anulavel: spec.anulavel === true,
+      exemplo: spec.exemplo,
+      resumo: spec.resumo,
+    }))
+    .sort((a, b) => a.chave.localeCompare(b.chave));
+}
+
+/**
+ * REDAÇÃO — o critério, e por que ele é este.
+ *
+ * Não há token nesta estrutura: a credencial do daemon vive no `AuthManager` e
+ * nunca entra em `DaemonConfig`. Então o que há para proteger não é segredo
+ * clássico, e sim duas coisas que uma resposta de API entregaria de graça:
+ *
+ *  1. AS RAÍZES (`profiles_root`, `upload_root`, `download_root`, `sessions_root`,
+ *     `tasks_root`). São caminhos ABSOLUTOS na máquina do dono. Publicá-los
+ *     entrega o nome da conta (`/Users/<fulano>/…`) e o lugar exato onde moram
+ *     os perfis do Chromium — que carregam COOKIE de sessão autenticada — e a
+ *     trilha de auditoria, que é justamente o que um atacante quer localizar
+ *     para adulterar. É reconhecimento pronto para travessia de caminho.
+ *     Decisão: REDIGIR.
+ *
+ *  2. `providers_base_url`. Uma URL aceita `usuario:senha@host` no userinfo, e
+ *     mesmo sem credencial ela nomeia o endpoint interno que recebe prompt e
+ *     SCREENSHOT da sessão do dono. Decisão: REDIGIR.
+ *
+ * `host` e `port` NÃO são redigidos: quem recebeu esta resposta já falou com
+ * eles. Redigir o que o cliente acabou de usar é teatro.
+ *
+ * `null` continua `null`, e isso é deliberado: ausência não é segredo, e trocar
+ * `null` por `[REDIGIDO]` faria a resposta mentir sobre a raiz estar desligada —
+ * exatamente a pergunta que alguém faz ao diagnosticar "por que não há trilha?".
+ */
+export const REDACAO = "[REDIGIDO]";
+
+export function redigirConfig(cfg: DaemonConfig): Record<string, unknown> {
+  const saida = describeConfig(cfg);
+  for (const [chave, spec] of Object.entries(CONFIG_SCHEMA)) {
+    if (!spec.sensivel) continue;
+    // Chave achatada sensível dentro de objeto não existe hoje (só `viewport`,
+    // que não é sensível); se passar a existir, o teste de divergência acusa.
+    if (chave.includes(".")) continue;
+    if (saida[chave] === null || saida[chave] === undefined) continue;
+    saida[chave] = REDACAO;
+  }
+  return saida;
+}
+
+/**
+ * Aplica UMA chave sobre os defaults, isolada.
+ *
+ * Existe para o verificador de schema poder provar a FAIXA de cada chave sem
+ * esbarrar nas validações CRUZADAS de `loadConfig` (base > teto do backoff,
+ * passo > total): elas são regras de coerência entre campos e responderiam
+ * "inválido" pelo motivo errado, o que faria o teste passar sem provar nada.
+ */
+export function aplicarChaveIsolada(chave: string, bruto: unknown, origem = "probe"): DaemonConfig {
+  const cfg = baseDefaults();
+  if (!applyKey(cfg, chave, bruto, origem)) {
+    throw new ConfigError(`chave de configuração desconhecida: ${chave}`, { key: chave });
+  }
+  return cfg;
+}
+
+/** Tabela markdown do schema. Renderizador ÚNICO: a rota, o script e o doc gerado usam este. */
+export function configSchemaMarkdown(): string {
+  const linhas: string[] = [];
+  const esc = (s: string): string => s.replace(/\|/g, "\\|");
+  const mostra = (v: unknown): string => (v === null ? "`null`" : `\`${String(v)}\``);
+
+  linhas.push("# Configuração do NOMOS Browser Runtime");
+  linhas.push("");
+  linhas.push("<!-- ARQUIVO GERADO por `node scripts/config-schema.ts --markdown`. Não edite à mão. -->");
+  linhas.push("<!-- A fonte é `packages/api/src/config.ts`; `tests/config-schema.test.ts` impede divergência. -->");
+  linhas.push("");
+  linhas.push(`Precedência: **defaults → arquivo → variáveis de ambiente → overrides do código**.`);
+  linhas.push("Nenhuma coerção silenciosa: valor fora da faixa lança `ConfigError` no arranque, com campo, origem e faixa na mensagem.");
+  linhas.push("");
+  linhas.push("Coluna **sensível**: sai `[REDIGIDO]` em `GET /api/v1/config`. Ver `redigirConfig` para o critério.");
+  linhas.push("");
+  linhas.push("| chave | tipo | default | faixa / valores | variável de ambiente | sensível | resumo |");
+  linhas.push("| --- | --- | --- | --- | --- | --- | --- |");
+  for (const e of configSchema()) {
+    linhas.push(
+      `| \`${e.chave}\` | ${e.tipo}${e.anulavel ? " ou `null`" : ""} | ${mostra(e.default)} | ${e.faixa === null ? "—" : `\`${esc(e.faixa)}\``} | ${e.env === null ? "—" : `\`${e.env}\``} | ${e.sensivel ? "**sim**" : "não"} | ${esc(e.resumo)} |`,
+    );
+  }
+  linhas.push("");
+  linhas.push("## Variáveis de ambiente");
+  linhas.push("");
+  linhas.push("Toda variável abaixo é suportada, tem default, tem validação e recusa valor inválido com mensagem nomeando campo, origem e faixa.");
+  linhas.push("");
+  linhas.push("| variável | chave | default | faixa / valores | exemplo válido |");
+  linhas.push("| --- | --- | --- | --- | --- |");
+  for (const e of configSchema()) {
+    if (e.env === null) continue;
+    linhas.push(
+      `| \`${e.env}\` | \`${e.chave}\` | ${mostra(e.default)} | ${e.faixa === null ? "—" : `\`${esc(e.faixa)}\``} | \`${esc(e.exemplo)}\` |`,
+    );
+  }
+  linhas.push("");
+  linhas.push("Além destas, `NOMOS_BROWSER_CONFIG` aponta para o arquivo de configuração; declarada e ausente é **erro de arranque**, nunca fallback silencioso para os defaults.");
+  linhas.push("");
+  return linhas.join("\n");
 }

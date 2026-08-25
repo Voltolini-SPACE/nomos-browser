@@ -110,6 +110,16 @@ export const ROUTE_SCOPE: Readonly<Record<string, Scope>> = Object.freeze({
   "lease.takeover": "ADMIN",
   // FASE 12 — verificar integridade de replay é leitura da trilha da sessão.
   "replay.verify": "OBSERVE",
+  // FASE 17 — a FORMA da configuração é contrato público do runtime: saber que
+  // existe `vision_refine_passes` e que ela vai de 0 a 2 não concede poder
+  // nenhum, e é o que um cliente precisa para se autoconfigurar sem adivinhar.
+  // Mesmo raciocínio de `tool_scopes` em `whoami`. OBSERVE.
+  "config.schema": "OBSERVE",
+  // Os VALORES são outra coisa. Mesmo redigidos, eles dizem se a auditoria está
+  // ligada, se o lease está fechado, qual política default vigora e para onde o
+  // runtime manda screenshot — mapa de reconhecimento de quem quer escolher por
+  // onde atacar. ADMIN, no mesmo nível de `sessions.takeover`.
+  "config.get": "ADMIN",
   // Ler a PRÓPRIA credencial é o mínimo que qualquer portador pode fazer.
   "whoami": "OBSERVE",
   "events": "OBSERVE",

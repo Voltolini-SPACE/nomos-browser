@@ -1,0 +1,76 @@
+Copyright (c) 2026 Voltolini-SPACE <admin@voltolini.space>
+Todos os direitos reservados. / All rights reserved.
+
+--------------------------------------------------------------------------
+AVISO SOBRE O TITULAR — ESTE NOME É UM PLACEHOLDER
+--------------------------------------------------------------------------
+
+O nome acima NÃO foi confirmado como a entidade legal titular. Ele foi
+derivado mecanicamente da identidade do autor do commit HEAD:
+
+    git log --format='%an <%ae>' -1   ->  Voltolini-SPACE <admin@voltolini.space>
+
+O histórico deste repositório contém DUAS identidades de autoria, e nenhuma
+delas é, por si só, prova de titularidade legal:
+
+    8 commits   NOMOS Browser <adm@se7enpay.com.br>
+    5 commits   Voltolini-SPACE <admin@voltolini.space>   (inclui o HEAD)
+
+`package.json` não declara `author` nem `license`. Nenhum agente tem
+autoridade para escolher o titular de direitos autorais em nome do dono.
+Portanto: **substitua a primeira linha deste arquivo pelo nome ou razão
+social correta** antes de qualquer distribuição. Enquanto isso não for
+feito, trate o nome acima como provisório.
+
+--------------------------------------------------------------------------
+ESTADO LEGAL ATUAL
+--------------------------------------------------------------------------
+
+Este software e a documentação que o acompanha são proprietários e não
+publicados. Nenhuma licença, expressa ou implícita, é concedida a
+terceiros — nem de uso, cópia, modificação, fusão, publicação,
+distribuição, sublicenciamento ou venda.
+
+Este é o estado legal PADRÃO de uma obra sob direito autoral: na ausência
+de uma licença, tudo é reservado. Escrever isto explicitamente não é uma
+decisão nova; é registrar o que já vale. O README dizia "Ainda não
+definida — decisão do dono", e um repositório sem arquivo de licença é
+exatamente isto — com a diferença de que quem lê não tinha como saber.
+
+--------------------------------------------------------------------------
+ESCOLHER UMA LICENÇA ABERTA É DECISÃO DO DONO
+--------------------------------------------------------------------------
+
+A adoção de uma licença aberta — MIT, Apache-2.0, BSD-3-Clause, MPL-2.0,
+AGPL-3.0 ou outra — é um ato do dono, com consequências jurídicas e
+comerciais que nenhum agente pode assumir por ele. Cada opção tem um
+efeito diferente e irreversível na prática:
+
+  MIT / BSD-3   permissiva; qualquer um pode fechar o derivado.
+  Apache-2.0    permissiva, com concessão explícita de patente e
+                exigência de aviso de modificações.
+  MPL-2.0       copyleft por arquivo; o derivado pode ser fechado, os
+                arquivos originais modificados não.
+  AGPL-3.0      copyleft forte, alcançando uso em serviço de rede — quem
+                oferecer o runtime como serviço tem de abrir a fonte.
+
+Ponto de atenção específico deste produto: ele controla um navegador com
+as sessões autenticadas do dono. Uma licença permissiva permite que um
+terceiro integre este runtime a um produto fechado que opere credenciais
+de outras pessoas. Isso pode ser desejado ou não — é decisão de negócio.
+
+COMO TROCAR:
+
+  1. Substitua o conteúdo INTEIRO deste arquivo pelo texto oficial da
+     licença escolhida, com o titular e o ano corretos.
+  2. Declare o mesmo identificador SPDX em `package.json`
+     (`"license": "MIT"`, por exemplo) e nos `package.json` dos pacotes
+     em `packages/*` que forem publicáveis.
+  3. Atualize a seção "Licença" do `README.md`.
+  4. Registre a mudança em `CHANGELOG.md` — troca de licença é mudança de
+     comportamento para quem consome, não detalhe administrativo.
+  5. Se houver contribuição de terceiros no histórico, confirme que há
+     direito de relicenciar antes do passo 1.
+
+Até que esses passos sejam executados pelo dono, vale o texto da seção
+"ESTADO LEGAL ATUAL".

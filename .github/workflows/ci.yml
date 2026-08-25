@@ -1,13 +1,23 @@
-# FASE 38 — CI anti-regressão.
+# FASE 38 + FASE 16 — CI anti-regressão.
 #
 # Este arquivo NÃO contém a lógica da CI: ela vive em `scripts/ci.sh`, que roda
 # igual aqui e na máquina do desenvolvedor. Um YAML com os comandos duplicados
 # diverge do script na primeira mudança, e aí a CI passa a testar outra coisa.
+# Cada job abaixo tem exatamente UMA linha de lógica: `./scripts/ci.sh <estagio>`.
 #
 # ESTADO HONESTO: este workflow nunca foi executado por um runner do GitHub —
 # o repositório não tem remote. O que está PROVADO é `scripts/ci.sh` rodando
 # localmente. Enquanto não houver uma execução verde no runner, considere este
 # arquivo declaração de intenção, não evidência.
+#
+# A matriz espelhada aqui é a de `scripts/ci.sh` (ver o cabeçalho de lá). Ela
+# não é redigitada: `scripts/ci-cobertura.sh`, que roda dentro do job `fast`,
+# falha se algum `tests/*.test.ts` ficar fora de todo estágio — foi assim que
+# `vision.test.ts` e `aiprovider.test.ts` (2.034 linhas) passaram meses sem
+# jamais rodar em `ci.sh all`.
+#
+# `cleanroom` NÃO tem job: ele é chamado por `scripts/clean-room.sh`, que copia
+# a árvore para um diretório temporário e prova `npm ci --include=dev` do zero.
 
 name: CI
 
@@ -19,7 +29,13 @@ on:
 
 jobs:
   # Barato primeiro: quebrar unidade não deve custar dez minutos de Chromium
-  # para ser descoberto.
+  # para ser descoberto. Inclui os guardas estáticos e o passo de cobertura da
+  # própria matriz.
+  #
+  # `build:ui` e `marca:selo-declarado` dependem do cofre de brandbooks do dono
+  # (`~/.brand-governance`). Num runner limpo o cofre não existe e `ci.sh` os
+  # marca PULADO com a razão impressa — nunca verde por impossibilidade. Por
+  # isso este job NÃO usa `continue-on-error`: tudo o que ele roda tem de passar.
   fast:
     runs-on: macos-latest
     steps:
@@ -30,23 +46,32 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: npm ci
+      - run: npm ci --include=dev
       - run: ./scripts/ci.sh fast
 
-  guards:
+  core:
     runs-on: macos-latest
+    needs: fast
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: "26"
-      - run: npm ci
-      # `guards` inclui a checagem de marca, que depende do cofre de brandbooks
-      # em `~/Documents/BRANDBOOKS_OFICIAIS`. Num runner limpo esse cofre não
-      # existe e o build da UI falha fechado — que é o comportamento correto.
-      # Por isso o passo é tolerado aqui e obrigatório na máquina do dono.
-      - run: ./scripts/ci.sh guards
-        continue-on-error: true
+      - run: npm ci --include=dev
+      - run: npx playwright install chromium
+      - run: ./scripts/ci.sh core
+
+  security:
+    runs-on: macos-latest
+    needs: fast
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "26"
+      - run: npm ci --include=dev
+      - run: npx playwright install chromium
+      - run: ./scripts/ci.sh security
 
   integration:
     runs-on: macos-latest
@@ -56,7 +81,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "26"
-      - run: npm ci
+      - run: npm ci --include=dev
       - run: npx playwright install chromium
       - run: ./scripts/ci.sh integration
 
@@ -68,19 +93,49 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "26"
-      - run: npm ci
+      - run: npm ci --include=dev
       - run: npx playwright install chromium
       - run: ./scripts/ci.sh adversarial
 
-  e2e:
+  recovery:
     runs-on: macos-latest
-    needs: [integration, adversarial]
+    needs: fast
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: "26"
-      - run: npm ci
+      - run: npm ci --include=dev
+      - run: npx playwright install chromium
+      - run: ./scripts/ci.sh recovery
+
+  # `providers` é job PRÓPRIO por causa da MEMÓRIA, não do tempo: é o único que
+  # pode carregar modelo de vários GB. Os testes se PULAM explicitamente quando
+  # não há backend em 11434 — nunca fingem verde —, então num runner sem Ollama
+  # o que este job prova é o contrato e o parsing, e isso precisa aparecer no
+  # relatório. O guarda de memória e a assinatura dos serviços de produção só
+  # têm efeito real na máquina do dono.
+  providers:
+    runs-on: macos-latest
+    needs: fast
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "26"
+      - run: npm ci --include=dev
+      - run: npx playwright install chromium
+      - run: ./scripts/ci.sh providers
+
+  e2e:
+    runs-on: macos-latest
+    needs: [core, integration, adversarial]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "26"
+      - run: npm ci --include=dev
       - run: npx playwright install chromium
       # Os gates que dependem de Ollama (visão e dois providers) se PULAM
       # explicitamente quando o backend não existe — nunca fingem sucesso.

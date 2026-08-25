@@ -1,0 +1,26 @@
+{
+  "name": "@nomos/browser-ui",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "SEE LICENSE IN LICENSE",
+  "engines": {
+    "node": ">=22.6.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+file:../..",
+    "directory": "packages/ui"
+  },
+  "description": "NOMOS Web \u2014 pagina de operacao. `build.ts` injeta os tokens do brandbook; `dist/` e artefato e nao e versionado.",
+  "main": "./serve.ts",
+  "exports": {
+    ".": "./serve.ts",
+    "./build": "./build.ts"
+  },
+  "files": [
+    "src",
+    "build.ts",
+    "serve.ts"
+  ]
+}

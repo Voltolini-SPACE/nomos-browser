@@ -28,8 +28,8 @@ texto na página não altera `Capabilities`.
 
 ### T1 — Injeção de prompt via conteúdo de página
 Página instrui o agente a executar ação sensível.
-**Mitigação:** capability engine no runtime. `send`, `purchase`, `payment`,
-`delete`, `upload` nascem **negados** (`RESTRICTED_CAPABILITIES`). Ferramenta sem
+**Mitigação:** capability engine no runtime. `download`, `upload`, `send`,
+`purchase`, `payment` e `delete` nascem **negados** (`RESTRICTED_CAPABILITIES`). Ferramenta sem
 entrada em `REQUIRED_CAPABILITY` é negada — fail closed, não permitida por omissão.
 **Resíduo:** dentro das capabilities concedidas o agente pode ser enganado. Por isso
 a classe `COMMIT` existe e é separada de `ACT`.
@@ -118,7 +118,7 @@ pedem ações opostas de quem opera.
 **Evidência ao lado da afirmação:**
 `evidence/nomos-browser-final-loop/11-security/bateria-completa.ts` — 53 vetores,
 `SECURITY_SUITE=PASS`, `OPEN_SECURITY_P1=0`. A bateria anterior
-(`…/final-validation/05-security/prova-guardas-vivos.ts`, 16 vetores) continua
+(`evidence/nomos-browser-final-validation/05-security/prova-guardas-vivos.ts`, 16 vetores) continua
 valendo e não foi alterada.
 
 **Resíduo honesto:** o bind continua sendo loopback por padrão e essa continua
@@ -131,9 +131,15 @@ local hostil; não torna seguro expor a porta na LAN.
 headers, corpo e query string.
 
 ### T9 — CAPTCHA e antiabuso
-**Postura:** o runtime **detecta e escala**, não contorna. Resolver CAPTCHA está
-fora do produto por decisão, não por limitação. Ao detectar, a task vai para
-`WAITING` e pede intervenção humana.
+**Postura:** o runtime **não contorna** CAPTCHA. Resolver CAPTCHA está fora do
+produto por decisão, não por limitação.
+**Correção de documento (2026-08-25):** este parágrafo afirmava que "ao detectar,
+a task vai para `WAITING` e pede intervenção humana". **Não há detecção de
+CAPTCHA implementada** — `grep -rni captcha packages tests` devolve zero. O que
+existe é o mecanismo genérico ao lado: quando o humano assume o controle, o passo
+devolve `CONTROL_HELD_BY_HUMAN` e a task vai para `PAUSED` esperando `resume`
+(`docs/TASK-ENGINE.md`). A postura de não contornar continua valendo; a detecção
+automática é ausência declarada, não capacidade.
 
 ### T10 — Watchdog em laço de reinício
 Um watchdog que reinicia sem teto transforma falha em negação de serviço local.
@@ -153,6 +159,15 @@ fica `degraded` e para de reiniciar, em vez de girar para sempre.
   oportunista; não fecha adversário com acesso de escrita — para isso seria
   preciso chave fora da máquina, que está fora do escopo desta versão.
 - Multiusuário: o runtime assume **um dono** na máquina local
+
+Os resíduos desta seção, com os números que os sustentam, estão consolidados em
+`docs/LIMITATIONS.md`. Como ler a trilha e verificar um replay: `docs/AUDIT.md`.
+
+*Revisado em 2026-08-25 contra HEAD `78491cc`: as afirmações sobre T7 (53/53
+vetores, `OPEN_SECURITY_P1=0`), T10 (watchdog com teto, agora instanciado pelo
+daemon) e o selo sem chave conferem com a evidência citada. Duas correções foram
+aplicadas nesta revisão — a lista de capabilities restritas em T1 e a alegação de
+detecção de CAPTCHA em T9.*
 
 ## Proibições operacionais herdadas da missão
 

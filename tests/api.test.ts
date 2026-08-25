@@ -861,3 +861,105 @@ test("encerramento fecha a sessão e o pool volta a zero", async () => {
   const health = await call<Record<string, unknown>>("GET", "/health");
   assert.equal((health.body.sessions as { total: number }).total, 0);
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FASE 17 — configuração como contrato consultável
+//
+// Duas rotas, dois riscos diferentes, dois escopos diferentes. Os testes abaixo
+// provam a diferença COM UMA SEGUNDA IDENTIDADE de escopo baixo — não por
+// leitura da tabela `ROUTE_SCOPE`, que provaria apenas que uma constante é
+// igual a si mesma.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Chamada com um token QUALQUER, para poder falar como um portador limitado. */
+async function callComToken<T>(method: string, route: string, token: string): Promise<Res<T>> {
+  const res = await fetch(`${daemon.url}${route}`, {
+    method,
+    headers: { "content-type": "application/json", "x-nomos-client": "teste-api", authorization: `Bearer ${token}` },
+  });
+  return { status: res.status, body: (await res.json()) as T };
+}
+
+test("GET /api/v1/config/schema devolve a FORMA e nenhum valor efetivo", async () => {
+  const res = await call<{ versao_schema: number; valores_efetivos: boolean; chaves: Record<string, unknown>[] }>(
+    "GET",
+    "/api/v1/config/schema",
+  );
+  assert.equal(res.status, 200);
+  assert.equal(res.body.valores_efetivos, false, "a rota de schema não pode se anunciar como valores efetivos");
+  assert.ok(res.body.chaves.length >= 50, `schema raso demais: ${res.body.chaves.length} chaves`);
+
+  const porChave = new Map(res.body.chaves.map((c) => [c.chave as string, c]));
+  const porta = porChave.get("port");
+  assert.ok(porta !== undefined, "port não está no schema");
+  assert.equal(porta.faixa, "0..65535");
+  assert.equal(porta.env, "NOMOS_BROWSER_PORT");
+  // Este daemon subiu com `port: 0` (efêmera) e está numa porta real. Se o
+  // schema carregasse ESTADO, `default` seria a porta viva; ele carrega o valor
+  // de fábrica, que é o contrato.
+  assert.equal(porta.default, 7777);
+  assert.notEqual(porta.default, daemon.port);
+
+  // `sessions_root` deste daemon é um diretório temporário real. Nem o caminho
+  // nem o /tmp podem aparecer numa resposta que promete "só a forma".
+  assert.ok(!JSON.stringify(res.body).includes(sessionsRoot), "o schema vazou o sessions_root efetivo");
+});
+
+test("GET /api/v1/config devolve valores EFETIVOS com os sensíveis redigidos", async () => {
+  const res = await call<{
+    valores_efetivos: boolean;
+    redacao: string;
+    valores: Record<string, unknown>;
+    runtime: { port: number; bind: string };
+  }>("GET", "/api/v1/config");
+  assert.equal(res.status, 200);
+  assert.equal(res.body.valores_efetivos, true);
+
+  // `valores` é o que foi CONFIGURADO: este daemon pediu porta efêmera (0).
+  assert.equal(res.body.valores.port, 0);
+  assert.equal(res.body.valores.headless, true);
+  // `runtime` é o que está EM VIGOR — e as duas coisas são diferentes de
+  // propósito. Uma rota que só publicasse o pedido mentiria ao se anunciar
+  // efetiva; uma que só publicasse o resultado apagaria o pedido do operador.
+  assert.equal(res.body.runtime.port, daemon.port);
+  assert.notEqual(res.body.runtime.port, res.body.valores.port);
+  assert.equal(res.body.runtime.bind, `${daemon.host}:${daemon.port}`);
+
+  // E o caminho do dono NÃO viaja.
+  assert.equal(res.body.valores.sessions_root, res.body.redacao, "sessions_root saiu em claro");
+  assert.ok(!JSON.stringify(res.body).includes(sessionsRoot), "o caminho absoluto vazou apesar da redação");
+
+  // A proveniência continua respondendo "por que está assim?" — nomeia a
+  // origem, nunca o conteúdo dela.
+  const fontes = res.body.valores.sources as Record<string, string>;
+  assert.equal(fontes.sessions_root, "override");
+  assert.equal(fontes.allow_unleased, "default");
+});
+
+test("um portador de escopo OBSERVE lê o schema mas é BARRADO nos valores", async () => {
+  // A segunda identidade: só OBSERVE, nada de ADMIN.
+  const { secret } = daemon.auth.issue({ subject: "curioso", preset: "observe" });
+
+  const forma = await callComToken<{ chaves: unknown[] }>("GET", "/api/v1/config/schema", secret);
+  assert.equal(forma.status, 200, "OBSERVE deveria poder ler a FORMA da configuração");
+  assert.ok(Array.isArray(forma.body.chaves));
+
+  const valores = await callComToken<{ error?: { code?: string } }>("GET", "/api/v1/config", secret);
+  assert.equal(valores.status, 403, "OBSERVE não pode ler os valores efetivos");
+  assert.equal(valores.body.error?.code, "CAPABILITY_DENIED");
+
+  // Controle: o MESMO pedido com o token ADMIN do daemon passa. Sem isto, o 403
+  // acima poderia vir de a rota simplesmente não existir.
+  const comAdmin = await call<{ valores_efetivos: boolean }>("GET", "/api/v1/config");
+  assert.equal(comAdmin.status, 200);
+});
+
+test("as rotas de configuração recusam método errado sem virar 404", async () => {
+  // 404 num caminho que existe esconderia do cliente que a rota está lá.
+  const res = await fetch(`${daemon.url}/api/v1/config/schema`, {
+    method: "POST",
+    headers: { authorization: `Bearer ${TOKEN}` },
+  });
+  assert.equal(res.status, 405);
+  assert.equal(res.headers.get("allow"), "GET");
+});

@@ -23,7 +23,8 @@ voz → Realtime → tool_call
    ← resultado estruturado + o veredito do NOMOS junto (auditoria bate dos dois lados)
 ```
 
-`docs/GI_V3_ARCHITECTURE.md` já declarava: *"NOMOS é a autoridade de ações"*.
+`docs/GI_V3_ARCHITECTURE.md` **do repositório `pocket-assistant`** (não deste)
+já declarava: *"NOMOS é a autoridade de ações"*.
 Este módulo é essa frase escrita em código — a Gi **pergunta** antes de agir, e a
 resposta do NOMOS é vinculante.
 

@@ -41,6 +41,13 @@ export type RouteName =
   | "lease.transfer"
   | "lease.takeover"
   | "replay.verify"
+  // FASE 17 — configuração como CONTRATO consultável. `config.schema` devolve a
+  // FORMA (chaves, tipos, faixas, envs) sem valor nenhum; `config.get` devolve
+  // os valores efetivos com os sensíveis redigidos. São rotas separadas porque
+  // são perguntas diferentes com riscos diferentes: "o que existe?" pode ser
+  // respondida a qualquer portador; "o que está valendo aqui?" não.
+  | "config.schema"
+  | "config.get"
   | "whoami"
   | "action"
   | "events";
@@ -112,6 +119,8 @@ export const ROUTES: readonly RouteSpec[] = Object.freeze([
   // MCP, sobretudo) saiba ANTES de agir quais escopos ele carrega, e recuse a
   // chamada com uma mensagem útil em vez de arrancar um 403 do runtime depois
   // de já ter aberto sessão. Nunca devolve o segredo — só o que ele PODE.
+  spec("GET", `${P}/config/schema`, "config.schema", false),
+  spec("GET", `${P}/config`, "config.get", false),
   spec("GET", `${P}/whoami`, "whoami", false),
   spec("GET", "/events", "events", false),
 ]);
