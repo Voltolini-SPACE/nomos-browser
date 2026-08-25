@@ -1,8 +1,7 @@
 # GitHub — descrição, topics e apresentação
 
-Pronto para colar quando o repositório for publicado. **A publicação depende de
-duas decisões do dono** (licença e titular de direitos autorais) — ver
-[`../PRODUCT_MANIFEST.md`](../PRODUCT_MANIFEST.md) §12.
+Licença **MIT** e titular **Voltolini-SPACE**, decididos pelo dono em
+2026-08-25. Ver [`../PRODUCT_MANIFEST.md`](../PRODUCT_MANIFEST.md) §12.
 
 ---
 
@@ -42,21 +41,18 @@ scrapers.
 | item | estado |
 |---|---|
 | README | pronto — nível produto, 20 seções |
-| LICENSE | **presente, proprietário**; titular é placeholder |
+| LICENSE | **MIT**, titular Voltolini-SPACE |
 | CHANGELOG.md | pronto, formato Keep a Changelog |
 | ROADMAP.md | pronto |
 | SECURITY.md | `docs/SECURITY.md` — considerar cópia na raiz para o GitHub reconhecer |
-| CONTRIBUTING.md | **não aplicável enquanto a licença for proprietária** |
+| CONTRIBUTING.md | presente |
 | Issue templates | adiar até haver público |
 | Social preview | gerar do cofre de marca no momento da publicação (ver abaixo) |
 
 ## Sobre CONTRIBUTING.md
 
-Não faz sentido convidar contribuição para um repositório cuja licença não
-concede permissão de uso, cópia ou modificação. Escrever um CONTRIBUTING agora
-seria convidar alguém a enviar código que ele não teria direito de derivar.
-
-Quando a licença for decidida, este é o gatilho para criar o arquivo.
+Com MIT, contribuir passa a fazer sentido, e o arquivo existe. Ele diz a coisa
+que mais importa neste repositório: **um teste que não sabe falhar não entra**.
 
 ## Social preview e ícones
 
@@ -78,7 +74,10 @@ seria o tipo de coisa que este projeto passou a missão inteira evitando.
 
 ## Aviso para quem chegar pelo GitHub
 
-Colocar em destaque, porque um visitante presume open source por padrão:
-
-> Este software é **proprietário**. O `LICENSE` não concede nenhuma permissão a
-> terceiros. O código está visível; o uso não está licenciado.
+> **MIT**, e a licença cobre o **código**. As marcas "NOMOS" e "NOMOS Browser",
+> e os tokens de identidade visual, são governados à parte e não são versionados
+> aqui.
+>
+> `0.3.0-rc.1` é **release candidate**. As limitações estão no README, não
+> escondidas: nenhum p99 é reportado, não há rota HTTP para emitir token com
+> escopo, e só macOS/Apple Silicon foi medido.

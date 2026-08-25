@@ -147,6 +147,6 @@ Somente o que a matriz marca `PROVEN`:
 
 - Datas de roadmap.
 - Suporte a plataformas não medidas (só macOS/Apple Silicon foi validado).
-- Licença aberta: o produto é **proprietário**, e o titular ainda não foi
-  decidido pelo dono.
+- Que a licença cobre a **marca**. MIT cobre o código; "NOMOS" e "NOMOS
+  Browser" são governados à parte.
 - Qualquer coisa da seção "Não implementado" da matriz de verdade.

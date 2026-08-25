@@ -168,6 +168,22 @@ limpa 14/14 a partir de clone do HEAD, suíte da Gi com 148 passes.
   cada arquivo, usando `lib-memoria.sh`, e registra memória disponível por
   arquivo para que starvation apareça como medida em vez de dedução.
 
+### Licença
+
+- **O projeto passou a ser MIT**, titular **Voltolini-SPACE**. Até 2026-08-25 o
+  `LICENSE` declarava *todos os direitos reservados* com um titular
+  **placeholder** derivado mecanicamente do autor do commit HEAD. As duas coisas
+  eram decisão do dono, e nenhum agente tem autoridade sobre elas. Foram
+  decididas nesta data. A cópia anterior está preservada em
+  `evidence/nomos-release/00-freeze/LICENSE-anterior-proprietario.txt`.
+- `license` e `author` passaram a ser **declarados** em `package.json` e em cada
+  workspace. Antes não eram declarados em lugar nenhum, e quem instalasse não
+  tinha como saber o que podia fazer com o código.
+- A licença cobre o **código**. Ela não concede direito sobre as marcas "NOMOS"
+  e "NOMOS Browser" nem sobre os tokens de identidade visual, que continuam
+  governados pelo contrato de marca e fora do versionamento.
+- `CONTRIBUTING.md` passou a existir, porque com MIT contribuir faz sentido.
+
 ### Limitações conhecidas nesta versão
 - **`p99` não é reportado** em nenhum caminho de latência: 30 amostras exigem 100.
   Nenhum máximo observado é chamado de p99.

@@ -1,6 +1,8 @@
 {
   "name": "nomos-browser",
   "version": "0.3.0-rc.1",
+  "license": "MIT",
+  "author": "Voltolini-SPACE",
   "private": true,
   "type": "module",
   "engines": {

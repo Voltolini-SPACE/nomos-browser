@@ -26,13 +26,16 @@ Estes pontos **não** precisam ser reportados: já estão documentados.
 
 ## Reportar uma vulnerabilidade
 
-Este software é **proprietário e não publicado**: o [`LICENSE`](LICENSE) não
-concede permissão de uso a terceiros. Não há, no momento, programa público de
-divulgação.
+O projeto é **MIT** e o código é público, então qualquer pessoa pode ler,
+executar e encontrar falhas. Isso é desejável.
 
-Se você encontrou uma falha, escreva para o endereço do titular declarado no
-`LICENSE`. Peço que não abra issue pública com detalhe explorável antes de haver
-uma correção.
+Por favor **não abra issue pública** com detalhe explorável antes de haver
+correção. Use o canal privado do GitHub (*Security* → *Report a vulnerability*)
+ou escreva para o titular declarado no [`LICENSE`](LICENSE).
+
+Este é um projeto pequeno, sem SLA de resposta. O que eu me comprometo a fazer:
+responder que li, dizer se reproduzi, e publicar a correção com o crédito que
+você quiser (ou nenhum, se preferir).
 
 ## O que ajuda num relato
 

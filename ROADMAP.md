@@ -88,14 +88,8 @@ a plataforma como não suportada. Hoje o README diz que não foi medida, que é 
 
 ## 7. Distribuição
 
-Não é dívida técnica, é decisão do dono, e está registrada aqui para não se
-perder:
+**Resolvido em 2026-08-25.** Licença **MIT**, titular **Voltolini-SPACE**, ambos
+decididos pelo dono. O repositório passou a ter remoto público.
 
-- o `LICENSE` declara software **proprietário e não publicado**;
-- o titular de direitos autorais no arquivo é um **placeholder** derivado da
-  identidade do commit HEAD;
-- o repositório **não tem remoto** — 16 commits além da última tag existem só
-  nesta máquina.
-
-Nenhum agente tem autoridade para escolher titular, licença ou destino de
-publicação. Ver [`PRODUCT_MANIFEST.md`](PRODUCT_MANIFEST.md) §12.
+O que continua valendo: a licença cobre o **código**, não as marcas nem os
+tokens de identidade visual do ecossistema.

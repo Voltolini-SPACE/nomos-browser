@@ -18,7 +18,7 @@ Apurado em `HEAD=6964cf0`, versão de trabalho `0.2.0`.
 | Cliente de linha de comando | `nomos-web` |
 | Repositório | `nomos-browser` |
 | Versão em `package.json` | `0.2.0` |
-| Licença | **Proprietária — todos os direitos reservados.** Titular ainda não confirmado (ver §12) |
+| Licença | **MIT** · titular **Voltolini-SPACE** (ver §12) |
 | Ecossistema | NOMOS (governança/autorização) · Gi (assistente de voz) · voltolini.space |
 
 ## 2. O que é
@@ -174,19 +174,30 @@ completa. Sessão que nunca existiu é `404`, não um replay vazio de `200`.
 | Build | **não há passo de build** para o runtime — TypeScript nativo do Node |
 | Build da UI | `node packages/ui/build.ts` (lê a marca do cofre a cada build) |
 
-## 12. Estado legal — decisão pendente do dono
+## 12. Estado legal
 
-O `LICENSE` declara software **proprietário e não publicado**: nenhuma licença é
-concedida a terceiros. Esse é o estado padrão de uma obra sob direito autoral.
+| | |
+|---|---|
+| Licença | **MIT** |
+| Titular | **Voltolini-SPACE** |
+| Decidido em | 2026-08-25, pelo dono |
 
-O nome do titular no arquivo é um **placeholder** derivado mecanicamente do autor
-do commit HEAD. O histórico tem duas identidades de autoria (44 commits
-`Voltolini-SPACE <admin@voltolini.space>`, 8 commits `NOMOS Browser
-<adm@se7enpay.com.br>`), e nenhuma prova titularidade legal.
+Até essa data o `LICENSE` declarava *todos os direitos reservados* e trazia um
+titular **placeholder**, derivado mecanicamente do autor do commit HEAD. O
+histórico tem duas identidades de autoria (44 commits `Voltolini-SPACE`, 8
+commits `NOMOS Browser <adm@se7enpay.com.br>`), e nenhuma delas prova
+titularidade legal por si só. Nenhum agente tem autoridade para escolher isso; o
+dono escolheu.
 
-**Nenhum agente tem autoridade para escolher o titular de direitos autorais.**
-Antes de qualquer distribuição pública, o dono precisa decidir: (a) o titular
-legal, e (b) se o produto será source-available proprietário ou licenciado.
+A escolha alinha o NOMOS Browser ao resto do ecossistema: NOMOS e OpenKern
+também são MIT.
+
+**A licença cobre o código.** Ela não concede direito sobre as marcas "NOMOS" e
+"NOMOS Browser" nem sobre os tokens de identidade visual, que são governados
+pelo contrato de marca e não são versionados neste repositório.
+
+A cópia proprietária anterior está preservada em
+`evidence/nomos-release/00-freeze/LICENSE-anterior-proprietario.txt`.
 
 ## 13. Limitações conhecidas
 

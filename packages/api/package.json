@@ -1,9 +1,9 @@
 {
   "name": "@nomos/browser-api",
   "version": "0.3.0-rc.1",
+  "license": "SEE LICENSE IN LICENSE",
   "private": true,
   "type": "module",
-  "license": "SEE LICENSE IN LICENSE",
   "engines": {
     "node": ">=22.6.0"
   },

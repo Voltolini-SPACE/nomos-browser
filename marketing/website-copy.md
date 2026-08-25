@@ -111,8 +111,7 @@ seu agente  ·  MCP · REST · WebSocket · SDK · CLI
 
 ## Status
 
-> **0.3.0-rc.1 · release candidate.** Software proprietário; o código não está
-> licenciado para uso de terceiros.
+> **0.3.0-rc.1 · release candidate.** Código aberto sob MIT.
 >
 > Validado em macOS com Apple Silicon. Outras plataformas ainda não foram
 > medidas, e por isso não são anunciadas.

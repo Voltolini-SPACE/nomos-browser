@@ -86,5 +86,5 @@ Curto, sem superlativo, e nada que a
 - Nenhum `p99`, nenhuma latência sem o `n` junto.
 - "100% seguro", "infalível", "zero risco".
 - Data de roadmap.
-- Chamar de open source. É **proprietário**, e a licença não concede uso.
+- Sugerir que a licença cobre a marca. MIT cobre o código; "NOMOS" é governada à parte.
 - Screenshot que não seja do produto real.

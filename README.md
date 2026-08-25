@@ -8,7 +8,7 @@ Infraestrutura de navegação governada para agentes de IA. O navegador vira um
 recurso da plataforma, não um brinquedo acoplado a um modelo — e o dono vê,
 autoriza e interrompe o que o agente faz.
 
-`0.3.0-rc.1` · Node ≥ 22.6 · Chromium via Playwright · sem passo de build
+`0.3.0-rc.1` · MIT · Node ≥ 22.6 · Chromium via Playwright · sem passo de build
 
 </div>
 
@@ -331,14 +331,14 @@ contrato de governança. Ver [`docs/BRAND.md`](docs/BRAND.md).
 
 ## Licença
 
-**Proprietária — todos os direitos reservados.** [`LICENSE`](LICENSE) não concede
-nenhuma permissão a terceiros: é o estado legal padrão de uma obra sob direito
-autoral, escrito explicitamente para que quem lê saiba.
+**MIT.** Ver [`LICENSE`](LICENSE).
 
-O titular declarado no arquivo é um **placeholder** derivado da identidade do
-commit HEAD, e está marcado como tal. Antes de qualquer distribuição, o dono
-precisa decidir o titular legal e se o produto será source-available proprietário
-ou licenciado. **Nenhum agente tem autoridade para escolher isso.**
+Titular: **Voltolini-SPACE**. A licença cobre o **código**; ela não concede
+direito sobre as marcas "NOMOS" e "NOMOS Browser" nem sobre os tokens de
+identidade visual, que são governados à parte e não são versionados aqui.
+
+Até 2026-08-25 este repositório declarava "todos os direitos reservados" com um
+titular placeholder. As duas coisas eram decisão do dono, e foram decididas.
 
 <div align="center">
 
