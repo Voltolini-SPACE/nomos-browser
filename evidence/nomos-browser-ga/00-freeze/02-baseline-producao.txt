@@ -1,0 +1,41 @@
+=== BASELINE DE PRODUCAO (PIDs, antes de qualquer acao) ===
+1003	0	ai.sovereign.ollama
+12728	0	ai.sovereign.omniroute
+83005	-9	br.com.se7enpay.nomos.servico
+78103	-15	com.gi.nomos.gateway
+51446	-15	com.gijarvis.backend
+83034	-9	com.nomos.panel
+1032	0	com.se7enpay.command-center
+69287	1	com.se7enpay.command-center.mom-canonical-check
+-	0	com.se7enpay.crmsync
+1048	0	com.se7enpay.resumo
+-	0	com.se7enpay.tpv.mom.canonical
+
+=== processos Gi/NOMOS fora do launchd ===
+30911 /bin/zsh -c source /Users/AI/.claude/shell-snapshots/snapshot-zsh-1787576391057-5vl6tj.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { \builtin unalias -- 'unsetenv'; \builtin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval 'until /usr/bin/grep -qE "^TS_PASS=" /tmp/suite_final.txt 2>/dev/null; do sleep 20; done; rtk read ~/Projects/nomos-browser/.suite/resumo.tsv | /usr/bin/column -t -s$'"'"'\t'"'"'; echo; tail -5 /tmp/suite_final.txt' < /dev/null && pwd -P >| /tmp/claude-ba9d-cwd
+32736 /bin/zsh -c source /Users/AI/.claude/shell-snapshots/snapshot-zsh-1787576391057-5vl6tj.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { \builtin unalias -- 'unsetenv'; \builtin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval 'until /usr/bin/grep -qE "^TS_PASS=" /tmp/suite_final.txt 2>/dev/null; do sleep 20; done; rtk read ~/Projects/nomos-browser/.suite/resumo.tsv | /usr/bin/column -t -s$'"'"'\t'"'"'; echo; tail -5 /tmp/suite_final.txt' < /dev/null && pwd -P >| /tmp/claude-0eed-cwd
+34268 /bin/zsh -c source /Users/AI/.claude/shell-snapshots/snapshot-zsh-1787576391057-5vl6tj.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { \builtin unalias -- 'unsetenv'; \builtin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval 'until /usr/bin/grep -qE "^TS_PASS=" /tmp/suite_v2.txt 2>/dev/null; do sleep 20; done; rtk read ~/Projects/nomos-browser/.suite/resumo.tsv | /usr/bin/column -t -s$'"'"'\t'"'"'; echo; tail -5 /tmp/suite_v2.txt; echo "=== leak/producao ==="; echo "chromium=$(ps aux | /usr/bin/grep -c '"'"'[c]hrome-mac-arm64'"'"') daemon=$(ps aux | /usr/bin/grep -c '"'"'[d]aemon.ts'"'"')"; launchctl list 2>/dev/null | /usr/bin/grep -iE "nomos|omniroute"' < /dev/null && pwd -P >| /tmp/claude-aecb-cwd
+56163 /opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python -m gi_nomos.device_voice_gateway 8765
+69333 tee evidence/nomos-browser-ga/00-freeze/02-baseline-producao.txt
+69448 /opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python /Users/AI/.local/bin/nomos painel
+70712 /bin/zsh -c source /Users/AI/.claude/shell-snapshots/snapshot-zsh-1787576391057-5vl6tj.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { \builtin unalias -- 'unsetenv'; \builtin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval 'until /usr/bin/grep -qE "^TS_PASS=" /tmp/suite_def.txt 2>/dev/null; do sleep 30; done; rtk read ~/Projects/nomos-browser/.suite/resumo.tsv | /usr/bin/column -t -s$'"'"'\t'"'"'; echo; /usr/bin/grep -E "^TS_|^ARQUIVOS_" /tmp/suite_def.txt' < /dev/null && pwd -P >| /tmp/claude-2e31-cwd
+76007 /bin/zsh -c source /Users/AI/.claude/shell-snapshots/snapshot-zsh-1787576391057-5vl6tj.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { \builtin unalias -- 'unsetenv'; \builtin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval 'until /usr/bin/grep -qE "^TS_PASS=" /tmp/suite_def.txt 2>/dev/null; do sleep 30; done; rtk read ~/Projects/nomos-browser/.suite/resumo.tsv | /usr/bin/column -t -s$'"'"'\t'"'"'; /usr/bin/grep -E "^TS_|^ARQUIVOS_" /tmp/suite_def.txt; echo "=== python ==="; cd ~/Projects/nomos-browser/sdk-python && python3 -m unittest discover -s tests 2>&1 | tail -2' < /dev/null && pwd -P >| /tmp/claude-71a2-cwd
+78103 /opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python /Users/AI/Projects/gi-whatsapp-epistemos-01/gateway/gateway.py
+83005 /opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python -m nomos.cli servico rodar --raiz /Users/AI/.nomos --intervalo 900.0
+
+=== estado do NOMOS Browser (deve estar tudo zerado) ===
+daemons=0
+chromium=0
+servidor_mcp=0
+lock=AUSENTE
+plist=AUSENTE
+porta_7777=0
+
+=== CATALOGO MCP DO DONO (estado congelado, so leitura) ===
+servers MCP confiáveis (3) · 0 revogado(s):
+
+  ✓ calendario-ics  [6ea7c63d83e06926…]  ['python3', 'servidor.py']
+  ✓ nomos-browser  [d267002feb6f9e4a…]  ['node', 'servidor.mjs']
+  ✓ nomos-browser  [317f15893e9ebd83…]  ['node', 'servidor.mjs']
+SHA_DO_CATALOGO=a3d04f8d490a806880df22bf137d2cb97bc6bcc0f75d2171c7ee1205bffec16c
+SHA_DA_POLICY=a4a224a48c48622c75ec70dbe873ddf5c9f91095643e5740c45bcdf040dad6e2

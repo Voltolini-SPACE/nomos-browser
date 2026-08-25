@@ -1,0 +1,79 @@
+=== os arquivos que esses lacos esperam existem? ===
+/tmp/suite_final.txt: EXISTE
+/tmp/suite_v2.txt: EXISTE
+/tmp/suite_def.txt: EXISTE
+
+=== prova de ownership: PPID, inicio, e o snapshot de shell que os criou ===
+PID 30911: 30911 52056 Mon Aug 24 12:14:49 2026     01-00:40:29
+PID 32736: 32736 52056 Mon Aug 24 12:15:45 2026     01-00:39:33
+PID 34268: 34268 52056 Mon Aug 24 12:16:56 2026     01-00:38:22
+PID 70712: 70712 52056 Mon Aug 24 13:05:53 2026     23:49:25
+PID 76007: 76007 52056 Mon Aug 24 13:17:37 2026     23:37:41
+
+=== a quem pertence o PPID? ===
+PID 30911 -> PPID 52056: /Users/AI/Library/Application Support/Claude/claude-code/2.1.221/claude.app/Contents/MacOS
+PID 70712 -> PPID 52056: /Users/AI/Library/Application Support/Claude/claude-code/2.1.221/claude.app/Contents/MacOS
+
+=== o snapshot de shell referenciado ===
+-rw-r--r--@ 1 AI  staff  10894 Aug 24 09:59 /Users/AI/.claude/shell-snapshots/snapshot-zsh-1787576391057-5vl6tj.sh
+
+=== 69448 'nomos painel' — de quem e? ===
+69448  5496 Mon Aug 24 14:46:30 2026    
+PPID 5496 = /bin/zsh -l
+=== no que os lacos estao presos ===
+/tmp/suite_final.txt:0
+/tmp/suite_v2.txt:0
+/tmp/suite_def.txt:0
+existe o comando 'rtk'? -> /opt/homebrew/bin/rtk
+
+=== filhos vivos desses shells ===
+PID 30911 filhos: 69677 
+PID 32736 filhos: 69678 
+PID 34268 filhos: 69608 
+PID 70712 filhos: 69585 
+PID 76007 filhos: 69672 
+
+=== CPU consumida em 24h ===
+  PID  %CPU      TIME     ELAPSED
+30911   0.0   0:07.17 01-00:40:49
+32736   0.0   0:07.24 01-00:39:53
+34268   0.0   0:07.30 01-00:38:42
+70712   0.0   0:04.67    23:49:45
+76007   0.0   0:04.39    23:38:01
+=== ANTES ===
+  PID     ELAPSED COMMAND
+30911 01-00:41:08 /bin/zsh -c source /Users/AI/.claude/shell-snapshots/snapshot-
+32736 01-00:40:12 /bin/zsh -c source /Users/AI/.claude/shell-snapshots/snapshot-
+34268 01-00:39:01 /bin/zsh -c source /Users/AI/.claude/shell-snapshots/snapshot-
+70712    23:50:04 /bin/zsh -c source /Users/AI/.claude/shell-snapshots/snapshot-
+76007    23:38:20 /bin/zsh -c source /Users/AI/.claude/shell-snapshots/snapshot-
+
+=== encerrando SOMENTE os cinco de ownership provado (PPID=52056, Claude Code, 24h) ===
+TERM enviado a 30911
+TERM enviado a 32736
+TERM enviado a 34268
+TERM enviado a 70712
+TERM enviado a 76007
+
+=== DEPOIS ===
+PID 30911 encerrado
+PID 32736 encerrado
+PID 34268 encerrado
+PID 70712 encerrado
+PID 76007 encerrado
+
+=== o painel do dono (PPID=zsh -l, terminal dele) segue INTOCADO ===
+69448 22:09:30
+
+=== servicos de producao apos a limpeza ===
+1003	0	ai.sovereign.ollama
+12728	0	ai.sovereign.omniroute
+69404	-9	br.com.se7enpay.nomos.servico
+78103	-15	com.gi.nomos.gateway
+51446	-15	com.gijarvis.backend
+83034	-9	com.nomos.panel
+1032	0	com.se7enpay.command-center
+-	1	com.se7enpay.command-center.mom-canonical-check
+-	0	com.se7enpay.crmsync
+1048	0	com.se7enpay.resumo
+-	0	com.se7enpay.tpv.mom.canonical

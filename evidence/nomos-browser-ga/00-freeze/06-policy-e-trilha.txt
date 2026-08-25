@@ -1,0 +1,34 @@
+=== policy.json AGORA (mtime 12:54 — mudou durante o freeze?) ===
+{
+  "version": 1,
+  "mode": "read_only_default",
+  "fail_closed": true,
+  "rules": {
+    "A0_READ_LOCAL": "ALLOW",
+    "A1_WRITE_LOCAL": "REQUIRE_APPROVAL",
+    "A2_NET_EGRESS": "REQUIRE_APPROVAL",
+    "A3_CRED_USE": "REQUIRE_APPROVAL",
+    "A3_CONNECTOR_USE": "REQUIRE_APPROVAL",
+    "A4_DEVICE_MIC": "REQUIRE_APPROVAL",
+    "A4_DEVICE_CAM": "REQUIRE_APPROVAL",
+    "A4_DEVICE_SCREEN": "REQUIRE_APPROVAL",
+    "A5_CODE_EXEC": "REQUIRE_APPROVAL",
+    "A5_SKILL_INSTALL": "REQUIRE_APPROVAL",
+    "A6_DESTRUCTIVE": "DENY"
+  },
+  "rules_capacidade": {
+    "gi-knowledge-ingest": "ALLOW"
+  }
+}
+SHA_AGORA=a4a224a48c48622c75ec70dbe873ddf5c9f91095643e5740c45bcdf040dad6e2
+SHA_NO_FREEZE=a4a224a48c48622c75ec70dbe873ddf5c9f91095643e5740c45bcdf040dad6e2
+
+=== trilha de auditoria do NOMOS ===
+total 4168
+drwxr-xr-x   5 AI  staff      160 Aug 23 12:30 .
+drwx------@ 24 AI  staff      768 Aug 25 12:54 ..
+-rw-r--r--@  1 AI  staff  1092729 Aug 25 12:55 audit.jsonl
+-rw-r--r--@  1 AI  staff        0 Aug 12 12:25 audit.jsonl.lock
+-rw-------@  1 AI  staff     9431 Aug 24 15:03 uso_motores.jsonl
+/Users/AI/.nomos/logs/uso_motores.jsonl
+/Users/AI/.nomos/logs/audit.jsonl

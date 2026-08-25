@@ -1,0 +1,34 @@
+=== 1. ONDE O TRUST E PERSISTIDO ===
+arquivo: ~/.nomos/mcp_catalogo.json
+permissoes: -rw-------@  bytes: 580
+formato: {confiaveis: {impressao: {nome, comando}}, revogadas: [impressao...]}
+
+=== 2. EXISTE REVOGACAO CANONICA? ===
+def revogar(home: Path, manifesto: dict) -> bool:
+    """Remove a confiança e marca a impressão como revogada (bloqueio duro)."""
+    fp = impressao(manifesto)
+    d = _ler(home)
+    tinha = d["confiaveis"].pop(fp, None) is not None
+    if fp not in d["revogadas"]:
+        d["revogadas"].append(fp)
+    _gravar(home, d)
+    return tinha
+
+--- e o CLI expoe? ---
+usage: nomos mcp revogar [-h] manifesto
+
+positional arguments:
+  manifesto
+
+options:
+
+=== 3. A REVOGACAO DEIXA RASTRO NA TRILHA? ===
+2653:            cat.revogar(ctx["home"], manifesto)
+2654-            ctx["audit"].append("mcp.revogado", server=manifesto["nome"])
+2655-            print(f"revogado: '{manifesto['nome']}' não será mais confiável "
+2656-                  "(nem que reapareça idêntico).")
+
+=== 4. EDITAR A MAO PULARIA O QUE? ===
+  - a linha de auditoria mcp.revogado
+  - a lista 'revogadas' (bloqueio duro); remover de 'confiaveis' apenas voltaria o server a EXPERIMENTAL, que ainda conecta com 'ACEITO O RISCO' num TTY
+  => editar a mao seria MAIS FRACO e sem rastro. Nao farei.

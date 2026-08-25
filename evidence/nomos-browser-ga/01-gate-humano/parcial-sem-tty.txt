@@ -1,0 +1,53 @@
+
+[1m══ 0. preparo — daemon, sessão MCP e DUAS abas em branco ══════════════════════[0m
+  · subindo um daemon só para este gate em http://127.0.0.1:7789
+  · runtime vivo em http://127.0.0.1:7789
+  · setup=lancador (NAO-CANONICO): abrindo uma segunda aba em branco
+      route=browser.new_tab session_id=ses_cd914ff5366243a1 http=200 action_id=act_mt8v8jof_a state=ACTIVE duration_ms=35
+      {
+        "page_id": "pg_8b961c21349a49ba",
+  · abas: pg_8f6ab5926c1649b9 pg_8b961c21349a49ba
+  · ativa no início: pg_8b961c21349a49ba
+  · alvo da troca: pg_8f6ab5926c1649b9  (a aba que NÃO está ativa)
+  · sessão MCP: ses_cd914ff5366243a1
+  · trilha do runtime: /tmp/ga-gate-a1-sessoes/ses_cd914ff5366243a1/actions.jsonl
+
+[1m══ 1. SEM APROVAÇÃO — sem TTY, o gate tem de negar ══════════════════════[0m
+    [NOMOS-E002] NEGADO (fail-closed): aprovação exige terminal interativo.
+    [NOMOS-E002] tool 'browser_tab_switch' é nível A1 — exige sua aprovação num terminal interativo; nada foi executado.
+    ativa depois: pg_8b961c21349a49ba  (tem de continuar pg_8b961c21349a49ba)
+  · negado E nada mudou — negativa sem efeito colateral
+
+[1m══ 2. APROVAÇÃO INCORRETA — com TTY, palavra errada, o gate tem de negar ══════════════════════[0m
+--- resposta digitada: 'NAO' ---
+    --- APROVAÇÃO NECESSÁRIA ---
+    [NOMOS-E002] tool 'browser_tab_switch' é nível A1 — exige sua aprovação num terminal interativo; nada foi executado.
+    [TTY] prompt_visto=True resposta_digitada='NAO' rc=3
+    NEGADO, e a aba ativa continua pg_8b961c21349a49ba
+--- resposta digitada: 'APROVADO' ---
+    --- APROVAÇÃO NECESSÁRIA ---
+    [NOMOS-E002] tool 'browser_tab_switch' é nível A1 — exige sua aprovação num terminal interativo; nada foi executado.
+    [TTY] prompt_visto=True resposta_digitada='APROVADO' rc=3
+    NEGADO, e a aba ativa continua pg_8b961c21349a49ba
+--- resposta digitada: 'aprovo' ---
+    --- APROVAÇÃO NECESSÁRIA ---
+    [NOMOS-E002] tool 'browser_tab_switch' é nível A1 — exige sua aprovação num terminal interativo; nada foi executado.
+    [TTY] prompt_visto=True resposta_digitada='aprovo' rc=3
+    NEGADO, e a aba ativa continua pg_8b961c21349a49ba
+    negadas: 3 de 3
+
+[1m══ 3. APROVO REAL — daqui em diante quem decide é você ══════════════════════[0m
+
+  PARADO AQUI. Não há terminal interativo nesta execução, e o NOMOS
+  exige um. Isso não é falha: é o gate funcionando.
+
+  Rode ESTE MESMO comando no seu Terminal para fechar o gate:
+      cd /Users/AI/Projects/nomos-browser
+      bash evidence/nomos-browser-ga/01-gate-humano/gate-humano-a1.sh
+
+  Quando o NOMOS perguntar, digite:  APROVO
+
+SEM_APROVACAO=DENIED
+APROVACAO_INVALIDA=DENIED
+APROVO_REAL=PENDENTE_DONO
+HUMAN_A1_GATE=PENDENTE_DONO

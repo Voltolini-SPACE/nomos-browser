@@ -1,0 +1,51 @@
+=== DATA ===
+2026-08-25T15:54:26Z
+2026-08-25 12:54:26 -03
+
+=== GIT ===
+HEAD=221a22d8efa431223c5b4516a63f29ec234fb61d
+HEAD_CURTO=221a22d
+TAGS=v0.2.0-rc.1 
+TAG_RESOLVE=95787cbf538eb82b6d30f20bda8f4e3feda12ba2
+TAG_OBJ=c4167199f88272f3595959c449c7dda2305466c0
+TIPO_TAG=tag
+REMOTES=[]
+BRANCH=main
+STATUS_LINHAS=1
+?? evidence/nomos-browser-ga/
+
+=== ESPERADO PELA MISSAO ===
+COMMIT_ESPERADO=95787cb
+RC1_TAG_MATCH=YES
+WORKTREE_CLEAN=NO
+NOTA: a unica linha de status e o diretorio de evidencia que ESTA missao acabou de criar.
+SUJEIRA_RASTREADA=0  (0 = arvore limpa)
+WORKTREE_CLEAN=YES
+
+=== HEAD vs TAG ===
+HEAD=221a22d  = relatorio final, commitado DEPOIS da tag (esperado)
+221a22d docs(release): relatorio final — PRODUCT_FINALIZED=YES em v0.2.0-rc.1
+DIFF_TAG_ATE_HEAD (so arquivos):
+NOMOS_BROWSER_FINAL_RELEASE_REPORT.md
+evidence/nomos-browser-final-100/00-relatorio-anterior.md
+evidence/nomos-browser-final-100/06-residuo/residuo-final.txt
+evidence/nomos-browser-final-100/09-tag/e2e-na-tag.txt
+evidence/nomos-browser-final-100/09-tag/revalidacao.txt
+
+=== CONTEUDO DA TAG ANOTADA ===
+object 95787cbf538eb82b6d30f20bda8f4e3feda12ba2
+type commit
+tag v0.2.0-rc.1
+tagger Voltolini-SPACE <admin@voltolini.space> 1787671548 -0300
+
+NOMOS Browser 0.2.0-rc.1
+
+Runtime de automacao de navegador para agentes, governado pelo NOMOS.
+
+Esta e a SEGUNDA vez que esta tag e cortada. A primeira apontava para
+4f6a432 (e depois 70fe2c6) e foram descartadas porque REPROVOU na propria revalidacao: o cenario
+10 do E2E perdeu uma checagem com `TypeError: fetch failed`, uma mensagem
+que nao permite diagnostico nenhum. A causa nao foi encontrada (a hipotese
+de keep-alive foi levantada e REFUTADA por sonda dirigida, 30 tentativas, 0
+...
+ASSINATURA_GPG=1 (0 = tag anotada sem assinatura GPG — nunca houve chave neste repo)

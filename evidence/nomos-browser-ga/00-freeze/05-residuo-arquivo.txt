@@ -1,0 +1,5 @@
+tmp_antes_MB=4043
+sandboxes=265
+tmp_depois_MB=3087
+liberado_MB=956
+sandboxes_restantes=0

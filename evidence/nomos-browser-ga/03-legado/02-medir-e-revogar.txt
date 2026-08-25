@@ -1,0 +1,79 @@
+
+[1m══ 0. extrair o manifesto legado do histórico (não forjar) ══════════════════════[0m
+  · legado extraído de 78491cc — 13 tools
+  · impressão do legado: d267002feb6f9e4a8d24331fa75eb504629515469e9f07b2deb94edd803e0ffe
+  · impressão do atual : 317f15893e9ebd83afa17d11f66dd896c83342858ad723e0f4ed7afd32e27207
+
+[1m══ 1. MEDIR — o que o legado consegue HOJE, ainda confiável ══════════════════════[0m
+    status do legado no catálogo: confiavel
+--- (a) o NOMOS conecta usando o manifesto legado? ---
+    conectado a 'nomos-browser' [✓ confiável] (server: nomos-browser-mcp) — 16 tool(s):
+    
+      [A2] browser_navigate — Navega a sessão para uma URL e devolve a página resultante (PageInfo).
+      [A0] browser_observe — Observa a página atual: elementos, título, URL e (opcional) árvore de 
+      [A0] browser_find — Resolve um alvo sem agir sobre ele. Devolve ResolvedTarget com a estra
+      [A2] browser_click — Clica no alvo resolvido e verifica o efeito. Devolve o alvo resolvido 
+--- (b) que nível o legado dá a browser_tabs? ---
+    legado: browser_tabs = A0
+    atual : browser_tabs = A0
+    A0 · ler arquivos locais · alvo=mcp:nomos-browser:browser_tabs
+    veredito: ALLOW — permitido pela política
+--- (c) O EXPLOIT HISTÓRICO, tentado de verdade pelo caminho canônico ---
+    browser_tabs (A0 no legado) com action=new + url — era assim que a aba abria
+    tool falhou no server: browser_tabs: argumento(s) desconhecido(s): action, url. Aceitos: session_id
+    abas antes=2 depois=2
+    quem barrou: SERVIDOR (validação de argumentos do código atual)
+  · o exploit NÃO abriu aba. Mas veja a camada: se foi o SERVIDOR, então a
+  · camada de manifesto teria deixado passar, e a defesa é de UMA só.
+
+[1m══ 2. REVOGAR — pelo caminho canônico, com rastro ══════════════════════[0m
+--- catálogo ANTES ---
+    servers MCP confiáveis (3) · 0 revogado(s):
+    
+      ✓ calendario-ics  [6ea7c63d83e06926…]  ['python3', 'servidor.py']
+      ✓ nomos-browser  [d267002feb6f9e4a…]  ['node', 'servidor.mjs']
+      ✓ nomos-browser  [317f15893e9ebd83…]  ['node', 'servidor.mjs']
+--- nomos mcp revogar <legado> ---
+    revogado: 'nomos-browser' não será mais confiável (nem que reapareça idêntico).
+    rc=0
+--- catálogo DEPOIS ---
+    servers MCP confiáveis (2) · 1 revogado(s):
+    
+      ✓ calendario-ics  [6ea7c63d83e06926…]  ['python3', 'servidor.py']
+      ✓ nomos-browser  [317f15893e9ebd83…]  ['node', 'servidor.mjs']
+--- a revogação deixou rastro na trilha do NOMOS? ---
+    {"event":"mcp.revogado","hash":"3ac15b857beb6fa320fa6f27dfd73bf4ee543aaef2c73a3d9265008919247db8","prev":"e8d078b4bfabf8629fdb6b9064dc476327276ca38a2dc73e64728017314f5441","server":"nomos-browser","ts":1787673904.293}
+    linhas mcp.revogado: 1
+  · revogado e auditado
+
+[1m══ 3. PROVAR — o legado deixou de ser aceito ══════════════════════[0m
+    status do legado agora: revogado   (tem de ser 'revogado')
+--- (a) conectar com o legado ---
+    [NOMOS-E002] 'nomos-browser' está REVOGADO — não conecto. Reveja em: nomos mcp catalogo
+--- (b) chamar uma tool A0 pelo legado (antes isto funcionava) ---
+    [NOMOS-E002] 'nomos-browser' é revogado — só chamo tools de server registrado. Confie primeiro: nomos mcp confiar <manifesto>
+--- (c) o exploit histórico, de novo ---
+    [NOMOS-E002] 'nomos-browser' é revogado — só chamo tools de server registrado. Confie primeiro: nomos mcp confiar <manifesto>
+    abas antes=2 depois=2
+  · o legado é recusado ANTES de qualquer execução, nas três portas
+
+[1m══ 4. CONTROLE — o manifesto ATUAL saiu ileso ══════════════════════[0m
+    status do atual: confiavel
+    conectado a 'nomos-browser' [✓ confiável] (server: nomos-browser-mcp) — 16 tool(s):
+    
+    route=browser.tabs session_id=ses_867ea01a68424ba6 http=200 action_id=act_mt8uvxpe_22 state=ACTIVE duration_ms=1
+    [
+    tools listadas pelo atual: 16
+  · atual continua confiável, com 16 tools, e executa
+
+[1m══ RODAPÉ ══════════════════════[0m
+LEGACY_MANIFEST_SHA=d267002feb6f9e4a8d24331fa75eb504629515469e9f07b2deb94edd803e0ffe
+LEGACY_MANIFEST_COMMIT=78491cc (13 tools)
+LEGACY_TRUSTED_BEFORE=SIM
+LEGACY_TRUST_EXPLOITABLE=NAO
+LEGACY_BLOCKED_BY_LAYER=SERVIDOR (validação de argumentos do código atual)
+LEGACY_TRUST_REVOKED=YES
+LEGACY_REFUSED_AFTER=YES
+CURRENT_MANIFEST_UNHARMED=YES
+LEGACY_TRUST_STATE=RESOLVED
+arquivo temporário do legado removido: OK

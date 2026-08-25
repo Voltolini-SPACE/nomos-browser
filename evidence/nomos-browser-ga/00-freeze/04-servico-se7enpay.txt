@@ -1,0 +1,63 @@
+=== quando 69404 nasceu? ===
+69404     1 Tue Aug 25 12:55:00 2026       01:15 /opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/Resources
+
+=== 83005 ainda existe? ===
+  PID STARTED                      COMMAND
+
+=== o plist do servico tem KeepAlive/intervalo? ===
+  <key>KeepAlive</key><true/>
+  <key>RunAtLoad</key><true/>
+  <key>ThrottleInterval</key><integer>30</integer>
+  <key>ProcessType</key><string>Background</string>
+  <key>StandardOutPath</key><string>/Users/AI/.nomos/servico/servico.out.log</string>
+
+=== log recente do servico (quem o derrubou) ===
+
+=== hora agora ===
+2026-08-25 12:56:15
+=== log do servico se7enpay (out + err) ===
+--- /Users/AI/.nomos/servico/servico.out.log (ultimas 12) ---
+aprovação pendente no painel local (id=34c6cf4d-c768-4cc1-89d0-95e7f3d0e49a); aguardando decisão humana até o TTL…
+aprovação pendente no painel local (id=531cc1a7-7142-4862-b4ea-91e26c92dfa8); aguardando decisão humana até o TTL…
+aprovação pendente no painel local (id=3b5bff93-771c-418f-8f43-1798554128eb); aguardando decisão humana até o TTL…
+aprovação pendente no painel local (id=909688d5-eb54-466b-a1b4-1235fa77a604); aguardando decisão humana até o TTL…
+aprovação pendente no painel local (id=4f31b911-fdf7-4cef-b544-2c5c56ac4094); aguardando decisão humana até o TTL…
+aprovação pendente no painel local (id=4add6797-bd24-49eb-b8fa-7eda543d8eaf); aguardando decisão humana até o TTL…
+aprovação pendente no painel local (id=6fb32622-e06b-41c8-b03e-2688d4901a33); aguardando decisão humana até o TTL…
+aprovação pendente no painel local (id=bf7fbaf1-591c-434a-be40-88b3b168f635); aguardando decisão humana até o TTL…
+aprovação pendente no painel local (id=22e02340-8f8c-4cd3-b709-fd7208760c23); aguardando decisão humana até o TTL…
+aprovação pendente no painel local (id=a4e167df-abc1-4326-9bb7-0e15e91c5e69); aguardando decisão humana até o TTL…
+aprovação pendente no painel local (id=56ee44bc-bbec-4081-a368-ab16069d4a69); aguardando decisão humana até o TTL…
+aprovação pendente no painel local (id=cdcb0022-6f30-496d-8f57-7fcefed97dee); aguardando decisão humana até o TTL…
+--- /Users/AI/.nomos/servico/servico.err.log (ultimas 12) ---
+NÃO SUBIU: preparar: ErroRegistro: registro de 'fs-apagar' negado: gate negou (ação sensível: exige aprovação explícita)
+NÃO SUBIU: preparar: ErroRegistro: registro de 'fs-apagar' negado: gate negou (ação sensível: exige aprovação explícita)
+NÃO SUBIU: preparar: ErroRegistro: registro de 'fs-apagar' negado: gate negou (ação sensível: exige aprovação explícita)
+NÃO SUBIU: preparar: ErroRegistro: registro de 'fs-apagar' negado: gate negou (ação sensível: exige aprovação explícita)
+NÃO SUBIU: preparar: ErroRegistro: registro de 'fs-apagar' negado: gate negou (ação sensível: exige aprovação explícita)
+NÃO SUBIU: preparar: ErroRegistro: registro de 'fs-apagar' negado: gate negou (ação sensível: exige aprovação explícita)
+NÃO SUBIU: preparar: ErroRegistro: registro de 'fs-apagar' negado: gate negou (ação sensível: exige aprovação explícita)
+NÃO SUBIU: preparar: ErroRegistro: registro de 'fs-apagar' negado: gate negou (ação sensível: exige aprovação explícita)
+NÃO SUBIU: preparar: ErroRegistro: registro de 'fs-apagar' negado: gate negou (ação sensível: exige aprovação explícita)
+NÃO SUBIU: preparar: ErroRegistro: registro de 'fs-apagar' negado: gate negou (ação sensível: exige aprovação explícita)
+Algo deu errado do meu lado, mas nada foi perdido. Você pode tentar de novo.
+(detalhe técnico para suporte: OSError: [Errno 28] No space left on device: '/Users/AI/.nomos/servico/batimento.tmp')
+
+=== o servico roda em ciclos? procurar marca de encerramento normal ===
+=== CRONOLOGIA (PIDs sao monotonicos: prova de que nao fui eu) ===
+69287  com.se7enpay.command-center.mom-canonical-check (job agendado do dono)
+69323  minha sondagem de baseline
+69404  br.com.se7enpay.nomos.servico REINICIADO  <- aqui, ANTES do meu kill
+69513  minha sondagem de ownership
+69778  meu kill dos 5 shells (PPID=52056)
+
+=== o erro de disco e de ONTEM, nao de agora ===
+servico.err.log mtime: Aug 24 09:10
+espaco livre agora: 88Gi (80% usado)
+
+=== o servico esta VIVO e escrevendo? ===
+out.log mtime: Aug 24 08:55
+69404 02:10
+
+=== quantas aprovacoes do DONO estao pendentes no painel ===
+nenhuma solicitação pendente.

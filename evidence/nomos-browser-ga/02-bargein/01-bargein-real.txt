@@ -1,0 +1,25 @@
+# daemon proprio em :7788 (pid 74770) runtime_dir=/tmp/ga-bargein-runtime
+# sessao MCP: ses_85c44e1e9e9a490b
+# registrado_no_nomos=True via=nomos-mcp
+
+ atraso  status       tardio  acoes novas  veredito
+--------------------------------------------------------------
+    0ms  CANCELADO    False   0            coerente
+   60ms  CANCELADO    False   0            coerente
+  120ms  CANCELADO    False   0            coerente
+  180ms  CANCELADO    False   0            coerente
+  240ms  CANCELADO    False   0            coerente
+  300ms  CANCELADO    False   0            coerente
+  360ms  CANCELADO    False   0            coerente
+  420ms  EXECUTADO    False   1            coerente
+  480ms  EXECUTADO    False   1            coerente
+  540ms  EXECUTADO    False   1            coerente
+
+CANCELADOS_COERENTES=7
+EXECUTADOS_TARDIOS_COERENTES=0
+INCOERENTES=0
+POST_CANCEL_ACTIONS=0
+PROCESS_RESIDUAL_NOMOS=0
+PROCESS_RESIDUAL_SERVIDOR_MCP=0
+REGISTERED_PATH_CANCEL=PASS
+BARGE_IN_PRODUCTION_PATH=PASS
