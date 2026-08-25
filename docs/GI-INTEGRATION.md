@@ -58,7 +58,9 @@ Três invariantes que `browser.py` mantém:
 | capability da Gi | tool MCP | nível | roda hoje? |
 |---|---|---|---|
 | `navegador_ler` | `browser_extract` | A0 | **sim**, headless |
-| `navegador_abas` | `browser_tabs` | A0 | **sim**, headless |
+| `navegador_abas` | `browser_tabs` (só lista) | A0 | **sim**, headless |
+| — | `browser_tab_open` | A2 | **não** — pede o dono |
+| — | `browser_tab_switch` / `browser_tab_close` | A1 | **não** — pede o dono |
 | `navegador_ver` (visão) | `browser_screenshot` | A0 | **sim**, headless |
 | `navegador_abrir` | `browser_navigate` | A2 | **não** — pede o dono |
 

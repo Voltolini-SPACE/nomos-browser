@@ -282,6 +282,20 @@ if roda security; then
     if (sobrando.length > 0) { console.error(`manifesto classifica tool inexistente: ${sobrando.join(", ")}`); process.exit(1); }
   '
 
+  # FASE 40 — O NÍVEL DE UMA TOOL VALE PARA TUDO QUE ELA FAZ.
+  #
+  # O passo acima confere COBERTURA (toda tool tem nível). Ele passava verde com
+  # uma elevação de privilégio de pé: `browser_tabs` era A0 e despachava
+  # `browser.new_tab` — a política do dono devolvia ALLOW para "ler arquivos
+  # locais" e a chamada ABRIA uma aba na rede, headless, sem aprovação (prova em
+  # evidence/nomos-browser-final-closeout/01-mcp/03-exploit-tabs.txt).
+  #
+  # Este passo confere COERÊNCIA: para cada tool, a pior rota que ela consegue
+  # despachar não pode exigir nível maior que o declarado. As rotas saem de DUAS
+  # fontes (o campo `routes` e as chamadas `call(...)` no corpo), então acrescentar
+  # um `if` novo no `build` sem reclassificar a tool reprova aqui.
+  checar "mcp:risco-por-tool-coerente" node scripts/verificar-risco-mcp.ts
+
   # O runtime não pode nascer aberto para a rede.
   #
   # Verificação de COMPORTAMENTO, não de texto: a primeira versão fazia grep por

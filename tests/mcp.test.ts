@@ -21,7 +21,8 @@ import test, { after, before } from "node:test";
 import assert from "node:assert/strict";
 import http from "node:http";
 import path from "node:path";
-import { readFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { spawn } from "node:child_process";
 import {
@@ -32,12 +33,13 @@ import {
   type McpToolResult,
 } from "../packages/mcp/src/server.ts";
 import { TOOLS, ToolInputError, buildRuntimeCall, listToolsPayload } from "../packages/mcp/src/tools.ts";
-import { API_PREFIX, type ActionResponse } from "../packages/core/src/contract.ts";
+import { ACTION_CLASS, API_PREFIX, type ActionResponse } from "../packages/core/src/contract.ts";
 
 const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SERVER_TS = path.join(RAIZ, "packages/mcp/src/server.ts");
 const TOOLS_TS = path.join(RAIZ, "packages/mcp/src/tools.ts");
 const PKG_JSON = path.join(RAIZ, "packages/mcp/package.json");
+const MANIFESTO_JSON = path.join(RAIZ, "packaging/mcp/manifesto.json");
 
 const ESPERADAS = [
   "browser_navigate",
@@ -50,6 +52,9 @@ const ESPERADAS = [
   "browser_extract",
   "browser_screenshot",
   "browser_tabs",
+  "browser_tab_open",
+  "browser_tab_switch",
+  "browser_tab_close",
   "browser_download",
   "browser_upload",
   "browser_task",
@@ -180,7 +185,11 @@ after(async () => {
 const TOKEN_DE_TESTE = "tok-de-teste-mcp";
 
 function novoServidor() {
-  return createMcpServer({ runtimeUrl: fake.url, owner: "teste", timeoutMs: 5_000, token: TOKEN_DE_TESTE });
+  // `persist:false` — a sessão DURÁVEL (FASE 40) tem bateria própria, no bloco 7,
+  // com `runtimeDir` temporário. Sem isto todo teste deste arquivo escreveria em
+  // `~/.nomos-browser/mcp-session.json` do operador e tentaria reusar a sessão
+  // real dele contra um runtime de mentira.
+  return createMcpServer({ runtimeUrl: fake.url, owner: "teste", timeoutMs: 5_000, token: TOKEN_DE_TESTE, persist: false });
 }
 
 function textoDe(r: McpToolResult): string {
@@ -188,10 +197,10 @@ function textoDe(r: McpToolResult): string {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 1. tools/list devolve as 13 ferramentas com inputSchema
+// 1. tools/list devolve as 16 ferramentas com inputSchema
 // ─────────────────────────────────────────────────────────────────────────────
 
-test("1a. tools/list devolve exatamente as 13 ferramentas do escopo", async () => {
+test("1a. tools/list devolve exatamente as 16 ferramentas do escopo", async () => {
   fake.reset();
   const srv = novoServidor();
   const res = (await srv.handleMessage({ jsonrpc: "2.0", id: 1, method: "tools/list" })) as JsonRpcResponse;
@@ -199,7 +208,7 @@ test("1a. tools/list devolve exatamente as 13 ferramentas do escopo", async () =
   assert.equal(res.error, undefined, `tools/list falhou: ${JSON.stringify(res.error)}`);
   const tools = (res.result as { tools: Array<{ name: string; description: string; inputSchema: unknown }> }).tools;
 
-  assert.equal(tools.length, 13, `esperava 13 ferramentas, vieram ${tools.length}`);
+  assert.equal(tools.length, 16, `esperava 16 ferramentas, vieram ${tools.length}`);
   assert.deepEqual(
     tools.map((t) => t.name).sort(),
     [...ESPERADAS].sort(),
@@ -349,9 +358,10 @@ test("2d. cada ferramenta cai na rota do contrato, com o corpo certo", async () 
     ["browser_extract", { format: "markdown" }, "/api/v1/browser.extract", { session_id: "S", format: "markdown" }],
     ["browser_screenshot", { scope: "element", target: { selector: "#t" } }, "/api/v1/browser.screenshot", { session_id: "S", scope: "element", target: { selector: "#t" } }],
     ["browser_tabs", {}, "/api/v1/browser.tabs", { session_id: "S" }],
-    ["browser_tabs", { action: "new", url: "http://a.local/" }, "/api/v1/browser.new_tab", { session_id: "S", url: "http://a.local/" }],
-    ["browser_tabs", { action: "switch", page_id: "pg_2" }, "/api/v1/browser.switch_tab", { session_id: "S", page_id: "pg_2" }],
-    ["browser_tabs", { action: "close", page_id: "pg_2" }, "/api/v1/browser.close_tab", { session_id: "S", page_id: "pg_2" }],
+    ["browser_tab_open", {}, "/api/v1/browser.new_tab", { session_id: "S" }],
+    ["browser_tab_open", { url: "http://a.local/" }, "/api/v1/browser.new_tab", { session_id: "S", url: "http://a.local/" }],
+    ["browser_tab_switch", { page_id: "pg_2" }, "/api/v1/browser.switch_tab", { session_id: "S", page_id: "pg_2" }],
+    ["browser_tab_close", { page_id: "pg_2" }, "/api/v1/browser.close_tab", { session_id: "S", page_id: "pg_2" }],
     ["browser_download", { url: "http://a.local/f.csv" }, "/api/v1/browser.download", { session_id: "S", url: "http://a.local/f.csv" }],
     ["browser_upload", { target: { selector: "input[type=file]" }, path: "/tmp/f.csv" }, "/api/v1/browser.upload", { session_id: "S", target: { selector: "input[type=file]" }, path: "/tmp/f.csv" }],
     ["browser_task", { goal: "extrair o TPV do dia" }, "/api/v1/browser.task", { session_id: "S", goal: "extrair o TPV do dia" }],
@@ -465,7 +475,14 @@ test("3f. argumento inválido vira erro de PROTOCOLO e não toca o runtime", asy
     ["browser_scroll", { session_id: "S" }, /ao menos um/],
     ["browser_screenshot", { scope: "element", session_id: "S" }, /exige "target"/],
     ["browser_screenshot", { scope: "region", session_id: "S" }, /exige "region"/],
-    ["browser_tabs", { action: "switch", session_id: "S" }, /exige "page_id"/],
+    // FASE 40 — `action` deixou de existir: a elevação de privilégio nem sequer
+    // é expressável. Erro de ARGUMENTO, não de autorização.
+    ["browser_tabs", { action: "switch", session_id: "S" }, /argumento\(s\) desconhecido\(s\): action/],
+    ["browser_tabs", { action: "new", url: "http://a.local/", session_id: "S" }, /argumento\(s\) desconhecido\(s\)/],
+    ["browser_tabs", { url: "http://a.local/", session_id: "S" }, /argumento\(s\) desconhecido\(s\): url/],
+    ["browser_tab_switch", { session_id: "S" }, /"page_id" é obrigatório/],
+    ["browser_tab_close", { session_id: "S" }, /"page_id" é obrigatório/],
+    ["browser_tab_open", { page_id: "pg_1", session_id: "S" }, /argumento\(s\) desconhecido\(s\): page_id/],
     ["browser_download", { session_id: "S" }, /informe "target" ou "url"/],
     ["browser_find", { target: {}, session_id: "S" }, /não pode ser objeto vazio/],
     ["browser_find", { target: { xpath: "//a" }, session_id: "S" }, /campo\(s\) desconhecido\(s\)/],
@@ -567,7 +584,10 @@ interface Sessao {
 function subirProcesso(env: Record<string, string>): Sessao {
   const filho = spawn(process.execPath, [SERVER_TS], {
     cwd: RAIZ,
-    env: { ...process.env, ...env },
+    // `efemera` por default: um teste de FRAMING não pode escrever no
+    // `~/.nomos-browser` do operador nem reusar a sessão real dele. A bateria 7
+    // liga a persistência de propósito, com `runtimeDir` temporário.
+    env: { ...process.env, NOMOS_BROWSER_MCP_SESSION: "efemera", ...env },
     stdio: ["pipe", "pipe", "pipe"],
   });
   const recebidas = new Map<number, JsonRpcResponse>();
@@ -633,7 +653,7 @@ test("5a. processo real: initialize + tools/list + tools/call por stdio", async 
 
     s.enviar({ jsonrpc: "2.0", id: 2, method: "tools/list" });
     const lista = await s.esperar(2);
-    assert.equal((lista.result as { tools: unknown[] }).tools.length, 13);
+    assert.equal((lista.result as { tools: unknown[] }).tools.length, 16);
 
     s.enviar({
       jsonrpc: "2.0",
@@ -677,7 +697,7 @@ test("5c. processo real: JSON quebrado na linha devolve -32700", async () => {
   fake.reset();
   const filho = spawn(process.execPath, [SERVER_TS], {
     cwd: RAIZ,
-    env: { ...process.env, NOMOS_BROWSER_URL: fake.url, NOMOS_BROWSER_TOKEN: TOKEN_DE_TESTE },
+    env: { ...process.env, NOMOS_BROWSER_MCP_SESSION: "efemera", NOMOS_BROWSER_URL: fake.url, NOMOS_BROWSER_TOKEN: TOKEN_DE_TESTE },
     stdio: ["pipe", "pipe", "pipe"],
   });
   try {
@@ -710,7 +730,7 @@ test("5d. stdin fechado logo após o pedido não trunca a resposta", async () =>
   fake.reset();
   const filho = spawn(process.execPath, [SERVER_TS], {
     cwd: RAIZ,
-    env: { ...process.env, NOMOS_BROWSER_URL: fake.url, NOMOS_BROWSER_TOKEN: TOKEN_DE_TESTE },
+    env: { ...process.env, NOMOS_BROWSER_MCP_SESSION: "efemera", NOMOS_BROWSER_URL: fake.url, NOMOS_BROWSER_TOKEN: TOKEN_DE_TESTE },
     stdio: ["pipe", "pipe", "pipe"],
   });
   let out = "";
@@ -855,4 +875,358 @@ test("6d. recusa por ARBITRAGEM de lease também tem nome próprio", async () =>
   assert.equal(out.isError, true);
   assert.match(textoDe(out), /MCP_CONTROL_NOT_OWNED/);
   assert.match(textoDe(out), /IA-A/);
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 7. FASE 40 — RISCO POR FERRAMENTA E SESSÃO DURÁVEL
+//
+// Os dois defeitos que esta bateria fecha foram provados com o NOMOS real e o
+// manifesto registrado, não em laboratório:
+//
+//   (1) `browser_tabs` era declarada A0 ("ler arquivos locais") e despachava
+//       `browser.new_tab` — a política do dono devolveu ALLOW e a chamada ABRIU
+//       uma aba na rede, headless, sem aprovação.
+//   (2) `nomos mcp chamar` é one-shot; com a sessão viva só na memória do
+//       processo, duas chamadas produziam duas sessões, `browser_extract` não
+//       via a página aberta na chamada anterior e cada chamada vazava um
+//       Chromium.
+//
+// Evidência crua: evidence/nomos-browser-final-closeout/.
+// ─────────────────────────────────────────────────────────────────────────────
+
+test("7a. as quatro ferramentas de aba têm UMA rota cada", () => {
+  const abas = ["browser_tabs", "browser_tab_open", "browser_tab_switch", "browser_tab_close"];
+  for (const nome of abas) {
+    const t = TOOLS.find((x) => x.name === nome);
+    assert.ok(t !== undefined, `${nome} não existe`);
+    assert.equal(t.routes.length, 1, `${nome} despacha ${t.routes.length} rotas — o nível declarado valeria para a pior`);
+  }
+  assert.deepEqual(
+    abas.map((n) => TOOLS.find((x) => x.name === n)!.routes[0]),
+    ["browser.tabs", "browser.new_tab", "browser.switch_tab", "browser.close_tab"],
+    "cada ferramenta de aba tem de cair na sua própria rota",
+  );
+
+  // CONTROLE: `browser_tabs` não sabe mais dizer "abra". Se `action` voltasse a
+  // ser aceito, este `assert` cairia — e é justamente o retorno do defeito.
+  assert.throws(
+    () => buildRuntimeCall("browser_tabs", { action: "new", url: "http://x.local/" }, "S"),
+    /argumento\(s\) desconhecido\(s\)/,
+    "browser_tabs voltou a aceitar action/url",
+  );
+  assert.equal(buildRuntimeCall("browser_tabs", {}, "S").route, "browser.tabs");
+});
+
+test("7b. GUARDA: nenhuma ferramenta despacha rota acima do nível que declara", async () => {
+  const { verificar, RISCO_DA_ROTA, NIVEL_MINIMO, rotasNoFonte } = await import("../scripts/verificar-risco-mcp.ts");
+  const manifesto = JSON.parse(readFileSync(MANIFESTO_JSON, "utf8")) as Record<string, unknown>;
+  const fonte = readFileSync(TOOLS_TS, "utf8");
+
+  assert.deepEqual(verificar(manifesto, fonte), [], "o manifesto do repositório está incoerente com o que as tools fazem");
+
+  // ── CONTROLE NEGATIVO 1: rebaixar uma tool de EGRESSO para A0 ─────────────
+  // Sem este controle, "não achou problema" poderia significar "não procura".
+  const rebaixado = JSON.parse(JSON.stringify(manifesto)) as { tools: Record<string, string> };
+  rebaixado.tools.browser_tab_open = "A0";
+  const p1 = verificar(rebaixado, fonte);
+  assert.ok(
+    p1.some((p) => p.tool === "browser_tab_open" && /ELEVAÇÃO DE PRIVILÉGIO/.test(p.motivo)),
+    `guarda não reprovou egresso declarado A0: ${JSON.stringify(p1)}`,
+  );
+
+  // ── CONTROLE NEGATIVO 2: rebaixar uma tool de MUTAÇÃO para A0 ─────────────
+  const rebaixado2 = JSON.parse(JSON.stringify(manifesto)) as { tools: Record<string, string> };
+  rebaixado2.tools.browser_tab_close = "A0";
+  assert.ok(
+    verificar(rebaixado2, fonte).some((p) => p.tool === "browser_tab_close"),
+    "guarda não reprovou mutação declarada A0",
+  );
+
+  // ── CONTROLE NEGATIVO 3: o DEFEITO ORIGINAL, reconstruído no fonte ────────
+  // Uma tool A0 que volta a despachar `browser.new_tab` no corpo. Este é o
+  // controle que prova que o guarda lê o que a tool FAZ, e não só o que ela
+  // DECLARA: aqui `routes` continua honesta e o corpo é que mente.
+  const fonteEnvenenado = fonte.replace(
+    '      rejectUnknown("browser_tabs", args, ["session_id"]);\n      return call("browser.tabs", { session_id: sessionId });',
+    '      rejectUnknown("browser_tabs", args, ["session_id", "url"]);\n      if (args.url !== undefined) return call("browser.new_tab", { session_id: sessionId });\n      return call("browser.tabs", { session_id: sessionId });',
+  );
+  assert.notEqual(fonteEnvenenado, fonte, "o controle não conseguiu envenenar o fonte — recorte mudou");
+  const p3 = verificar(manifesto, fonteEnvenenado);
+  assert.ok(
+    p3.some((p) => p.tool === "browser_tabs"),
+    `guarda não viu a rota nova no CORPO de uma tool A0: ${JSON.stringify(p3)}`,
+  );
+  assert.deepEqual(rotasNoFonte(fonteEnvenenado).get("browser_tabs"), ["browser.new_tab", "browser.tabs"]);
+
+  // ── A TABELA COBRE O CONTRATO INTEIRO ────────────────────────────────────
+  for (const rota of Object.keys(ACTION_CLASS)) {
+    assert.ok(rota in RISCO_DA_ROTA, `rota "${rota}" do contrato sem classe de risco`);
+  }
+  assert.equal(NIVEL_MINIMO.leitura, 0);
+  assert.equal(NIVEL_MINIMO.mutacao, 1);
+  assert.equal(NIVEL_MINIMO.egresso, 2);
+});
+
+// ── sessão durável entre PROCESSOS ──────────────────────────────────────────
+
+interface FakeDuravel {
+  url: string;
+  criacoes: number;
+  leases: string[];
+  attaches: string[];
+  matar: (id: string) => void;
+  close: () => Promise<void>;
+}
+
+/** Runtime de mentira com CICLO DE VIDA de sessão — o fake do topo não tem. */
+async function startFakeDuravel(): Promise<FakeDuravel> {
+  const vivas = new Set<string>();
+  let n = 0;
+  const est = { criacoes: 0, leases: [] as string[], attaches: [] as string[] };
+
+  const server = http.createServer((req, res) => {
+    const chunks: Buffer[] = [];
+    req.on("data", (c: Buffer) => chunks.push(c));
+    req.on("end", () => {
+      const url = req.url ?? "";
+      const json = (status: number, payload: unknown): void => {
+        res.writeHead(status, { "content-type": "application/json" });
+        res.end(JSON.stringify(payload));
+      };
+      const info = (id: string): Record<string, unknown> => ({
+        session_id: id,
+        owner: "mcp:nomos-browser-mcp",
+        profile: "default",
+        permissions: {},
+        created_at: "2026-08-25T00:00:00.000Z",
+        last_activity: "2026-08-25T00:00:00.000Z",
+        context_id: "ctx_1",
+        pages: [],
+        task: null,
+        status: "IDLE",
+        control: "agent",
+        attached_client: null,
+      });
+
+      if (req.method === "POST" && url === `${API_PREFIX}/sessions`) {
+        est.criacoes += 1;
+        const id = `sess_dur_${++n}`;
+        vivas.add(id);
+        json(201, info(id));
+        return;
+      }
+      const mLease = url.match(new RegExp(`^${API_PREFIX}/sessions/([^/]+)/lease$`));
+      if (mLease !== null) {
+        est.leases.push(mLease[1]!);
+        json(200, { lease_id: "lease_1", holder: "daemon-root", mode: "exclusive", reentrant: true });
+        return;
+      }
+      const mAttach = url.match(new RegExp(`^${API_PREFIX}/sessions/([^/]+)/attach$`));
+      if (mAttach !== null) {
+        est.attaches.push(mAttach[1]!);
+        json(200, info(mAttach[1]!));
+        return;
+      }
+      const mGet = url.match(new RegExp(`^${API_PREFIX}/sessions/([^/]+)$`));
+      if (mGet !== null && req.method === "GET") {
+        if (!vivas.has(mGet[1]!)) {
+          json(404, { success: false, error: { code: "SESSION_NOT_FOUND", message: "não existe" } });
+          return;
+        }
+        json(200, info(mGet[1]!));
+        return;
+      }
+      json(200, envelope({ echo: url }));
+    });
+  });
+  await new Promise<void>((r) => server.listen(0, "127.0.0.1", () => r()));
+  const addr = server.address() as { port: number };
+  return {
+    url: `http://127.0.0.1:${addr.port}`,
+    get criacoes() {
+      return est.criacoes;
+    },
+    get leases() {
+      return est.leases;
+    },
+    get attaches() {
+      return est.attaches;
+    },
+    matar: (id) => vivas.delete(id),
+    close: () => new Promise<void>((r) => server.close(() => r())),
+  };
+}
+
+/** Roda o servidor em modo administrativo (comando do dono) e devolve o stdout. */
+async function rodarComando(argv: string[], env: Record<string, string>): Promise<string> {
+  const filho = spawn(process.execPath, [SERVER_TS, ...argv], {
+    cwd: RAIZ,
+    env: { ...process.env, ...env },
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  let out = "";
+  filho.stdout.setEncoding("utf8");
+  filho.stdout.on("data", (c: string) => {
+    out += c;
+  });
+  await new Promise<void>((r) => filho.once("exit", () => r()));
+  return out;
+}
+
+/** Um `nomos mcp chamar`: sobe o processo, faz UMA chamada, encerra. */
+async function umTiro(env: Record<string, string>, tool: string, args: Record<string, unknown>): Promise<string> {
+  const filho = spawn(process.execPath, [SERVER_TS], {
+    cwd: RAIZ,
+    env: { ...process.env, ...env },
+    stdio: ["pipe", "pipe", "pipe"],
+  });
+  let buf = "";
+  const respostas: JsonRpcResponse[] = [];
+  filho.stdout.setEncoding("utf8");
+  filho.stdout.on("data", (c: string) => {
+    buf += c;
+    let nl: number;
+    while ((nl = buf.indexOf("\n")) >= 0) {
+      const linha = buf.slice(0, nl);
+      buf = buf.slice(nl + 1);
+      if (linha.trim() !== "") respostas.push(JSON.parse(linha) as JsonRpcResponse);
+    }
+  });
+  filho.stdin.write(`${JSON.stringify({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2024-11-05", capabilities: {}, clientInfo: { name: "t" } } })}\n`);
+  filho.stdin.write(`${JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: tool, arguments: args } })}\n`);
+  filho.stdin.end();
+  await new Promise<void>((r) => filho.once("exit", () => r()));
+  const r = respostas.find((x) => x.id === 2);
+  const conteudo = (r?.result as McpToolResult | undefined)?.content ?? [];
+  return conteudo.map((c) => c.text).join("\n");
+}
+
+test("7c. dois PROCESSOS one-shot compartilham a mesma sessão", async () => {
+  const fd = await startFakeDuravel();
+  const dir = mkdtempSync(path.join(tmpdir(), "mcp-sess-"));
+  const env = {
+    NOMOS_BROWSER_URL: fd.url,
+    NOMOS_BROWSER_TOKEN: TOKEN_DE_TESTE,
+    NOMOS_BROWSER_RUNTIME_DIR: dir,
+    NOMOS_BROWSER_MCP_SESSION: "duravel",
+  };
+  try {
+    const t1 = await umTiro(env, "browser_tab_open", { url: "http://alvo.local/" });
+    const t2 = await umTiro(env, "browser_extract", { target: { selector: "#fato" } });
+    const id1 = /session_id=(\S+)/.exec(t1)?.[1];
+    const id2 = /session_id=(\S+)/.exec(t2)?.[1];
+    assert.ok(id1 !== undefined && id1 !== "", `1ª chamada não expôs session_id: ${t1.slice(0, 200)}`);
+    assert.equal(id2, id1, "duas invocações separadas produziram sessões diferentes — o defeito voltou");
+    assert.equal(fd.criacoes, 1, `criou ${fd.criacoes} sessões em 2 processos — cada chamada estaria vazando uma sessão`);
+
+    // O registro em disco é o que torna isto possível, e é atômico.
+    const rec = JSON.parse(readFileSync(path.join(dir, "mcp-session.json"), "utf8")) as Record<string, unknown>;
+    assert.equal(rec.session_id, id1);
+    assert.equal(rec.runtime_url, fd.url);
+    assert.equal(typeof rec.criada_em, "string");
+
+    // Reatar não afrouxa o lease: readquire (reentrante) e registra no audit do
+    // runtime pela rota que ele JÁ tem para "um cliente voltou a conduzir".
+    assert.ok(fd.leases.includes(id1!), "reuso não readquiriu o lease — sob allow_unleased:false a chamada morreria");
+    assert.ok(fd.attaches.includes(id1!), "reuso não deixou rastro de reatamento no audit");
+
+    // ── CONTROLE: sessão MORTA no runtime ⇒ recria em silêncio ───────────────
+    fd.matar(id1!);
+    const t3 = await umTiro(env, "browser_tabs", {});
+    const id3 = /session_id=(\S+)/.exec(t3)?.[1];
+    assert.notEqual(id3, id1, "sessão morta foi reusada");
+    assert.equal(fd.criacoes, 2, "não recriou a sessão morta");
+
+    // ── CONTROLE: runtime DIFERENTE ⇒ o id do outro daemon não vale ─────────
+    const fd2 = await startFakeDuravel();
+    try {
+      await umTiro({ ...env, NOMOS_BROWSER_URL: fd2.url }, "browser_tabs", {});
+      assert.equal(fd2.criacoes, 1, "reusou id de outro runtime_url");
+    } finally {
+      await fd2.close();
+    }
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+    await fd.close();
+  }
+});
+
+test("7d. três processos SIMULTÂNEOS não criam três sessões", async () => {
+  const fd = await startFakeDuravel();
+  const dir = mkdtempSync(path.join(tmpdir(), "mcp-race-"));
+  const env = {
+    NOMOS_BROWSER_URL: fd.url,
+    NOMOS_BROWSER_TOKEN: TOKEN_DE_TESTE,
+    NOMOS_BROWSER_RUNTIME_DIR: dir,
+    NOMOS_BROWSER_MCP_SESSION: "duravel",
+  };
+  try {
+    const saidas = await Promise.all([
+      umTiro(env, "browser_tabs", {}),
+      umTiro(env, "browser_tabs", {}),
+      umTiro(env, "browser_tabs", {}),
+    ]);
+    const ids = saidas.map((s) => /session_id=(\S+)/.exec(s)?.[1]);
+    assert.equal(new Set(ids).size, 1, `corrida entre processos produziu ${new Set(ids).size} sessões: ${ids.join(", ")}`);
+    assert.equal(fd.criacoes, 1, `corrida criou ${fd.criacoes} sessões no runtime`);
+    // O arquivo tem de estar íntegro depois da corrida: escrita é tmp+rename.
+    const rec = JSON.parse(readFileSync(path.join(dir, "mcp-session.json"), "utf8")) as Record<string, unknown>;
+    assert.equal(rec.session_id, ids[0]);
+    // A trava não pode ficar para trás — senão o próximo processo espera o
+    // tempo de expiração inteiro por nada.
+    assert.equal(existsSync(path.join(dir, "mcp-session.lock")), false, "a trava sobrou depois da corrida");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+    await fd.close();
+  }
+});
+
+test("7e. o DONO encerra a sessão sem matar o daemon, e sem tool nova", async () => {
+  // A saída explícita é um comando do lançador, não uma ferramenta MCP: quem
+  // precisa encerrar é o dono, e ferramenta é o que o AGENTE chama. Ver a
+  // justificativa inteira em `encerrarSessaoPersistida`.
+  assert.equal(
+    TOOLS.some((t) => t.name === "browser_session"),
+    false,
+    "apareceu uma tool de sessão — a saída do dono não pode virar poder do agente",
+  );
+  const fd = await startFakeDuravel();
+  const dir = mkdtempSync(path.join(tmpdir(), "mcp-close-"));
+  const env = {
+    NOMOS_BROWSER_URL: fd.url,
+    NOMOS_BROWSER_TOKEN: TOKEN_DE_TESTE,
+    NOMOS_BROWSER_RUNTIME_DIR: dir,
+    NOMOS_BROWSER_MCP_SESSION: "duravel",
+  };
+  try {
+    const t1 = await umTiro(env, "browser_tabs", {});
+    const id = /session_id=(\S+)/.exec(t1)?.[1];
+    assert.ok(existsSync(path.join(dir, "mcp-session.json")));
+
+    // ASSÍNCRONO de propósito: `execFileSync` bloqueia o event loop DESTE
+    // processo, e o runtime de mentira que o filho vai chamar mora aqui dentro —
+    // seria um impasse, não um teste.
+    const saida = await rodarComando(["--encerrar-sessao"], env);
+    assert.match(saida, new RegExp(`MCP_SESSION_CLOSED session_id=${id}`), `saída inesperada: ${saida}`);
+    assert.equal(existsSync(path.join(dir, "mcp-session.json")), false, "o registro sobreviveu ao encerramento");
+
+    // Depois de encerrar, a próxima chamada cria OUTRA — não ressuscita a velha.
+    await umTiro(env, "browser_tabs", {});
+    assert.equal(fd.criacoes, 2);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+    await fd.close();
+  }
+});
+
+test("7f. o manifesto classifica as quatro ferramentas de aba, cada uma no seu nível", () => {
+  const m = JSON.parse(readFileSync(MANIFESTO_JSON, "utf8")) as { nivel_padrao: string; tools: Record<string, string> };
+  assert.equal(m.nivel_padrao, "A5", "o piso para o desconhecido não pode cair");
+  assert.equal(m.tools.browser_tabs, "A0");
+  assert.equal(m.tools.browser_tab_open, "A2");
+  assert.equal(m.tools.browser_tab_switch, "A1");
+  assert.equal(m.tools.browser_tab_close, "A1");
+  // Toda tool do catálogo está classificada — o guarda de cobertura de `ci.sh`
+  // repetido aqui, para que `node --test tests/mcp.test.ts` sozinho já pegue.
+  for (const t of TOOLS) assert.ok(t.name in m.tools, `${t.name} sem classificação no manifesto`);
 });

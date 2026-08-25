@@ -263,10 +263,9 @@ function schema(props: Record<string, unknown>, required: string[] = []): JsonSc
 
 const WAIT_UNTIL = ["load", "domcontentloaded", "networkidle", "commit"] as const;
 const SCREENSHOT_SCOPES = ["viewport", "full", "element", "region"] as const;
-const TAB_ACTIONS = ["list", "new", "switch", "close"] as const;
 
 // ─────────────────────────────────────────────────────────────────────────────
-// As 13 ferramentas
+// As 16 ferramentas — UMA CLASSE DE RISCO POR FERRAMENTA
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const TOOLS: readonly McpToolDefinition[] = Object.freeze([
@@ -487,28 +486,75 @@ export const TOOLS: readonly McpToolDefinition[] = Object.freeze([
       return call("browser.screenshot", { session_id: sessionId, scope, target, region });
     },
   },
+  // ── ABAS ───────────────────────────────────────────────────────────────────
+  //
+  // FASE 40 — POR QUE SÃO QUATRO FERRAMENTAS E NÃO UMA COM `action`.
+  //
+  // `browser_tabs` era UMA ferramenta com quatro rotas: `browser.tabs` (ler),
+  // `browser.new_tab` (EGRESSO), `browser.switch_tab` e `browser.close_tab`
+  // (mutação de estado). O manifesto MCP classifica por FERRAMENTA, não por
+  // argumento — então o nível declarado (A0, "ler arquivos locais") valia para o
+  // pior que a ferramenta sabia fazer. Não era teoria: com o manifesto
+  // registrado, `nomos mcp chamar ... browser_tabs --args '{"action":"new",
+  // "url":"..."}'` recebeu ALLOW da política do dono e ABRIU a aba, headless,
+  // sem aprovação (evidence/nomos-browser-final-closeout/01-mcp/03-exploit-tabs.txt).
+  //
+  // A correção não é validar melhor o `action`: é fazer o nível de uma
+  // ferramenta valer para TUDO que ela faz. Uma ferramenta, uma rota, uma classe
+  // de risco. `scripts/verificar-risco-mcp.ts` é o guarda que impede a volta.
   {
     name: "browser_tabs",
     description:
-      "Gerencia abas. action=list (default) lista PageInfo[]; new abre aba (url opcional); switch foca page_id; close fecha page_id.",
-    routes: ["browser.tabs", "browser.new_tab", "browser.switch_tab", "browser.close_tab"],
+      "Lista as abas da sessão (PageInfo[]). SOMENTE leitura: não abre, não foca e não fecha aba — para isso existem browser_tab_open, browser_tab_switch e browser_tab_close, cada uma com o seu próprio nível de risco. Mapeia para POST /api/v1/browser.tabs.",
+    routes: ["browser.tabs"],
+    inputSchema: schema({}),
+    build: (args, sessionId) => {
+      rejectUnknown("browser_tabs", args, ["session_id"]);
+      return call("browser.tabs", { session_id: sessionId });
+    },
+  },
+  {
+    name: "browser_tab_open",
+    description:
+      "Abre uma aba nova, opcionalmente já em uma URL. EGRESSO: com 'url' a aba sai para a rede antes de qualquer leitura. Mapeia para POST /api/v1/browser.new_tab.",
+    routes: ["browser.new_tab"],
     inputSchema: schema({
-      action: { type: "string", enum: [...TAB_ACTIONS], description: "Operação sobre abas. Default: list." },
-      url: { type: "string", description: "URL inicial quando action=new." },
-      page_id: { type: "string", description: "Aba alvo quando action=switch ou close." },
+      url: { type: "string", description: "URL inicial da aba. Omitida, a aba nasce em branco." },
     }),
     build: (args, sessionId) => {
-      rejectUnknown("browser_tabs", args, ["action", "url", "page_id", "session_id"]);
-      const action = readEnum("browser_tabs", args, "action", TAB_ACTIONS) ?? "list";
-      const url = readString("browser_tabs", args, "url", false);
-      const page_id = readString("browser_tabs", args, "page_id", false);
-      if ((action === "switch" || action === "close") && page_id === undefined) {
-        throw new ToolInputError(`browser_tabs: action="${action}" exige "page_id"`);
-      }
-      if (action === "list") return call("browser.tabs", { session_id: sessionId });
-      if (action === "new") return call("browser.new_tab", { session_id: sessionId, url });
-      if (action === "switch") return call("browser.switch_tab", { session_id: sessionId, page_id });
-      return call("browser.close_tab", { session_id: sessionId, page_id });
+      rejectUnknown("browser_tab_open", args, ["url", "session_id"]);
+      return call("browser.new_tab", {
+        session_id: sessionId,
+        url: readString("browser_tab_open", args, "url", false),
+      });
+    },
+  },
+  {
+    name: "browser_tab_switch",
+    description:
+      "Foca uma aba já aberta. Muta estado da sessão: a partir daqui toda ferramenta que fala em 'a página' fala de outra. Mapeia para POST /api/v1/browser.switch_tab.",
+    routes: ["browser.switch_tab"],
+    inputSchema: schema({ page_id: { type: "string", description: "Aba a focar." } }, ["page_id"]),
+    build: (args, sessionId) => {
+      rejectUnknown("browser_tab_switch", args, ["page_id", "session_id"]);
+      return call("browser.switch_tab", {
+        session_id: sessionId,
+        page_id: readString("browser_tab_switch", args, "page_id", true),
+      });
+    },
+  },
+  {
+    name: "browser_tab_close",
+    description:
+      "Fecha uma aba aberta. Muta estado da sessão e descarta o que estava carregado nela. Mapeia para POST /api/v1/browser.close_tab.",
+    routes: ["browser.close_tab"],
+    inputSchema: schema({ page_id: { type: "string", description: "Aba a fechar." } }, ["page_id"]),
+    build: (args, sessionId) => {
+      rejectUnknown("browser_tab_close", args, ["page_id", "session_id"]);
+      return call("browser.close_tab", {
+        session_id: sessionId,
+        page_id: readString("browser_tab_close", args, "page_id", true),
+      });
     },
   },
   {

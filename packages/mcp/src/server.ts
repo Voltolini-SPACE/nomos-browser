@@ -17,6 +17,10 @@
  *   3. `success:false` do runtime NUNCA vira sucesso MCP. Vira isError com o
  *      `error.code` do contrato preservado no texto.
  */
+import crypto from "node:crypto";
+import { link, mkdir, open, readFile, rename, rm, stat } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import { createInterface } from "node:readline";
 import { pathToFileURL } from "node:url";
 import { API_PREFIX, CONTRACT_VERSION, type ActionResponse, type SessionInfo } from "../../core/src/contract.ts";
@@ -233,6 +237,32 @@ export class RuntimeClient {
     }
     return { status, json };
   }
+
+  /**
+   * DELETE JSON. Existe para UMA coisa: `encerrarSessaoPersistida`. Mandar
+   * `DELETE` com corpo é o que a rota `sessions.delete` espera (o `reason` vai
+   * no corpo, ver `daemon.ts`), e o `router` do daemon lê corpo em DELETE.
+   */
+  async del(path: string, body: unknown): Promise<{ status: number; json: unknown }> {
+    this.#exigirCredencial(path);
+    const url = `${this.baseUrl}${path}`;
+    try {
+      const res = await this.#fetch(url, {
+        method: "DELETE",
+        headers: this.#authHeaders(),
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(this.timeoutMs),
+      });
+      const text = await res.text();
+      return { status: res.status, json: text === "" ? null : (JSON.parse(text) as unknown) };
+    } catch (err) {
+      throw new RuntimeTransportError(`falha ao falar com o Browser Runtime em ${this.baseUrl}${path}`, {
+        path,
+        runtime_url: this.baseUrl,
+        cause: err instanceof Error ? `${err.name}: ${err.message}` : String(err),
+      });
+    }
+  }
 }
 
 function readIntEnv(name: string, fallback: number): number {
@@ -259,58 +289,301 @@ export interface SessionOptions {
   owner?: string;
   profile?: string;
   headless?: boolean;
+  /**
+   * Onde mora `mcp-session.json`. Default: `NOMOS_BROWSER_RUNTIME_DIR` ou
+   * `~/.nomos-browser` — o MESMO diretório do `control-token`, porque a sessão
+   * durável é um dado do runtime local, não do repositório.
+   */
+  runtimeDir?: string;
+  /** `false` desliga a persistência: uma sessão por processo, como antes. */
+  persist?: boolean;
+}
+
+export const SESSION_FILE = "mcp-session.json" as const;
+export const SESSION_LOCK = "mcp-session.lock" as const;
+/** Trava mais velha que isto é considerada abandonada (processo morto no meio). */
+export const LOCK_STALE_MS = 10_000;
+const LOCK_ESPERA_MS = 50;
+const LOCK_TENTATIVAS = 400; // 20 s
+
+/** Cliente do ponto de vista do runtime: é isto que sai em `session.attach`. */
+export const MCP_CLIENT_ID = "mcp:nomos-browser-mcp" as const;
+
+export interface SessaoPersistida {
+  session_id: string;
+  runtime_url: string;
+  criada_em: string;
+  owner: string;
+}
+
+export function runtimeDirPadrao(): string {
+  const env = process.env.NOMOS_BROWSER_RUNTIME_DIR;
+  if (typeof env === "string" && env !== "") return env;
+  return path.join(os.homedir(), ".nomos-browser");
+}
+
+function ehSessaoPersistida(v: unknown): v is SessaoPersistida {
+  if (typeof v !== "object" || v === null) return false;
+  const o = v as Record<string, unknown>;
+  return typeof o.session_id === "string" && o.session_id !== "" && typeof o.runtime_url === "string";
+}
+
+/** Lê o registro; devolve `null` para ausente, ilegível ou corrompido. */
+export async function lerSessaoPersistida(runtimeDir: string): Promise<SessaoPersistida | null> {
+  try {
+    const cru = await readFile(path.join(runtimeDir, SESSION_FILE), "utf8");
+    const v: unknown = JSON.parse(cru);
+    return ehSessaoPersistida(v) ? v : null;
+  } catch {
+    // Arquivo ausente é o caso normal da PRIMEIRA chamada. JSON quebrado é o
+    // caso de um processo morto no meio de uma escrita não atômica — que este
+    // módulo não faz, mas que uma edição à mão pode produzir. Nos dois, a
+    // resposta certa é a mesma: criar de novo. Nunca derrubar a chamada do
+    // agente por causa de um cache.
+    return null;
+  }
 }
 
 /**
- * Uma sessão por processo MCP, criada sob demanda e reutilizada. O cliente pode
- * fixar outra passando `session_id` na chamada.
+ * Escrita ATÔMICA: tmp + `rename(2)`. Um leitor concorrente vê o arquivo velho
+ * inteiro ou o novo inteiro — nunca meio JSON.
+ */
+export async function gravarSessaoPersistida(runtimeDir: string, rec: SessaoPersistida): Promise<void> {
+  await mkdir(runtimeDir, { recursive: true, mode: 0o700 });
+  const alvo = path.join(runtimeDir, SESSION_FILE);
+  const tmp = path.join(runtimeDir, `.${SESSION_FILE}.${process.pid}.${crypto.randomUUID().slice(0, 8)}`);
+  const fh = await open(tmp, "w", 0o600);
+  try {
+    await fh.writeFile(`${JSON.stringify(rec, null, 2)}\n`, "utf8");
+    await fh.sync();
+  } finally {
+    await fh.close();
+  }
+  await rename(tmp, alvo);
+}
+
+export async function apagarSessaoPersistida(runtimeDir: string): Promise<void> {
+  await rm(path.join(runtimeDir, SESSION_FILE), { force: true });
+}
+
+/**
+ * Trava entre PROCESSOS, no estilo já usado pela idempotência do task engine
+ * (`packages/core/src/taskengine.ts`): `link(2)` falha com EEXIST quando o
+ * destino existe, e falha SEM escrever. `open(..., "wx")` também recusaria, mas
+ * deixaria uma janela entre criar e escrever em que um segundo processo leria um
+ * arquivo vazio e concluiria "não há dono".
  *
- * O corpo de criação NÃO pede capabilities: omitir faz o runtime aplicar o
- * default restrito (download/upload/send/purchase/payment/delete negados). Pedir
- * capability aqui seria o servidor MCP se autoconceder poder — concessão é ato
- * do dono, não do adaptador de protocolo.
+ * Trava velha demais é quebrada: um `nomos mcp chamar` morto com SIGKILL no meio
+ * não pode trancar o adaptador para sempre.
+ */
+async function travar(runtimeDir: string): Promise<() => Promise<void>> {
+  await mkdir(runtimeDir, { recursive: true, mode: 0o700 });
+  const alvo = path.join(runtimeDir, SESSION_LOCK);
+  const tmp = path.join(runtimeDir, `.${SESSION_LOCK}.${process.pid}.${crypto.randomUUID().slice(0, 8)}`);
+  const fh = await open(tmp, "w", 0o600);
+  try {
+    await fh.writeFile(`${JSON.stringify({ pid: process.pid, em: new Date().toISOString() })}\n`, "utf8");
+  } finally {
+    await fh.close();
+  }
+  try {
+    for (let i = 0; i < LOCK_TENTATIVAS; i++) {
+      try {
+        await link(tmp, alvo);
+        return async () => {
+          await rm(alvo, { force: true });
+        };
+      } catch {
+        const idade = await stat(alvo)
+          .then((st) => Date.now() - st.mtimeMs)
+          .catch(() => Number.POSITIVE_INFINITY);
+        // `Infinity` = a trava sumiu entre o link e o stat: tenta de novo já.
+        if (idade > LOCK_STALE_MS) await rm(alvo, { force: true });
+        else await new Promise((r) => setTimeout(r, LOCK_ESPERA_MS));
+      }
+    }
+    throw new RuntimeTransportError(`não consegui a trava de sessão em ${alvo} após ${LOCK_TENTATIVAS} tentativas`, {
+      lock: alvo,
+    });
+  } finally {
+    await rm(tmp, { force: true }).catch(() => undefined);
+  }
+}
+
+/**
+ * Sessão do adaptador, DURÁVEL ENTRE PROCESSOS.
  *
- * FASE 7 — LEASE. A criação vai pela MESMA rota da API v1 que todo mundo usa
- * (`POST /api/v1/sessions`), e é o runtime que, no mesmo ato, concede o lease
- * EXCLUSIVO ao principal do token (`sessions.create` em `api/src/daemon.ts`).
- * Isto NÃO é um atalho do adaptador: sob `allow_unleased:false` — o default do
- * produto — uma sessão criada por qualquer outro caminho nasceria sem dono e
- * toda ação seguinte bateria em `CONTROL_NOT_OWNED`. O adaptador não pede lease,
- * não renova lease e não rouba lease de ninguém; ele herda o que o runtime deu a
- * quem apresentou a credencial, e o `session_id` resultante volta no cabeçalho
- * de toda resposta (ver `envelopeToResult`) para que o chamador possa continuar.
+ * FASE 40 — POR QUE ISTO DEIXOU DE SER "uma sessão por processo".
+ *
+ * `nomos mcp chamar` é one-shot: sobe o servidor, faz UMA chamada, encerra. Com
+ * a sessão viva só na memória do processo, duas chamadas seguidas do caminho
+ * canônico do NOMOS produziam DUAS sessões (medido: `ses_ac4cc2dd…` e
+ * `ses_d77016fe…`, com `SESSOES_VIVAS=2` acumuladas). O efeito prático era que o
+ * produto não servia para trabalho de mais de um passo — `browser_extract`
+ * depois de abrir uma aba não via a página, porque a página estava na sessão
+ * anterior — e cada chamada vazava uma sessão (navegador + perfil) que ninguém fechava.
+ *
+ * Devolver `session_id` no cabeçalho da resposta (FASE 7) tornou a continuidade
+ * POSSÍVEL, mas só para quem lesse a resposta e repassasse o id. O NOMOS não
+ * repassa: ele chama a tool. Então a continuidade tem de estar aqui.
+ *
+ * O que este resolvedor faz, nesta ordem:
+ *   1. `session_id` explícito na chamada vence sempre. Continua sendo o volante
+ *      do chamador que sabe o que quer.
+ *   2. Se `<runtime_dir>/mcp-session.json` existe, é do MESMO `runtime_url` e a
+ *      sessão está viva no daemon, REUSA — readquirindo o lease e registrando o
+ *      reatamento no audit do runtime (`session.attach` + `lease.acquired` em
+ *      `sessions/<id>/actions.jsonl`).
+ *   3. Senão cria, EM SILÊNCIO, sob trava entre processos, e regrava o arquivo.
+ *
+ * O que ele NÃO faz: afrouxar `allow_unleased`, roubar lease de outro principal
+ * (nesse caso desiste do reuso e cria uma sessão nova) e escrever qualquer coisa
+ * fora de `runtime_dir`.
  */
 export class SessionResolver {
   #id: string | null = null;
   #pending: Promise<string> | null = null;
+  #reatada = false;
   readonly #client: RuntimeClient;
   readonly #opts: SessionOptions;
+  readonly #runtimeDir: string;
+  readonly #persist: boolean;
 
   constructor(client: RuntimeClient, opts: SessionOptions = {}) {
     this.#client = client;
     this.#opts = opts;
+    this.#runtimeDir = opts.runtimeDir ?? runtimeDirPadrao();
+    this.#persist = opts.persist ?? process.env.NOMOS_BROWSER_MCP_SESSION !== "efemera";
   }
 
   get current(): string | null {
     return this.#id;
   }
 
+  /** `true` quando a sessão corrente veio do arquivo, não de uma criação. */
+  get reattached(): boolean {
+    return this.#reatada;
+  }
+
+  get runtimeDir(): string {
+    return this.#runtimeDir;
+  }
+
   async resolve(explicit?: string): Promise<string> {
     if (explicit !== undefined && explicit !== "") return explicit;
     if (this.#id !== null) return this.#id;
     if (this.#pending === null) {
-      // Duas chamadas concorrentes sem session_id não podem criar duas sessões:
-      // a segunda espera a promessa da primeira.
-      this.#pending = this.#create();
-      this.#pending.finally(() => {
-        this.#pending = null;
-      });
+      // Duas chamadas concorrentes DENTRO deste processo não podem criar duas
+      // sessões: a segunda espera a promessa da primeira. Entre PROCESSOS, quem
+      // resolve é a trava em `travar()`.
+      this.#pending = this.#resolverDuravel();
+      // `.finally()` devolve uma promessa NOVA que herda a rejeição. Sem o
+      // `.catch` ela fica sem tratador e o Node derruba o processo com
+      // `unhandledRejection` — o chamador veria o servidor MCP MORRER onde
+      // deveria receber um erro MCP legível. Foi assim que um `429
+      // BACKPRESSURE_REJECTED` do runtime matou o adaptador em vez de virar
+      // isError. A promessa devolvida ao chamador continua sendo `#pending`.
+      void this.#pending
+        .finally(() => {
+          this.#pending = null;
+        })
+        .catch(() => undefined);
     }
     return this.#pending;
   }
 
-  async #create(): Promise<string> {
-    const body: Record<string, unknown> = { owner: this.#opts.owner ?? process.env.NOMOS_BROWSER_OWNER ?? DEFAULT_OWNER };
+  async #resolverDuravel(): Promise<string> {
+    if (!this.#persist) return this.#criar();
+
+    // Caminho comum primeiro, sem pagar trava: o arquivo já existe e a sessão
+    // está viva. Travar aqui serializaria chamadas que não competem por nada.
+    const reusada = await this.#tentarReusar();
+    if (reusada !== null) return reusada;
+
+    const soltar = await travar(this.#runtimeDir);
+    try {
+      // Outro processo pode ter criado enquanto esperávamos a trava. Sem esta
+      // segunda leitura, a trava só atrasaria a corrida em vez de resolvê-la.
+      const denovo = await this.#tentarReusar();
+      if (denovo !== null) return denovo;
+      const id = await this.#criar();
+      await gravarSessaoPersistida(this.#runtimeDir, {
+        session_id: id,
+        runtime_url: this.#client.baseUrl,
+        criada_em: new Date().toISOString(),
+        owner: this.#ownerAtual(),
+      });
+      return id;
+    } finally {
+      await soltar();
+    }
+  }
+
+  #ownerAtual(): string {
+    return this.#opts.owner ?? process.env.NOMOS_BROWSER_OWNER ?? DEFAULT_OWNER;
+  }
+
+  /**
+   * Devolve o `session_id` reusável, ou `null` para "não dá, crie outra".
+   *
+   * Nenhum caminho aqui lança: falha de rede, sessão morta, lease de outro
+   * principal e arquivo corrompido são todos "crie outra". Um cache que derruba
+   * a chamada do agente é pior que cache nenhum.
+   */
+  async #tentarReusar(): Promise<string | null> {
+    const rec = await lerSessaoPersistida(this.#runtimeDir);
+    if (rec === null) return null;
+    // Daemon diferente: o id não significa nada lá. Sem esta comparação, mudar
+    // NOMOS_BROWSER_URL faria o adaptador insistir num id de outro runtime e
+    // colher 404 a cada chamada.
+    if (rec.runtime_url !== this.#client.baseUrl) return null;
+
+    try {
+      const { status, json } = await this.#client.get(`${API_PREFIX}/sessions/${rec.session_id}`);
+      if (status !== 200) return null;
+      const info = json as Partial<SessionInfo> | null;
+      if (info === null || typeof info.session_id !== "string") return null;
+      if (info.status === "CLOSED" || info.status === "FAILED") return null;
+
+      // ── LEASE ────────────────────────────────────────────────────────────
+      // A sessão nasceu com lease EXCLUSIVO do principal do adaptador, e o TTL
+      // padrão é de 60 s — mais curto que o intervalo entre dois `nomos mcp
+      // chamar` de um humano. Sem readquirir, sob `allow_unleased:false` (o
+      // default do produto) a chamada seguinte bateria em CONTROL_NOT_OWNED.
+      // `lease.acquire` é REENTRANTE para quem já detém: readquirir não rouba
+      // nada de ninguém, e o audit registra `lease.acquired`.
+      const lease = await this.#client.post(`${API_PREFIX}/sessions/${rec.session_id}/lease`, { mode: "exclusive" });
+      if (lease.status < 200 || lease.status >= 300) {
+        const texto = JSON.stringify(lease.json ?? {});
+        // Volante de OUTRO principal: desistir do reuso é a única resposta que
+        // não afrouxa a arbitragem. Criar sessão nova é honesto — não interfere
+        // em quem está dirigindo.
+        if (texto.includes("CONTROL_NOT_OWNED")) return null;
+        // Qualquer outra recusa (escopo do token, rota indisponível) NÃO é prova
+        // de que a sessão é inutilizável; deixa o runtime decidir na ação.
+      }
+
+      // ── AUDIT DO REATAMENTO ──────────────────────────────────────────────
+      // `sessions.attach` é a rota que o runtime JÁ tem para "um cliente voltou
+      // a conduzir esta sessão": grava `session.attach` e `task.resume` em
+      // `sessions/<id>/actions.jsonl`, com actor e owner. Inventar um evento
+      // `session.reattached` novo só para o MCP criaria um segundo vocabulário
+      // para o mesmo fato. Best-effort: se falhar, a chamada segue — o que não
+      // pode acontecer é o adaptador recusar trabalho porque o audit tossiu.
+      await this.#client
+        .post(`${API_PREFIX}/sessions/${rec.session_id}/attach`, { client: MCP_CLIENT_ID })
+        .catch(() => undefined);
+
+      this.#id = rec.session_id;
+      this.#reatada = true;
+      return rec.session_id;
+    } catch {
+      return null;
+    }
+  }
+
+  async #criar(): Promise<string> {
+    const body: Record<string, unknown> = { owner: this.#ownerAtual() };
     const profile = this.#opts.profile ?? process.env.NOMOS_BROWSER_PROFILE;
     if (profile !== undefined && profile !== "") body.profile = profile;
     const headless = this.#opts.headless ?? readBoolEnv("NOMOS_BROWSER_HEADLESS");
@@ -329,8 +602,53 @@ export class SessionResolver {
       throw new RuntimeTransportError("runtime respondeu criação de sessão sem session_id", { response: json });
     }
     this.#id = info.session_id;
+    this.#reatada = false;
     return info.session_id;
   }
+}
+
+/**
+ * SAÍDA EXPLÍCITA — encerra a sessão durável sem matar o daemon.
+ *
+ * POR QUE NÃO É UMA TOOL `browser_session` COM `action=close`.
+ *
+ *   1. Quem precisa encerrar é o DONO, e uma tool é chamada pelo AGENTE. Dar ao
+ *      agente o botão de desligar não dá ao dono nada que ele já não tenha; só
+ *      transfere para o lado errado uma decisão de fim de trabalho.
+ *   2. `action=close` é exatamente a forma que acabamos de remover de
+ *      `browser_tabs`: uma ferramenta cujo comportamento (e cujo risco) depende
+ *      de um argumento. Reintroduzi-la um commit depois é como o defeito volta.
+ *   3. Toda tool nova muda a superfície do manifesto e, com ela, o SHA-256 que o
+ *      dono registrou. O manifesto já precisa ser reassinado por causa da
+ *      correção de segurança; cobrar do dono uma segunda reassinatura por uma
+ *      conveniência seria um mau negócio.
+ *   4. O dono nunca precisou de uma tool para isto: `DELETE /api/v1/sessions/:id`
+ *      já existe. O que faltava era saber QUAL id — e é isso que o arquivo
+ *      persistido passou a dizer.
+ *
+ * Uso:  node packaging/mcp/servidor.mjs --encerrar-sessao
+ *       node packaging/mcp/servidor.mjs --sessao          (só mostra qual é)
+ *
+ * Também aceita `NOMOS_BROWSER_MCP_SESSION=efemera` para UMA invocação sem
+ * persistência nenhuma (útil para provar o comportamento antigo).
+ */
+export async function encerrarSessaoPersistida(
+  client: RuntimeClient,
+  runtimeDir: string = runtimeDirPadrao(),
+): Promise<{ session_id: string | null; http_status: number | null; apagado: boolean }> {
+  const rec = await lerSessaoPersistida(runtimeDir);
+  if (rec === null) return { session_id: null, http_status: null, apagado: false };
+  let http: number | null = null;
+  try {
+    const r = await client.del(`${API_PREFIX}/sessions/${rec.session_id}`, { reason: "requested" });
+    http = r.status;
+  } catch {
+    // Daemon fora do ar: a sessão já não existe de fato. Apagar o arquivo é
+    // correto — deixá-lo faria a próxima chamada tentar reusar um fantasma.
+    http = null;
+  }
+  await apagarSessaoPersistida(runtimeDir);
+  return { session_id: rec.session_id, http_status: http, apagado: true };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -675,8 +993,38 @@ function invokedDirectly(): boolean {
   }
 }
 
+/**
+ * Comandos administrativos do DONO, fora do protocolo MCP.
+ *
+ * Devolve `true` quando o argv foi um desses e o processo NÃO deve virar
+ * servidor stdio. Fica aqui (e não no lançador) para que `packaging/mcp/
+ * servidor.mjs` continue sendo o que o manifesto promete: um lançador que não
+ * decide nada.
+ */
+export async function executarComandoDeSessao(argv: readonly string[]): Promise<boolean> {
+  const dir = runtimeDirPadrao();
+  if (argv.includes("--sessao")) {
+    const rec = await lerSessaoPersistida(dir);
+    process.stdout.write(
+      rec === null
+        ? `MCP_SESSION=none arquivo=${path.join(dir, SESSION_FILE)}\n`
+        : `MCP_SESSION=${rec.session_id} runtime_url=${rec.runtime_url} criada_em=${rec.criada_em} arquivo=${path.join(dir, SESSION_FILE)}\n`,
+    );
+    return true;
+  }
+  if (argv.includes("--encerrar-sessao")) {
+    const r = await encerrarSessaoPersistida(new RuntimeClient(), dir);
+    process.stdout.write(
+      `MCP_SESSION_CLOSED session_id=${r.session_id ?? "none"} http=${r.http_status ?? "-"} arquivo_apagado=${r.apagado}\n`,
+    );
+    return true;
+  }
+  return false;
+}
+
 if (invokedDirectly()) {
   try {
+    if (await executarComandoDeSessao(process.argv.slice(2))) process.exit(0);
     const server = createMcpServer();
     // Sem `process.exit(0)` no fim: `startStdio` já drena as respostas pendentes,
     // e sair à força truncaria escrita ainda no buffer do pipe — o cliente que

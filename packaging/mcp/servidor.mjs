@@ -43,9 +43,14 @@ if (
   }
 }
 
-const { createMcpServer, startStdio } = await import(pathToFileURL(SERVIDOR).href);
+const { createMcpServer, startStdio, executarComandoDeSessao } = await import(pathToFileURL(SERVIDOR).href);
 
 try {
+  // SAIDA EXPLICITA DO DONO (FASE 40). `--sessao` mostra a sessao duravel;
+  // `--encerrar-sessao` a fecha no runtime e apaga o registro — sem matar o
+  // daemon e sem uma tool nova que o AGENTE pudesse chamar. Justificativa
+  // completa em `encerrarSessaoPersistida`, em packages/mcp/src/server.ts.
+  if (await executarComandoDeSessao(process.argv.slice(2))) process.exit(0);
   startStdio(createMcpServer());
 } catch (err) {
   process.stderr.write(`[nomos-browser-mcp] arranque falhou: ${err instanceof Error ? err.message : String(err)}\n`);
