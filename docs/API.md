@@ -29,6 +29,32 @@ normativa: SDKs, CLI e MCP codificam contra ela e **não** inventam rota.
 | POST | `/api/v1/sessions/:id/handoff` | `SessionInfo` — corpo `{to_owner}` |
 | POST | `/api/v1/sessions/:id/takeover` | `SessionInfo` — humano assume, agente congela |
 | POST | `/api/v1/sessions/:id/release` | `SessionInfo` — devolve; runtime **reobserva** |
+| GET | `/api/v1/queues` | profundidade da fila **por sessão** — `ADMIN` |
+
+### Pressão: `/health` e `GET /api/v1/queues` (FASE 20b)
+
+`HealthResponse.queues` publica o **agregado** das filas de sessão —
+`{running, waiting, sessions_with_queue, max_concurrency, max_queue}`. Responde
+"o runtime está sob pressão?" sem dizer **de quem** é a pressão.
+
+`GET /api/v1/queues` publica o **detalhe por sessão** —
+`{workers, sessions_pool, aggregate, sessions:[{session_id, running, waiting,
+max_concurrency, max_queue, oldest_running_ms}]}`.
+
+**Por que são duas rotas.** `/health` pede apenas `OBSERVE`, e `OBSERVE` é
+concedido inclusive a token limitado a **uma** sessão — a rota não nomeia sessão,
+então a `session_allowlist` não restringe nada ali. Publicar `session_id` +
+profundidade no `/health` entregaria a atividade das sessões alheias a quem só
+podia ver a própria: lido em laço, o número desenha o horário de trabalho de cada
+agente. Por isso o detalhe por sessão exige `ADMIN`, no mesmo nível de
+`config.get`.
+
+`oldest_running_ms` viaja junto porque profundidade **sem idade** não distingue
+"10 ações rápidas passando" de "1 ação presa há 4 minutos segurando as outras 9"
+— os dois casos mostram o mesmo `running` e pedem correções opostas.
+
+A fila **nasce na primeira ação** da sessão: sessão criada e ainda ociosa não
+aparece em `sessions[]`, e isso é a verdade — ela não tem fila.
 
 ## Ações — `POST /api/v1/browser.<verbo>`
 
@@ -93,6 +119,11 @@ fica registrada na linha do tempo das duas sessões.
 
 `ws://127.0.0.1:7777/events` — emite `RuntimeEvent` em JSON, um por frame.
 Filtro opcional: `?session_id=...` e `?events=mouse.clicked,task.progress`.
+
+`session.rejected` (FASE 20b) é emitido quando `POST /api/v1/sessions` é recusado
+por pool cheio. Antes dele o barramento só tinha `session.created`: quem observava
+o runtime via o silêncio de uma sessão que nunca apareceu e não distinguia
+"ninguém pediu" de "pedi e fui recusado".
 
 ## Códigos de erro
 

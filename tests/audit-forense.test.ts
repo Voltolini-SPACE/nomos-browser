@@ -25,6 +25,7 @@ import path from "node:path";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { startDaemon } from "../packages/api/src/daemon.ts";
 import {
+  AUDIT_EVENTS,
   AUDIT_FIELDS,
   type AgentProvider,
   type Observation,
@@ -478,7 +479,12 @@ test("9. toda linha de toda sessão tem TODAS as chaves do schema", async () => 
       assert.equal(Object.keys(l).length, AUDIT_FIELDS.length, `linha com chave extra: ${JSON.stringify(l)}`);
       assert.equal(l.session, sid, "linha gravada no arquivo da sessão errada");
       assert.equal(typeof l.timestamp, "string");
-      assert.ok(["action", "policy", "control", "recovery", "task", "provider"].includes(l.event), `event inválido: ${l.event}`);
+      // FASE 20b — a lista deixou de ser redigitada aqui. Uma cópia manual do
+      // vocabulário envelhece em silêncio: quando o contrato ganhou a classe
+      // `backpressure`, esta linha teria continuado verde sem nunca a ter visto.
+      // `AUDIT_EVENTS` é a projeção do union, e o compilador reprova a projeção
+      // quando ela fica para trás (`AuditEventCobertura` em contract.ts).
+      assert.ok(AUDIT_EVENTS.includes(l.event), `event não declarado em AUDIT_EVENTS: ${l.event}`);
       assert.ok(["allow", "deny", "not_applicable"].includes(l.policy_decision), `policy_decision inválida: ${l.policy_decision}`);
       assert.ok(["ok", "error", "denied"].includes(l.result), `result inválido: ${l.result}`);
       assert.ok(l.detail !== null && typeof l.detail === "object", "detail tem de ser objeto");

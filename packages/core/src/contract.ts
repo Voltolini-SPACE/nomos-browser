@@ -423,7 +423,14 @@ export type EventName =
   | "target.healed"
   | "secret.used"
   | "control.taken"
-  | "control.returned";
+  | "control.returned"
+  // FASE 20b — RECUSA DE SESSAO POR PRESSAO, AO VIVO.
+  //
+  // `session.created` so existe quando a sessao nasce. A recusa por pool cheio
+  // nao tinha nome nenhum no barramento: quem observava o runtime pelo
+  // WebSocket via o silencio de uma sessao que nunca apareceu e nao tinha como
+  // distinguir "ninguem pediu" de "pedi e fui recusado".
+  | "session.rejected";
 
 export interface RuntimeEvent<P = Record<string, unknown>> {
   timestamp: string;
@@ -523,6 +530,35 @@ export interface HealthResponse {
   browser: "ok" | "starting" | "down";
   workers: { active: number; max: number };
   sessions: { total: number; active: number; idle: number; paused: number };
+  /**
+   * FASE 20b — PROFUNDIDADE DA FILA, AGREGADA.
+   *
+   * DEFEITO MEDIDO (soak de 100 ciclos): `fila_running`/`fila_waiting` so eram
+   * publicados pelo daemon nos ciclos COM task, e nenhuma rota publicava a
+   * profundidade da `SessionQueue`. `/health` dizia quantos workers e quantas
+   * sessoes havia — nunca quantas acoes estavam presas esperando. Um operador
+   * vendo 429 no cliente nao tinha como confirmar a pressao pelo runtime.
+   *
+   * SO O AGREGADO SAI AQUI, e isso e deliberado: `/health` pede apenas o escopo
+   * OBSERVE, que e concedido inclusive a token limitado a UMA sessao (a rota nao
+   * nomeia sessao, entao a allowlist nao restringe nada). `running`/`waiting`
+   * POR SESSAO neste corpo entregaria a atividade das sessoes alheias a quem so
+   * podia ver a propria — quem lesse em laco veria quando cada sessao trabalha e
+   * quando para. O agregado responde "o runtime esta sob pressao?" sem dizer de
+   * QUEM e a pressao. O detalhe por sessao vive em `GET /api/v1/queues`, ADMIN.
+   */
+  queues: {
+    /** Soma das acoes EM EXECUCAO em todas as filas de sessao. */
+    running: number;
+    /** Soma das acoes AGUARDANDO em todas as filas de sessao. */
+    waiting: number;
+    /** Quantas sessoes ja tem fila instanciada (a fila nasce na 1a acao). */
+    sessions_with_queue: number;
+    /** Teto por sessao, da config — o denominador de `running`. */
+    max_concurrency: number;
+    /** Teto de espera por sessao, da config — o denominador de `waiting`. */
+    max_queue: number;
+  };
   version: string;
   contract: string;
   uptime_s: number;
@@ -589,7 +625,60 @@ export interface UploadRecord {
  * clicou" de "a política recusou" de "o humano tomou o volante" sem precisar
  * adivinhar pelo nome da ação.
  */
-export type AuditEvent = "action" | "policy" | "control" | "recovery" | "task" | "provider";
+export type AuditEvent =
+  | "action"
+  | "policy"
+  | "control"
+  | "recovery"
+  | "task"
+  | "provider"
+  /**
+   * FASE 20b — RECUSA POR CAPACIDADE.
+   *
+   * Nao cabia em nenhuma das classes anteriores, e forcar uma delas apagaria a
+   * pergunta que a classe existe para responder. `policy` seria mentira: nenhuma
+   * politica foi consultada quando o pool esta cheio — quem recusou foi o TETO,
+   * e um auditor que busca negacao de politica passaria a receber casos que a
+   * politica nunca viu. `control` e sobre quem manda na sessao, e aqui nao ha
+   * sessao. Com classe propria, "quantas sessoes foram recusadas por pressao
+   * ontem?" e um filtro por `event`, nao uma arqueologia por texto de mensagem.
+   */
+  | "backpressure";
+
+/**
+ * A lista em tempo de EXECUCAO dos valores de `AuditEvent`.
+ *
+ * POR QUE A TUPLA CRUA FICA SEPARADA DA CONSTANTE EXPORTADA: anotar direto
+ * (`const X: readonly AuditEvent[] = Object.freeze([...] as const)`) ALARGA o
+ * tipo — `(typeof X)[number]` vira `AuditEvent` e o `Exclude` abaixo daria
+ * `never` para QUALQUER lista, inclusive uma vazia. O guarda pareceria ativo e
+ * nao verificaria nada. Foi exatamente o que aconteceu com `KNOWN_EVENTS` em
+ * `router.ts`, corrigido junto nesta fase. Com a tupla intacta, o compilador
+ * reprova nas duas direcoes: valor do union que ficou de fora, e valor na lista
+ * que nao existe no union.
+ */
+const AUDIT_EVENTS_TUPLA = [
+  "action",
+  "policy",
+  "control",
+  "recovery",
+  "task",
+  "provider",
+  "backpressure",
+] as const;
+
+export const AUDIT_EVENTS: readonly AuditEvent[] = Object.freeze(AUDIT_EVENTS_TUPLA);
+
+type AuditEventFaltando = Exclude<AuditEvent, (typeof AUDIT_EVENTS_TUPLA)[number]>;
+type AuditEventSobrando = Exclude<(typeof AUDIT_EVENTS_TUPLA)[number], AuditEvent>;
+type AuditEventCobertura = [AuditEventFaltando] extends [never]
+  ? [AuditEventSobrando] extends [never]
+    ? true
+    : ["AUDIT_EVENTS declara valor que nao existe em AuditEvent", AuditEventSobrando]
+  : ["AuditEvent sem cobertura em AUDIT_EVENTS", AuditEventFaltando];
+/** So existe para o typecheck falhar quando AUDIT_EVENTS ficar para tras. */
+const _auditEventCobertura: AuditEventCobertura = true;
+void _auditEventCobertura;
 
 export type PolicyDecisionLabel = "allow" | "deny" | "not_applicable";
 

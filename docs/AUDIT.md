@@ -31,7 +31,7 @@ preenche todo campo ausente e ignora `undefined` vindo do chamador, porque
 | # | Campo | Tipo | O que responde |
 |---|---|---|---|
 | 1 | `timestamp` | string ISO | Quando. |
-| 2 | `event` | `action`\|`policy`\|`control`\|`recovery`\|`task`\|`provider` | A classe do fato. Separa "o agente clicou" de "a política recusou" de "o humano tomou o volante" sem adivinhar pelo nome da ação. |
+| 2 | `event` | `action`\|`policy`\|`control`\|`recovery`\|`task`\|`provider`\|`backpressure` | A classe do fato. Separa "o agente clicou" de "a política recusou" de "o humano tomou o volante" sem adivinhar pelo nome da ação. |
 | 3 | `session` | string\|null | Qual sessão. `null` → balde `_runtime`. |
 | 4 | `browser` | string\|null | O `BrowserContext`: estável na sessão, distinto entre sessões. |
 | 5 | `page` | string\|null | **Em qual aba.** Com 2 abas abertas, sem isto era impossível saber qual recebeu a ação. |
@@ -81,6 +81,47 @@ o valor; é o que prova o uso.
 com `session: null`, e por isso revelou que o balde `_runtime` era recusado pelo
 próprio `assertSafeSessionId`: toda linha morria no append e virava stderr.
 Corrigido em `3f62706`.
+
+**`backpressure`** (FASE 20b) — **recusa por capacidade**, hoje com um único
+produtor: `session.rejected`, quando `POST /api/v1/sessions` bate no teto do
+worker pool.
+
+*Defeito medido (soak de 100 ciclos, `evidence/nomos-browser-final-loop/20-soak/`):*
+a recusa da `SessionQueue` já virava linha — ali a sessão existe e `note()` tem
+onde escrever. A recusa de **POOL** acontece **antes de a sessão existir**: não há
+`session_id`, não há diretório, e `note()` exige `session`. As 7 recusas do regime
+BAIXO existiam **só no corpo HTTP do cliente**. "Quantas sessões foram recusadas
+por pressão ontem?" não tinha resposta dentro do runtime.
+
+A linha vai para o balde `_runtime`, o mesmo caminho de `provider.degraded`.
+Forjar um `session_id` aqui inventaria um vínculo que não existe e criaria em
+`sessions/` o diretório de uma sessão que nunca nasceu.
+
+`policy_decision` é **`not_applicable`, de propósito**: nenhuma política foi
+consultada — quem recusou foi o teto. Marcar `deny` faria toda busca por negação
+de política devolver casos que a `CapabilityEngine` nunca viu. O discriminador é
+`event`; `result` é `denied`.
+
+`detail` carrega a **evidência da pressão**: `workers_max`, `workers_ativos`,
+`sessoes_vivas`, `owner_solicitado`, `profile_solicitado`,
+`capabilities_solicitadas` (**normalizadas** — o conjunto fechado de booleanos,
+nunca eco do corpo cru), `max_concurrency`, `max_queue`, `fila_running`,
+`fila_waiting`, `route` e `http_status`. `action_id` casa a linha com o 429 que o
+cliente recebeu.
+
+**As duas recusas não se confundem, e isso é medido.** A recusa de FILA continua
+sendo linha de `event: "action"` com `result: "error"` e
+`error.code = "BACKPRESSURE_REJECTED"` na trilha **da sessão** — ela tem sessão.
+`tests/backpressure-audit.test.ts` prova que pressão de fila **não** produz linha
+`backpressure` (controle de especificidade) e que sem pressão nenhuma ela também
+não aparece (controle de vacuidade).
+
+**A lista de classes deixou de ser redigitada.** `AUDIT_EVENTS`
+(`packages/core/src/contract.ts`) é a projeção em tempo de execução do union, e o
+compilador reprova a projeção nas duas direções quando ela fica para trás. O mesmo
+guarda em `router.ts` (`KNOWN_EVENTS`) era **vácuo** até a FASE 20b: a anotação
+`readonly EventName[]` alargava o tipo e `Exclude<EventName, EventName>` dava
+`never` para qualquer lista, inclusive uma vazia. Corrigido preservando a tupla.
 
 ---
 
@@ -150,6 +191,28 @@ grep '"task":"<task_id>"' "$S"
 
 # degradação de provider (sessão null)
 grep '"event":"provider"' <sessions_root>/_runtime/actions.jsonl
+
+# quantas sessões foram recusadas por PRESSÃO DE POOL, e de quem eram (FASE 20b)
+grep '"event":"backpressure"' <sessions_root>/_runtime/actions.jsonl | wc -l
+R=<sessions_root>/_runtime/actions.jsonl
+python3 - "$R" <<XPY
+import json,sys
+n=0
+for l in open(sys.argv[1]):
+    e=json.loads(l)
+    if e["event"]!="backpressure": continue
+    n+=1; d=e["detail"]
+    print(f"{e['timestamp']}  owner={d['owner_solicitado']:<16} "
+          f"workers={d['workers_ativos']}/{d['workers_max']}  "
+          f"sessoes_vivas={d['sessoes_vivas']}  action_id={e['action_id']}")
+print(f"total de recusas de pool: {n}")
+XPY
+```
+
+Linha real de uma recusa de pool (`max_workers: 1`), **verbatim**:
+
+```json
+{"timestamp":"2026-08-25T06:30:50.347Z","event":"backpressure","session":null,"browser":null,"page":null,"task":null,"owner":"agente-beta","actor":"operador-nomos","provider":null,"action":"session.rejected","capability":null,"policy_decision":"not_applicable","policy_reason":null,"target":null,"result":"denied","verified":false,"error":{"code":"BACKPRESSURE_REJECTED","message":"worker pool cheio: 1/1 — sessão recusada em vez de enfileirada"},"detail":{"route":"sessions.create","http_status":429,"workers_max":1,"workers_ativos":1,"sessoes_vivas":1,"owner_solicitado":"agente-beta","profile_solicitado":"sandbox","capabilities_solicitadas":{"navigate":true,"read":true,"click":true,"type":true,"download":true,"upload":true,"send":false,"purchase":false,"payment":false,"delete":false},"max_concurrency":1,"max_queue":1,"fila_running":0,"fila_waiting":0},"action_id":"act_mt8adfqi_2"}
 ```
 
 Três perguntas que a trilha agora responde e antes não respondia:
@@ -157,6 +220,10 @@ Três perguntas que a trilha agora responde e antes não respondia:
 1. **Quem pediu?** `actor` — nunca `"unknown"` com sessão dona.
 2. **Em qual aba?** `page`.
 3. **Foi negado, e por quê?** `policy_decision` + `policy_reason` + `capability`.
+4. **Quantas sessões foram recusadas por pressão ontem, e de quem eram?**
+   `event: "backpressure"` no balde `_runtime` (FASE 20b). Antes disso a recusa
+   existia só no corpo HTTP do cliente — quem operasse o runtime no dia seguinte
+   não tinha onde olhar.
 
 ---
 

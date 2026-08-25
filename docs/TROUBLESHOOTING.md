@@ -160,6 +160,71 @@ nesta ordem:
 - Não "resolva" desligando `click_delivery_check`. Isso não faz o clique chegar;
   faz o runtime voltar a mentir.
 
+### Sessões (ou ações) sendo recusadas com `429 BACKPRESSURE_REJECTED`
+
+**Não é falha — é o teto funcionando.** O runtime recusa na hora em vez de
+enfileirar sem limite. O que o 429 **não** diz é *qual* teto foi batido, e são
+dois, com correções opostas.
+
+| Onde | O que estourou | Onde fica registrado |
+|---|---|---|
+| `POST /api/v1/sessions` | **pool de sessões** (`max_workers`) | `<sessions_root>/_runtime/actions.jsonl`, `event: "backpressure"`, `action: "session.rejected"` |
+| `POST /api/v1/browser.<verbo>` | **fila da sessão** (`max_concurrency` + `max_queue`) | `<sessions_root>/<session_id>/actions.jsonl`, `event: "action"`, `error.code: "BACKPRESSURE_REJECTED"` |
+
+**(1) Olhe a trilha — quantas, de quem, contra que teto**
+
+```bash
+R=<sessions_root>/_runtime/actions.jsonl
+
+# recusas de POOL, com a evidência da pressão no instante de cada uma
+grep -c '"event":"backpressure"' "$R"
+grep '"event":"backpressure"' "$R" | tail -3
+
+# recusas de FILA de uma sessão
+grep '"BACKPRESSURE_REJECTED"' <sessions_root>/<session_id>/actions.jsonl | wc -l
+```
+
+Cada linha de pool carrega `workers_ativos`/`workers_max`, `sessoes_vivas`,
+`owner_solicitado`, `fila_running`/`fila_waiting` e o `action_id` que o cliente
+recebeu no 429. Antes da FASE 20b essa recusa existia **só** no corpo HTTP: quem
+operasse o runtime no dia seguinte não tinha onde olhar.
+
+**(2) Olhe a fila AGORA**
+
+```bash
+# agregado — qualquer token OBSERVE
+curl -s -H "Authorization: Bearer $TOKEN" http://127.0.0.1:7777/health \
+  | python3 -c 'import json,sys; print(json.load(sys.stdin)["queues"])'
+
+# por sessão — exige ADMIN
+curl -s -H "Authorization: Bearer $TOKEN" http://127.0.0.1:7777/api/v1/queues
+```
+
+`sessions[].oldest_running_ms` é o número que decide o diagnóstico, e é por isso
+que ele existe: profundidade sozinha não distingue **vazão** de **travamento**.
+
+**(3) Dimensione — e mude UM de cada vez**
+
+| Sintoma medido | Causa | O que mexer |
+|---|---|---|
+| `workers_ativos == workers_max` e as sessões estão de fato trabalhando | pool pequeno para a carga | `NOMOS_BROWSER_MAX_WORKERS` ↑ |
+| `workers_ativos == workers_max` mas `sessions.total` inclui `IDLE` antigas | cliente não fecha sessão | `DELETE /api/v1/sessions/:id` no fim; o teto está certo |
+| `running == max_concurrency` e `oldest_running_ms` na casa dos **segundos** | vazão: ações rápidas se atropelando | `NOMOS_BROWSER_MAX_CONCURRENCY` ↑ **ou** `NOMOS_BROWSER_MAX_QUEUE` ↑ |
+| `running == max_concurrency` e `oldest_running_ms` na casa dos **minutos** | **worker preso** — subir teto só esconde | investigue a ação presa; ver `TARGET_NOT_ACTIONABLE` acima e o watchdog em `/health` |
+| `waiting == max_queue` o tempo todo, `running` baixo | fila curta demais para picos | `NOMOS_BROWSER_MAX_QUEUE` ↑ |
+
+**Cada worker é um `BrowserContext` do Chromium.** `max_workers` não é um número
+livre: nesta máquina (M2, 16 GB) subi-lo sem folga de memória é o caminho mais
+curto para o jetsam matar os serviços de produção — ver `scripts/lib-memoria.sh`.
+Suba de dois em dois e confira `/health` e a memória disponível entre um passo e
+outro.
+
+**`max_concurrency` e `max_queue` são POR SESSÃO**, não globais. Dobrar
+`max_concurrency` com 8 sessões vivas dobra o paralelismo dentro de cada uma.
+
+Faixas e variáveis em `docs/_gerado/CONFIGURATION.generated.md`
+(`max_workers` 1..1024, `max_concurrency` 1..1024, `max_queue` 0..100000).
+
 ### `DOWNLOAD_DENIED: download_root não configurado`
 
 **Sintoma**

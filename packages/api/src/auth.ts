@@ -120,6 +120,14 @@ export const ROUTE_SCOPE: Readonly<Record<string, Scope>> = Object.freeze({
   // runtime manda screenshot — mapa de reconhecimento de quem quer escolher por
   // onde atacar. ADMIN, no mesmo nível de `sessions.takeover`.
   "config.get": "ADMIN",
+  // FASE 20b — a profundidade da fila POR SESSAO. ADMIN pelo MESMO raciocinio de
+  // `config.get`: o agregado ("o runtime esta sob pressao?") ja sai no `/health`
+  // para qualquer OBSERVE; o que esta rota acrescenta e QUAL sessao esta presa,
+  // com quantas acoes e ha quanto tempo. Isso e mapa de atividade: lido em laco,
+  // desenha o horario de trabalho de cada agente e de cada dono. OBSERVE nao
+  // serve porque um token limitado a UMA sessao passa aqui — a rota nao nomeia
+  // sessao, entao a `session_allowlist` nao restringe nada.
+  "queues.get": "ADMIN",
   // Ler a PRÓPRIA credencial é o mínimo que qualquer portador pode fazer.
   "whoami": "OBSERVE",
   "events": "OBSERVE",

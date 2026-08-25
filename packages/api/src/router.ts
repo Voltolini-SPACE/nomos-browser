@@ -48,6 +48,11 @@ export type RouteName =
   // respondida a qualquer portador; "o que está valendo aqui?" não.
   | "config.schema"
   | "config.get"
+  // FASE 20b — PROFUNDIDADE DA FILA POR SESSAO. Rota SEPARADA de `/health` de
+  // proposito: `/health` responde a um token OBSERVE qualquer (inclusive um
+  // limitado a uma unica sessao), e a fila por sessao e mapa de ATIVIDADE alheia.
+  // Ver o comentario de `queues.get` em `ROUTE_SCOPE` e em `HealthResponse`.
+  | "queues.get"
   | "whoami"
   | "action"
   | "events";
@@ -121,6 +126,7 @@ export const ROUTES: readonly RouteSpec[] = Object.freeze([
   // de já ter aberto sessão. Nunca devolve o segredo — só o que ele PODE.
   spec("GET", `${P}/config/schema`, "config.schema", false),
   spec("GET", `${P}/config`, "config.get", false),
+  spec("GET", `${P}/queues`, "queues.get", false),
   spec("GET", `${P}/whoami`, "whoami", false),
   spec("GET", "/events", "events", false),
 ]);
@@ -236,7 +242,7 @@ export function httpStatusFor(code: ActionErrorCode): number {
  * union que só existe em tempo de compilação — `_eventCoverage` abaixo faz o
  * compilador reprovar a lista se o contrato ganhar um evento e esta esquecer.
  */
-export const KNOWN_EVENTS: readonly EventName[] = Object.freeze([
+const KNOWN_EVENTS_TUPLA = [
   "runtime.started",
   "browser.started",
   "browser.closed",
@@ -274,10 +280,29 @@ export const KNOWN_EVENTS: readonly EventName[] = Object.freeze([
   "secret.used",
   "control.taken",
   "control.returned",
-] as const);
+  "session.rejected",
+] as const;
 
-type MissingEvents = Exclude<EventName, (typeof KNOWN_EVENTS)[number]>;
-type EventCoverage = [MissingEvents] extends [never] ? true : ["EventName sem cobertura em KNOWN_EVENTS", MissingEvents];
+export const KNOWN_EVENTS: readonly EventName[] = Object.freeze(KNOWN_EVENTS_TUPLA);
+
+// DEFEITO MEDIDO (FASE 20b): este guarda era VÁCUO. `KNOWN_EVENTS` era declarado
+// como `const KNOWN_EVENTS: readonly EventName[] = Object.freeze([...] as const)`
+// — a anotação ALARGA o tipo, `(typeof KNOWN_EVENTS)[number]` virava `EventName`
+// e `Exclude<EventName, EventName>` dá `never` para QUALQUER lista, inclusive
+// uma vazia. O compilador aprovava a lista sem olhar para ela; a linha
+// "só existe para o typecheck falhar" nunca falharia. Provado removendo
+// "control.returned" da lista: com a anotação, `tsc --noEmit` passava.
+//
+// Com a TUPLA preservada (`KNOWN_EVENTS_TUPLA`, sem anotação alargadora) o
+// compilador reprova nas duas direções: evento do contrato que ficou de fora, e
+// nome na lista que o contrato não tem.
+type MissingEvents = Exclude<EventName, (typeof KNOWN_EVENTS_TUPLA)[number]>;
+type ExtraEvents = Exclude<(typeof KNOWN_EVENTS_TUPLA)[number], EventName>;
+type EventCoverage = [MissingEvents] extends [never]
+  ? [ExtraEvents] extends [never]
+    ? true
+    : ["KNOWN_EVENTS declara evento inexistente em EventName", ExtraEvents]
+  : ["EventName sem cobertura em KNOWN_EVENTS", MissingEvents];
 /** Só existe para o typecheck falhar quando KNOWN_EVENTS ficar para trás. */
 const _eventCoverage: EventCoverage = true;
 void _eventCoverage;

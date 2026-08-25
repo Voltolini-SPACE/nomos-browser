@@ -83,6 +83,10 @@ const HEALTH: HealthResponse = {
   browser: "ok",
   workers: { active: 1, max: 4 },
   sessions: { total: 1, active: 1, idle: 0, paused: 0 },
+  // FASE 20b — `queues` e obrigatorio no contrato de `/health`. O fixture da CLI
+  // acompanha o contrato; deixa-lo opcional so para nao mexer aqui faria a rota
+  // poder parar de publicar a profundidade sem nada reprovar.
+  queues: { running: 0, waiting: 0, sessions_with_queue: 1, max_concurrency: 4, max_queue: 64 },
   version: "0.1.0",
   contract: "1",
   uptime_s: 42,

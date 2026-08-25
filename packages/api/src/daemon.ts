@@ -721,6 +721,116 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
   // é justamente a contabilidade que fica mentindo quando algo morre.
   let watchdog: HealthWatchdog | null = null;
 
+  /**
+   * FASE 20b — a soma das filas de sessao. Ver `HealthResponse.queues` para o
+   * porque de so o AGREGADO sair no `/health`.
+   */
+  const filaAgregada = (): HealthResponse["queues"] => {
+    let running = 0;
+    let waiting = 0;
+    for (const q of queues.values()) {
+      running += q.running;
+      waiting += q.waiting;
+    }
+    return {
+      running,
+      waiting,
+      sessions_with_queue: queues.size,
+      max_concurrency: config.max_concurrency,
+      max_queue: config.max_queue,
+    };
+  };
+
+  /**
+   * FASE 20b — A RECUSA DE POOL DEIXA LINHA NA TRILHA.
+   *
+   * DEFEITO MEDIDO (soak de 100 ciclos, `evidence/.../20-soak`): a recusa em
+   * `POST /api/v1/sessions` por pool cheio existia SO no corpo HTTP do cliente.
+   * A recusa da `SessionQueue` (acao) ja virava linha — ali a sessao existe e
+   * `services.note` tem onde escrever. Aqui a sessao AINDA NAO EXISTE: nao ha
+   * `session_id`, nao ha diretorio, e `services.note` exige `session`. Resultado:
+   * "quantas sessoes foram recusadas por pressao ontem?" nao tinha resposta
+   * dentro do runtime — so no log de quem chamou, se ele tivesse guardado.
+   *
+   * A linha vai para o balde `_runtime` (`session: null`), o mesmo caminho que
+   * `provider.degraded` usa desde a FASE 5. Forjar um `session_id` aqui
+   * inventaria um vinculo que nao existe e criaria em `sessions/` o diretorio de
+   * uma sessao que nunca nasceu — poluindo a listagem e o replay.
+   *
+   * `policy_decision` fica `not_applicable` DE PROPOSITO. Nenhuma politica foi
+   * consultada: quem recusou foi o teto de capacidade. Marcar `deny` faria toda
+   * busca por negacao de politica devolver casos que a `CapabilityEngine` nunca
+   * viu. O discriminador e `event: "backpressure"`; `result: "denied"` diz que o
+   * pedido foi recusado, nao que algo quebrou.
+   *
+   * `capabilities` entra NORMALIZADA (`normalizeCapabilities`), nunca o objeto
+   * cru do corpo: o cliente escreve o que quiser ali, e a trilha nao e lugar
+   * para eco de entrada nao validada. Normalizado, o valor e um conjunto fechado
+   * de booleanos — nao ha o que vazar.
+   */
+  const auditarRecusaDePool = async (
+    erro: unknown,
+    pedido: { owner: string; profile: string | null; capabilities: Capabilities | null },
+    ator: string,
+    action_id: string,
+  ): Promise<void> => {
+    const err = toActionError(erro);
+    if (err.code !== "BACKPRESSURE_REJECTED") return;
+    const stats = sessions.poolStats();
+    await services.record(
+      makeAuditEntry({
+        event: "backpressure",
+        action: "session.rejected",
+        session: null,
+        // Sem sessao, `owner` seria null para sempre. O dono PEDIDO e a resposta
+        // mais proxima de "de quem seria esta sessao" — e sem ele a linha nao
+        // responde a pergunta operacional ("quem esta batendo no teto?").
+        // `detail.owner_solicitado` repete o valor para que ninguem confunda o
+        // dono de uma sessao viva com o dono de uma sessao que nao nasceu.
+        owner: pedido.owner,
+        actor: ator,
+        capability: null,
+        policy_decision: "not_applicable",
+        policy_reason: null,
+        target: null,
+        result: "denied",
+        verified: false,
+        action_id,
+        error: { code: err.code, message: err.message },
+        detail: {
+          route: "sessions.create",
+          http_status: httpStatusFor("BACKPRESSURE_REJECTED"),
+          workers_max: stats.workers.max,
+          workers_ativos: stats.workers.active,
+          sessoes_vivas: stats.sessions.total,
+          owner_solicitado: pedido.owner,
+          profile_solicitado: pedido.profile,
+          capabilities_solicitadas: pedido.capabilities,
+          max_concurrency: config.max_concurrency,
+          max_queue: config.max_queue,
+          // A pressao das FILAS no mesmo instante da recusa de POOL. Sao tetos
+          // diferentes (pool = sessoes vivas; fila = acoes por sessao) e a
+          // pergunta "estava tudo travado ou so cheio de sessoes ociosas?" so tem
+          // resposta se os dois numeros forem gravados juntos.
+          fila_running: filaAgregada().running,
+          fila_waiting: filaAgregada().waiting,
+        },
+      }),
+    );
+    // Ao vivo, para quem observa pelo WebSocket em vez de ler o arquivo.
+    bus.publish("session.rejected", {
+      source: ator,
+      action_id,
+      payload: {
+        code: err.code,
+        owner: pedido.owner,
+        workers_max: stats.workers.max,
+        workers_ativos: stats.workers.active,
+        sessoes_vivas: stats.sessions.total,
+      },
+    });
+  };
+
   const health = (): HealthResponse => {
     const stats = sessions.poolStats();
     // FASE 13 — o vigia aparece no /health.
@@ -740,6 +850,7 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
       browser,
       workers: stats.workers,
       sessions: stats.sessions,
+      queues: filaAgregada(),
       version: config.version,
       contract: CONTRACT_VERSION,
       uptime_s: Math.round((Date.now() - startedAt) / 1000),
@@ -785,6 +896,15 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
     principal: string,
     /** A credencial já autenticada. `whoami` a lê; ninguém mais precisa dela. */
     tokenAtual: TokenRecord,
+    /**
+     * FASE 20b — o `action_id` que sai no envelope de erro desta requisição.
+     *
+     * Sem ele, a linha de trilha da recusa de pool teria `action_id: null` e o
+     * operador não conseguiria casar "o cliente recebeu 429 com action_id X" com
+     * "há uma linha de recusa na trilha" — teria de correlacionar por timestamp,
+     * que é justamente o que falha quando várias recusas caem no mesmo segundo.
+     */
+    action_id: string,
   ): Promise<unknown> {
     // Quem PEDIU a operação de controle. O header do cliente ganha do sujeito
     // do token porque é o mais específico dos dois; nunca cai em "unknown".
@@ -821,6 +941,35 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
           // cabem, em campos diferentes.
           runtime: { port: boundPort, bind: `${config.host}:${boundPort}` },
         };
+      // FASE 20b — A FILA, POR SESSAO E AGREGADA.
+      //
+      // `/health` publica so o agregado (ver `HealthResponse.queues`). Esta rota
+      // e onde mora o detalhe, e por isso e ADMIN — ver o comentario em
+      // `ROUTE_SCOPE`. `oldest_running_ms` viaja junto porque profundidade sem
+      // idade nao distingue "10 acoes rapidas passando" de "1 acao presa ha 4
+      // minutos segurando as outras 9": os dois casos mostram o mesmo numero e
+      // pedem correcoes opostas (subir teto vs. matar o worker preso).
+      case "queues.get": {
+        const stats = sessions.poolStats();
+        const agora = Date.now();
+        return {
+          workers: stats.workers,
+          sessions_pool: stats.sessions,
+          aggregate: filaAgregada(),
+          // A fila NASCE na primeira acao da sessao (`queueFor`). Sessao criada e
+          // ainda ociosa nao aparece aqui, e isso e a verdade: ela nao tem fila.
+          sessions: [...queues.entries()]
+            .map(([sid, q]) => ({
+              session_id: sid,
+              running: q.running,
+              waiting: q.waiting,
+              max_concurrency: q.concurrency,
+              max_queue: q.maxQueue,
+              oldest_running_ms: q.oldestRunningMs(agora),
+            }))
+            .sort((a, b) => a.session_id.localeCompare(b.session_id)),
+        };
+      }
       case "whoami": {
         // O SEGREDO NUNCA SAI DAQUI. Só identidade, poderes e prazo — que é
         // exatamente o que um cliente precisa para se autolimitar, e nada do
@@ -852,15 +1001,35 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
           throw new ApiError("INVALID_REQUEST", "owner é obrigatório");
         }
         const caps = capabilitiesFromBody(body);
-        const info = await sessions.createSession({
-          owner,
-          ...(typeof body.profile === "string" ? { profile: body.profile } : {}),
-          ...(caps !== undefined ? { capabilities: normalizeCapabilities(caps) } : {}),
-          ...(typeof body.headless === "boolean" ? { headless: body.headless } : {}),
-          ...(typeof body.url === "string" ? { url: body.url } : {}),
-          ...(typeof body.task === "string" ? { task: body.task } : {}),
-          client: typeof body.client === "string" ? body.client : client,
-        });
+        const capsNormalizadas = caps !== undefined ? normalizeCapabilities(caps) : null;
+        let info: SessionInfo;
+        try {
+          info = await sessions.createSession({
+            owner,
+            ...(typeof body.profile === "string" ? { profile: body.profile } : {}),
+            ...(capsNormalizadas !== null ? { capabilities: capsNormalizadas } : {}),
+            ...(typeof body.headless === "boolean" ? { headless: body.headless } : {}),
+            ...(typeof body.url === "string" ? { url: body.url } : {}),
+            ...(typeof body.task === "string" ? { task: body.task } : {}),
+            client: typeof body.client === "string" ? body.client : client,
+          });
+        } catch (e) {
+          // FASE 20b — a recusa por pool cheio para de existir so no corpo HTTP.
+          // A auditoria vem ANTES do rethrow: se lancasse primeiro, o `catch` do
+          // servidor ja teria respondido e nada aqui rodaria. Erro que NAO seja
+          // BACKPRESSURE_REJECTED passa intocado — `auditarRecusaDePool` filtra.
+          await auditarRecusaDePool(
+            e,
+            {
+              owner,
+              profile: typeof body.profile === "string" ? body.profile : null,
+              capabilities: capsNormalizadas,
+            },
+            ator,
+            action_id,
+          );
+          throw e;
+        }
         await snapshot(info.session_id);
         // FASE 10 — QUEM CRIA, MANDA. O lease exclusivo é concedido no mesmo
         // ato da criação. Sem isto, com `allow_unleased: false`, o cliente
@@ -1910,6 +2079,7 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
           url.searchParams,
           principal,
           autenticado.token,
+          action_id,
         );
         jsonResponse(res, route.name === "sessions.create" ? 201 : 200, result);
       } catch (e) {
