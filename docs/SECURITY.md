@@ -174,3 +174,33 @@ detecção de CAPTCHA em T9.*
 Não usar produção financeira como laboratório. Não executar pagamento real. Não
 excluir dado real. Não publicar conteúdo real. Não alterar sistema externo fora de
 ambiente controlado.
+
+---
+
+## T11 — Elevação de privilégio pela fronteira MCP
+
+**Encontrada em produção, não em teoria.** O manifesto MCP declara um nível de
+risco **por ferramenta**. Uma ferramenta que despacha mais de uma rota carrega,
+na prática, o nível da **pior** delas — e o rótulo declarado passa a mentir.
+
+`browser_tabs` era uma ferramenta com quatro rotas (`browser.tabs`,
+`browser.new_tab`, `browser.switch_tab`, `browser.close_tab`) declarada
+`A0_READ_LOCAL`. Com o manifesto registrado, o NOMOS deu `ALLOW` e a chamada
+abriu uma aba numa URL — egresso de rede sob um rótulo de leitura local, sem
+aprovação humana. Evidência:
+`evidence/nomos-browser-final-closeout/01-mcp/03-exploit-tabs.txt`.
+
+**Mitigação.** Uma ferramenta, uma rota, uma classe de risco — as quatro rotas
+viraram quatro ferramentas, cada uma no seu nível. E, para que a regra não
+dependa de disciplina humana, `scripts/verificar-risco-mcp.ts` classifica as 23
+rotas do runtime em leitura / mutação / egresso, extrai de `tools.ts` o que cada
+ferramenta alcança, e reprova o manifesto quando uma `A0` puder mutar ou sair
+para a rede. Roda na CI, validado por controle negativo.
+
+**Estado: FECHADA**, com guarda executável contra reincidência.
+
+**Resíduo declarado.** O guarda protege a fronteira MCP. Ele não substitui o
+capability engine nem o lease do runtime — que continuam valendo e foram
+reverificados: ver os seis invariantes em
+`evidence/nomos-browser-final-closeout/05-antibypass/`.
+

@@ -23,6 +23,86 @@ Legenda usada nos itens:
 
 ## [Não lançado]
 
+### `0ebfe30` · `82c347c` · `aae1900` · `1e6baf7` — Closeout: elevação de privilégio pelo MCP, sessão durável, Gi ativada (2026-08-25)
+
+O dono registrou o manifesto no catálogo do NOMOS. Foi o CLI **real** — e não o
+cliente que havíamos reimplementado — que expôs os dois defeitos abaixo na
+primeira hora de uso. A exigência de "não vale cliente reimplementado como prova
+final" foi exatamente o que os encontrou.
+
+#### Corrigido — ⚠ INCOMPATÍVEL · segurança (P0)
+- **Elevação de privilégio pelo manifesto MCP.** `browser_tabs` estava declarada
+  `A0_READ_LOCAL` e despachava quatro rotas, incluindo `browser.new_tab` (que
+  aceita `url` e sai para a rede) e `browser.close_tab`. O manifesto classifica
+  por **ferramenta**, nunca por argumento — então o rótulo "ler arquivos locais"
+  valia para o pior que a ferramenta sabia fazer. Executado contra o NOMOS real,
+  headless, sem aprovação nenhuma:
+
+  ```
+  A0 · ler arquivos locais · alvo=mcp:nomos-browser:browser_tabs
+  veredito: ALLOW — permitido pela política
+  route=browser.new_tab http=200
+  { "url": "http://127.0.0.1:8899/segredo", "title": "Alvo /segredo" }
+  ```
+
+  Correção: uma ferramenta, uma rota, uma classe de risco.
+
+  | ferramenta | rota | nível |
+  |---|---|---|
+  | `browser_tabs` | `browser.tabs` (só listar) | `A0_READ_LOCAL` |
+  | `browser_tab_open` | `browser.new_tab` | `A2_NET_EGRESS` |
+  | `browser_tab_switch` | `browser.switch_tab` | `A1_WRITE_LOCAL` |
+  | `browser_tab_close` | `browser.close_tab` | `A1_WRITE_LOCAL` |
+
+  **Quem chamava `browser_tabs` com `action`/`url` precisa migrar**: a ferramenta
+  agora recusa esses argumentos.
+  Evidência: `evidence/nomos-browser-final-closeout/01-mcp/03-exploit-tabs.txt`.
+
+#### Corrigido — P1
+- **A sessão não sobrevivia ao modelo one-shot do NOMOS.** `nomos mcp chamar`
+  sobe o servidor, chama e encerra. Duas chamadas seguidas produziam duas sessões
+  (`SESSOES_VIVAS=2` acumuladas) e `browser_extract` depois de abrir uma aba
+  devolvia `TARGET_NOT_FOUND`, porque a sessão era outra, em `about:blank`. Pelo
+  caminho canônico o produto era inutilizável para trabalho de mais de um passo,
+  e vazava Chromium por chamada. Agora a sessão é persistida em
+  `<runtime_dir>/mcp-session.json` com escrita atômica e trava contra corrida;
+  processos one-shot distintos compartilham a mesma sessão.
+
+#### Adicionado
+- `scripts/verificar-risco-mcp.ts`: guarda que classifica as 23 rotas do runtime
+  em leitura, mutação e egresso, extrai de `tools.ts` as rotas que cada
+  ferramenta alcança, e **reprova o manifesto** se uma ferramenta `A0` puder
+  mutar ou sair para a rede. Roda na CI. Validado por controle negativo:
+  rebaixar `browser_tab_open` para `A0` produz `MCP_RISK_COHERENT=NO` com `rc=1`.
+- Bateria de anti-bypass com seis invariantes do plano de controle, cada um com
+  controle positivo **e** negativo:
+  `evidence/nomos-browser-final-closeout/05-antibypass/`.
+
+#### Mudado
+- **Gi ativada.** `build_dispatcher()` do `pocket-assistant` registra as quatro
+  capabilities `navegador_*`, com a categoria vinda **do manifesto**. O backend
+  `com.gijarvis.backend` foi reiniciado. O E2E prova
+  `Gi → NOMOS → MCP → API v1 → Chromium → resultado → Gi` para `A0`, e prova —
+  conferindo no próprio navegador — que `A2` **não executa** sem o dono.
+
+#### Nota operacional
+- Mudar o manifesto muda o SHA-256, que **é** a confiança registrada. Depois
+  desta correção o NOMOS voltou a tratá-lo como experimental (fail-closed,
+  correto) e o dono precisa reassinar:
+  `nomos mcp confiar packaging/mcp/manifesto.json`.
+  Impressão nova: `317f15893e9ebd83afa17d11f66dd896c83342858ad723e0f4ed7afd32e27207`.
+- O **gateway de voz** da Gi (processo `gi_nomos.device_voice_gateway`) roda
+  órfão, fora do launchd, e nenhum plist o referencia. Ele **não** foi
+  reiniciado: sem supervisor, reiniciá-lo é derrubar o assistente sem garantia de
+  volta. É passo do dono.
+
+#### Medido neste HEAD
+`ci.sh all` → `CI_PASS=YES` · suíte Node **735/735** em 35 arquivos ·
+SDK Python **31/31** · E2E **20/20** (223 checagens) · segurança **53 vetores**,
+`OPEN_SECURITY_P1=0` · anti-bypass **6/6** · zero processo residual ·
+produção com os mesmos PIDs.
+
+
 ### `78491cc` — Integração canônica com o NOMOS e binding da Gi (2026-08-25)
 
 #### Adicionado

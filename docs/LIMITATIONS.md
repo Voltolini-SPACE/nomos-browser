@@ -201,3 +201,47 @@ Divergência aberta e não reconciliada: o corpo do `BRANDBOOK_NOMOS.md` afirma
 ausência de escolha, não uma decisão nova. Escolher MIT/Apache-2.0/AGPL é ato do
 dono. Não há nenhuma tag no repositório e `package.json` é `"private": true`:
 **nada foi lançado**. Ver `LICENSE`, `CHANGELOG.md` e `docs/RELEASE.md`.
+
+---
+
+## Integração MCP — o registro é do dono, e ele expira com o manifesto
+
+A confiança que o NOMOS grava em `~/.nomos/mcp_catalogo.json` é o **SHA-256 do
+manifesto normalizado** (`nome`, `comando`, `nivel_padrao`, `tools`). Qualquer
+mudança nesses quatro campos — inclusive uma que **aumenta** a segurança, como
+dividir uma ferramenta para tirar egresso de baixo de um rótulo `A0` — muda a
+impressão e faz o servidor voltar a `experimental`. O NOMOS então recusa
+`conectar` e `chamar`, fail-closed.
+
+Isso não é defeito: é o mecanismo funcionando. Mas tem consequência operacional
+real — **toda correção que mexe na classificação exige reassinatura do dono**, e
+até lá a integração fica parada. Planeje mudanças de manifesto em lote.
+
+`descricao` e `env` ficam fora do hash e podem mudar livremente.
+
+## O que roda sem o dono, e o que não roda
+
+Com a `policy.json` de referência (`A0_READ_LOCAL: ALLOW`, o resto
+`REQUIRE_APPROVAL`, `A6: DENY`, `fail_closed: true`) e `gate()` negando sem
+aprovador presente:
+
+| Ferramentas | Categoria | Headless |
+|---|---|---|
+| `browser_observe`, `browser_find`, `browser_extract`, `browser_tabs`, `browser_screenshot` | `A0_READ_LOCAL` | **sim** |
+| `browser_tab_switch`, `browser_tab_close` | `A1_WRITE_LOCAL` | não |
+| `browser_navigate`, `browser_tab_open`, `browser_click`, `browser_type`, `browser_press`, `browser_scroll`, `browser_download`, `browser_upload` | `A2_NET_EGRESS` | não |
+| `browser_task` | `A5_CODE_EXEC` | não |
+
+`nomos mcp chamar` **não tem `--panel`**: para as categorias acima de `A0` a
+aprovação só acontece num terminal do dono. Uma automação headless que precise
+navegar tem de ser desenhada sabendo disso — ou o dono muda a política dele,
+que é decisão dele e não do produto.
+
+## Gateway de voz da Gi — sem supervisor
+
+O processo `gi_nomos.device_voice_gateway` roda **órfão** (`PPID=1`), fora do
+launchd, e nenhum plist o referencia. Ele não é reiniciado automaticamente. As
+ferramentas `navegador_*` registradas no dispatcher só chegam ao caminho de voz
+depois que o dono o reinicia — e, enquanto não houver um LaunchAgent para ele,
+esse reinício é manual e sem rede de segurança.
+
