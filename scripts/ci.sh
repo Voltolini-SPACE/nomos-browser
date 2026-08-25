@@ -73,7 +73,7 @@ FALHAS=0
 # ─────────────────────────────────────────────────────────────────────────────
 E_FAST="bench lease observability replay-hardening skills traceability ui-build config-schema"
 E_CORE="session perception pointer-keyboard target-verifier"
-E_SECURITY="auth policy-vault ownership injection-wired security-files-secrets security-net-injection"
+E_SECURITY="auth policy-vault ownership injection-wired security-files-secrets security-net-injection autonomy"
 E_PROVIDERS="aiprovider vision providers-runtime cascata-percepcao"
 E_INTEGRATION="api mcp sdk-ts cli task-engine click-entrega audit-forense backpressure-audit"
 E_ADVERSARIAL="security-net-injection security-files-secrets injection-wired watchdog-wired recovery-watchdog"
@@ -302,6 +302,22 @@ if roda security; then
   # fontes (o campo `routes` e as chamadas `call(...)` no corpo), então acrescentar
   # um `if` novo no `build` sem reclassificar a tool reprova aqui.
   checar "mcp:risco-por-tool-coerente" node scripts/verificar-risco-mcp.ts
+
+  # FASE 100/live-agent — a tabela de risco por rota tem de cobrir o contrato
+  # INTEIRO. Uma tabela que silenciosamente nao cobre uma rota nova e pior que
+  # tabela nenhuma: da a sensacao de proteger. Fail-closed cobre o buraco em
+  # runtime; este guarda o impede de existir.
+  checar "autonomia:tabela-cobre-o-contrato" node --input-type=module -e '
+    const { PERFIL_DA_ROTA, rotasQueSempreAprovam, decidir } = await import("./packages/core/src/autonomy.ts");
+    const { ACTION_CLASS } = await import("./packages/core/src/contract.ts");
+    const faltando = Object.keys(ACTION_CLASS).filter((r) => PERFIL_DA_ROTA[r] === undefined);
+    if (faltando.length > 0) { console.error("rotas sem perfil: " + faltando.join(", ")); process.exit(1); }
+    const fantasma = Object.keys(PERFIL_DA_ROTA).filter((r) => ACTION_CLASS[r] === undefined);
+    if (fantasma.length > 0) { console.error("perfis fantasmas: " + fantasma.join(", ")); process.exit(1); }
+    const vazou = rotasQueSempreAprovam().filter((r) => decidir(r, "AUTO").efeito !== "PEDIR_APROVACAO");
+    if (vazou.length > 0) { console.error("AUTO liberou aprovacao obrigatoria: " + vazou.join(", ")); process.exit(1); }
+    if (rotasQueSempreAprovam().length === 0) { console.error("nenhuma rota exige aprovacao — o guarda seria vacuoso"); process.exit(1); }
+    process.exit(0)'
 
   # FASE 100 — `$VAR…` não é `${VAR}…`. O `…` é multibyte: o bash não encerra o
   # nome ali, tenta expandir `VAR\xe2\x80\xa6`, e sob `set -u` o script MORRE.

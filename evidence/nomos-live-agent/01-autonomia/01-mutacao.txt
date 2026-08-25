@@ -1,0 +1,27 @@
+=== MUTACAO 1: AUTO rebaixa SEMPRE_APROVAR (o bypass que a missao proibe) ===
+ℹ pass 12
+ℹ fail 3
+✖ failing tests:
+
+=== MUTACAO 2: rota desconhecida vira AUTOMATICO (fail-open) ===
+ℹ pass 14
+ℹ fail 1
+✖ failing tests:
+
+=== MUTACAO 3: tirar uma rota da tabela (cobertura cega?) ===
+ℹ pass 14
+ℹ fail 1
+✖ failing tests:
+
+=== RESTAURADO ===
+ℹ pass 15
+ℹ fail 0
+=== o guarda novo pega o defeito? (controle negativo no repo real) ===
+test:autonomy                                 OK
+autonomia:tabela-cobre-o-contrato             OK
+--- agora com uma rota removida da tabela ---
+autonomia:tabela-cobre-o-contrato             FALHOU
+    rotas sem perfil: browser.press
+--- restaurado ---
+test:autonomy                                 OK
+autonomia:tabela-cobre-o-contrato             OK
