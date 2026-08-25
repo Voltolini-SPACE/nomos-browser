@@ -19,35 +19,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
---------------------------------------------------------------------------
-NOTA SOBRE A ESCOLHA / NOTE ON THIS CHOICE
---------------------------------------------------------------------------
-
-Até 2026-08-25 este arquivo declarava "todos os direitos reservados" e trazia
-um titular PLACEHOLDER, derivado mecanicamente do autor do commit HEAD. Nenhum
-agente tem autoridade para escolher titular de direitos autorais nem licença.
-
-Ambos foram decididos pelo dono nesta data:
-
-    titular  : Voltolini-SPACE
-    licença  : MIT
-
-A escolha alinha o NOMOS Browser ao restante do ecossistema (NOMOS e OpenKern
-também são MIT).
-
-A cópia anterior, proprietária, está preservada em
-evidence/nomos-release/00-freeze/LICENSE-anterior-proprietario.txt — o histórico
-do estado legal faz parte da evidência do projeto.
-
---------------------------------------------------------------------------
-MARCA / TRADEMARK
---------------------------------------------------------------------------
-
-A licença MIT cobre o CÓDIGO. Ela não concede direito sobre as marcas "NOMOS",
-"NOMOS Browser" nem sobre os tokens de identidade visual, que são governados
-pelo contrato de marca do ecossistema e NÃO são versionados neste repositório.
-
-The MIT license above covers the CODE. It grants no rights to the "NOMOS" or
-"NOMOS Browser" trademarks or to the visual identity tokens, which are governed
-separately and are not versioned in this repository.

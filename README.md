@@ -331,11 +331,11 @@ contrato de governança. Ver [`docs/BRAND.md`](docs/BRAND.md).
 
 ## Licença
 
-**MIT.** Ver [`LICENSE`](LICENSE).
+**MIT.** Ver [`LICENSE`](LICENSE). Titular: **Voltolini-SPACE**.
 
-Titular: **Voltolini-SPACE**. A licença cobre o **código**; ela não concede
-direito sobre as marcas "NOMOS" e "NOMOS Browser" nem sobre os tokens de
-identidade visual, que são governados à parte e não são versionados aqui.
+A licença cobre o **código**. Ela não concede direito sobre as marcas "NOMOS" e
+"NOMOS Browser" nem sobre os tokens de identidade visual, que são governados à
+parte e não são versionados aqui. Detalhes em [`NOTICE.md`](NOTICE.md).
 
 Até 2026-08-25 este repositório declarava "todos os direitos reservados" com um
 titular placeholder. As duas coisas eram decisão do dono, e foram decididas.
