@@ -1,0 +1,25 @@
+=== GIT ===
+HEAD=b7d84a99a6f3b731241529ddd47f71a6c081d0e8
+HEAD_CURTO=b7d84a9
+TAG_GA=v0.2.0 -> e9a847c
+VERSAO=0.2.0
+BRANCH=main
+REMOTES=[]
+SUJEIRA_RASTREADA=0
+STATUS=1
+
+=== SERVICOS E PIDS ===
+1003	0	ai.sovereign.ollama
+12728	0	ai.sovereign.omniroute
+69404	-9	br.com.se7enpay.nomos.servico
+78103	-15	com.gi.nomos.gateway
+51446	-15	com.gijarvis.backend
+83034	-9	com.nomos.panel
+1032	0	com.se7enpay.command-center
+-	1	com.se7enpay.command-center.mom-canonical-check
+-	0	com.se7enpay.crmsync
+1048	0	com.se7enpay.resumo
+-	0	com.se7enpay.tpv.mom.canonical
+
+=== RESIDUO NOMOS BROWSER ===
+daemons=0 chromium=0 mcp=0

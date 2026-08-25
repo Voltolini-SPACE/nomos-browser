@@ -1,0 +1,37 @@
+=== packages/ui — o que ja existe ===
+packages/ui/dist/index.html
+packages/ui/serve.ts
+packages/ui/package.json
+packages/ui/build.ts
+packages/ui/src/app.html
+
+TAMANHO:
+ 68K	packages/ui
+
+=== package.json do ui ===
+{
+  "name": "@nomos/browser-ui",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "license": "SEE LICENSE IN LICENSE",
+  "engines": {
+    "node": ">=22.6.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+file:../..",
+    "directory": "packages/ui"
+  },
+  "description": "NOMOS Web — pagina de operacao. `build.ts` injeta os tokens do brandbook; `dist/` e artefato e nao e versionado.",
+  "main": "./serve.ts",
+  "exports": {
+    ".": "./serve.ts",
+    "./build": "./build.ts"
+  },
+  "files": [
+    "src",
+    "build.ts",
+    "serve.ts"
+  ]
+}
