@@ -247,6 +247,10 @@ export const HTTP_STATUS: Readonly<Record<ActionErrorCode, number>> = Object.fre
   // 408 Request Timeout: o servidor esperou o cliente/humano e desistiu. 504
   // seria culpar um upstream que nao existe — quem nao respondeu foi a pessoa.
   APPROVAL_TIMEOUT: 408,
+  // 409: o recurso existe e a credencial esta boa; o ESTADO e' que conflita
+  // com o pedido. Mesma familia de CONTROL_HELD_BY_HUMAN, e resolvivel pelo
+  // proprio cliente — basta observar antes.
+  REOBSERVE_REQUIRED: 409,
   BROWSER_UNAVAILABLE: 503,
   UPLOAD_DENIED: 403,
   DOWNLOAD_DENIED: 403,

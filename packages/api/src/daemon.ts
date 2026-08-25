@@ -49,6 +49,7 @@ import {
   type SessionState,
   type VerificationResult,
   type VisionProvider,
+  ACTION_CLASS,
 } from "../../core/src/contract.ts";
 import { agentFromAIProvider, type AIProvider } from "../../core/src/aiprovider.ts";
 import { buildAiProvider, buildVisionProvider, descreverProviders } from "./providers.ts";
@@ -658,6 +659,11 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
   // sobrevivesse a um restart seria uma aprovação que ninguém está olhando, e
   // executá-la depois seria pior do que pedir de novo.
   const autonomia = new GovernoDeAutonomia();
+  // Sessões governadas que voltaram de um controle humano e ainda não olharam
+  // a página de novo. Só governadas: exigir isto de toda sessão mudaria o
+  // contrato de quem nunca pediu Live Agent — inclusive dos testes que já
+  // fazem takeover→release→agir.
+  const precisaReobservar = new Set<string>();
   const aprovacoes = new RegistroDeAprovacoes();
 
   const services = new RuntimeServices({
@@ -1139,6 +1145,7 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
         // aprovação de sessão fechada é uma aprovação que não pode mais
         // executar coisa nenhuma.
         autonomia.esquecer(id);
+        precisaReobservar.delete(id);
         aprovacoes.negarPendentes(id, "session.closed");
         // O contexto é lido ANTES do fechamento: depois dele `sessions.get` já
         // não devolve dono nem context_id, e a linha sairia oca.
@@ -1552,6 +1559,16 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
       case "sessions.release": {
         const quem = typeof body.actor === "string" ? body.actor : "human";
         const devolvida = await sessions.release(params.id!, quem);
+        // O humano mexeu na página. Devolver o volante NÃO devolve o
+        // conhecimento: o agente precisa OLHAR antes de agir. Sem esta marca,
+        // ele continuaria do modelo mental de antes do takeover — que é
+        // exatamente o cenário em que se clica onde o botão ESTAVA.
+        if (autonomia.modoDe(params.id!) !== null) {
+          precisaReobservar.add(params.id!);
+        }
+        services.emit("owner.changed", params.id!, null,
+          { de: "human", para: devolvida.owner, motivo: "release", reobservacao_exigida: precisaReobservar.has(params.id!) },
+          quem);
         await services.note({
           session: devolvida.session_id,
           event: "control",
@@ -1867,6 +1884,32 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
         fail(action_id, info.status, "CONTROL_HELD_BY_HUMAN", message, t.done(), { session_id }),
       );
       return;
+    }
+
+    // 2b. REOBSERVAÇÃO — depois de um controle humano, o agente OLHA antes de agir.
+    if (precisaReobservar.has(session_id)) {
+      const classe = ACTION_CLASS[tool];
+      if (classe === "OBSERVE") {
+        // Olhou. O conhecimento está fresco de novo.
+        precisaReobservar.delete(session_id);
+      } else {
+        const message =
+          "o humano esteve no controle desta sessão; observe a página antes de agir " +
+          "(browser.observe, browser.extract, browser.find, browser.screenshot ou browser.tabs)";
+        await services.record(
+          auditEntryFor(req, "denied", false, { code: "REOBSERVE_REQUIRED", classe }, {
+            event: "policy",
+            action: "policy.deny",
+            capability,
+            policy_decision: "deny",
+            policy_reason: `REOBSERVE_REQUIRED: ${message}`,
+            error: { code: "REOBSERVE_REQUIRED", message },
+          }),
+        );
+        jsonResponse(res, httpStatusFor("REOBSERVE_REQUIRED"),
+          fail(action_id, info.status, "REOBSERVE_REQUIRED", message, t.done(), { tool, session_id }));
+        return;
+      }
     }
 
     // 3. AUTONOMIA E APROVAÇÃO — o último portão antes do Chromium.

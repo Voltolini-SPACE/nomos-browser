@@ -1,0 +1,15 @@
+# daemon :7796 · sessão ses_292a3190bde443fd
+[PASS] 0. sessão governada em AUTO — AUTO
+[PASS] 0b. e o agente age normalmente — CLICADO
+[PASS] 1. ASSUMIR CONTROLE transfere o volante — http=200 control=human
+[PASS] 2. e o runtime declara USER_CONTROL — USER_CONTROL
+[PASS] 3. AGENT_ACTION_DURING_USER_CONTROL=0 — nem leitura passa — 0 de 4 passaram
+[PASS] 4. DEVOLVER PARA A GI devolve o volante — http=200 control=agent
+[PASS] 5. agir SEM reobservar é recusado — o modelo mental está vencido — http=409 code=REOBSERVE_REQUIRED
+[PASS] 6. observar é permitido — é justamente o que se exige — http=200
+[PASS] 7. e DEPOIS de observar o agente volta a agir — http=200
+[PASS] 8. e o que ele vê agora é a página NOVA, não a de antes — MEXIDA-PELO-HUMANO
+[PASS] 9. CONTROLE NEGATIVO — sessão não governada segue como sempre foi — http=200 (exigência nova não pode mudar quem nunca pediu Live Agent)
+
+FALHAS=0
+TAKEOVER_HANDOFF=PASS

@@ -104,6 +104,11 @@ export type ActionErrorCode =
   // NUNCA vira permissao. Separado de APPROVAL_DENIED porque "disseram nao" e
   // "nao havia ninguem" sao diagnosticos diferentes.
   | "APPROVAL_TIMEOUT"
+  // O humano assumiu o controle, mexeu na pagina e devolveu. O agente NAO pode
+  // continuar de onde parou: o que ele "sabe" da tela e' de antes, e agir sobre
+  // um modelo mental vencido e' como clicar de olhos fechados no lugar onde o
+  // botao ESTAVA. Antes de agir de novo, ele OLHA.
+  | "REOBSERVE_REQUIRED"
   | "BROWSER_UNAVAILABLE"
   | "UPLOAD_DENIED"
   | "DOWNLOAD_DENIED"
