@@ -1,4 +1,4 @@
-# daemon :7796 · sessão ses_c7381c3ae2504509
+# daemon :7796 · sessão ses_8447707c9be141d4
 [PASS] 0. sessão governada em AUTO — AUTO
 [PASS] 0b. e o agente age normalmente — CLICADO
 [PASS] 1. ASSUMIR CONTROLE transfere o volante — http=200 control=human

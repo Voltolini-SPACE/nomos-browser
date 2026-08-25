@@ -1,0 +1,19 @@
+── 1. padroes de segredo em arquivos VERSIONADOS
+  nenhum formato de credencial encontrado
+── 2. token de controle do runtime nunca versionado
+  ok: control-token nao esta no git
+── 3. caminhos pessoais em arquivos de PRODUTO (nao evidencia)
+  caminhos absolutos em:
+      scripts/verificar-segredos-publicos.sh
+── 4. dados de sessao/perfil de navegador versionados
+  ok
+── 5. o canario dos testes de segredo vazou para o git?
+  canarios (esperado em evidencia, nunca em produto):
+      evidence/nomos-live-agent/06-segredos/01-antes.txt
+      evidence/nomos-live-agent/06-segredos/02-depois.txt
+      evidence/nomos-live-agent/06-segredos/03-mutacao.txt
+      evidence/nomos-live-agent/06-segredos/medir-vazamento.mjs
+      evidence/nomos-live-agent/07-replay/RELATORIO-F17-F18.md
+
+PUBLIC_REPO_SECRET_LEAK=0
+CAMINHOS_PESSOAIS_EM_PRODUTO=1

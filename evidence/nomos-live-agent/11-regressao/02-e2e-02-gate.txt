@@ -1,6 +1,6 @@
 # fixture em http://127.0.0.1:8907/
 # daemon em :7794
-# sessão ses_ac1fcabe9fb64cc1
+# sessão ses_51aa211c1b634dcd
 [PASS] 0. preparo — a fixture abriu — http=200
 [PASS] 0b. controle — a saída começa INTOCADO — INTOCADO
 [PASS] 1. ASK ligado — http=200 modo=ASK scope=SESSION

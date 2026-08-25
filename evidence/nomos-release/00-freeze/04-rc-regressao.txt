@@ -1,0 +1,49 @@
+════ higiene: órfãos dos MEUS testes (nunca por porta) ════
+── candidatos: processos de daemon do runtime
+── portas de teste (apenas RELATADAS, jamais limpas por porta)
+
+ORFAOS_MORTOS=0
+PRESERVADOS_POR_FALTA_DE_PROVA=0
+
+════ 1. suíte TypeScript do runtime ════
+suite-typescript                   PASS           TS_PASS=792 TS_FAIL=0 em 37 arquivos
+
+════ 2. baterias E2E do Live Agent ════
+e2e-02-gate                        PASS           20 casos PASS
+e2e-03-console                     PASS           18 casos PASS
+e2e-04-takeover                    PASS           11 casos PASS
+e2e-05-controles                   PASS           13 casos PASS
+e2e-06-segredos                    PASS           4 casos PASS
+e2e-07-replay                      PASS           13 casos PASS
+e2e-08-modos                       PASS           8 casos PASS
+e2e-09-falhas                      PASS           13 casos PASS
+e2e-10-latencia                    PASS           6 casos PASS
+
+════ 3. Gi (assistente de voz) — suíte Python ════
+gi-pytest                          PASS           148 passed, 2 warnings in 18.88s
+
+════ 4. confiança do MCP (catálogo do NOMOS) ════
+mcp-catalogo                       PASS           modo 0600 · confiaveis=2 revogadas=1
+
+════ 5. cobertura declarada da CI ════
+ci-cobertura                       PASS           todo arquivo de teste está declarado na CI
+
+════ 6. guardas estáticas ════
+guardas-estaticas                  PASS           shell + versão + links de documentação
+
+════ 6b. segredos no que virará público ════
+segredos-publicos                  PASS           PUBLIC_REPO_SECRET_LEAK=0
+
+════ 6c. demos reproduzíveis ════
+demos                              PASS           24 passos OK em 6 demos
+
+════ 7. tipos ════
+tsc-noEmit                         PASS           sem erro de tipo
+
+════════════════════ VEREDITO ════════════════════
+ETAPAS_PASS=17
+ETAPAS_FALHA=0
+ETAPAS_NAO_EXECUTADAS=0
+NOMOS_BROWSER_REGRESSION=PASS
+LIVE_AGENT_REGRESSION=PASS (9/9 baterias)
+RELATORIO=/Users/AI/Projects/nomos-browser/evidence/nomos-live-agent/11-regressao/etapas.tsv
