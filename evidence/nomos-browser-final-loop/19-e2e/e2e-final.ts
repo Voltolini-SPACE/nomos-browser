@@ -86,6 +86,13 @@ const REGISTROS: Registro[] = [];
  *  uma repetição silenciosa seria maquiagem; um número que ninguém consegue
  *  não ver, não. Zero é o esperado; qualquer coisa acima disso é para olhar. */
 let TRANSPORTE_REPETICOES = 0;
+/** Falhas de transporte contra um daemon que a PRÓPRIA bateria já derrubou —
+ *  limpeza de sessão depois de um SIGKILL, `browser.task` numa porta que o
+ *  cenário fechou de propósito. Não dizem nada sobre o produto e por isso NÃO
+ *  entram em `TRANSPORTE_REPETICOES`; entram aqui, para que a separação entre
+ *  "o produto vacilou" e "o teste falou com um morto" seja explícita e contada,
+ *  em vez de virar um número inflado que ninguém sabe ler. */
+let TRANSPORTE_APOS_DAEMON_MORTO = 0;
 
 /**
  * Acumulador de asserções de UM cenário.
@@ -501,12 +508,20 @@ async function subirDaemon(opts: OpcoesDaemon): Promise<Daemon> {
       return await f();
     } catch (e) {
       const saude = await vivo();
+      // Daemon inalcançável ⇒ ou o cenário o derrubou de propósito, ou ele
+      // morreu. Repetir não ajuda em nenhum dos dois casos, e contar isso como
+      // "vacilo de transporte" mistura o ruído do teste com o sinal do produto.
+      if (!saude.startsWith("health=2")) {
+        TRANSPORTE_APOS_DAEMON_MORTO += 1;
+        console.log(`   TRANSPORTE(daemon fora do ar): ${rotulo} — ${causaDe(e)} · ${saude}`);
+        throw new Error(`${rotulo}: daemon fora do ar — ${causaDe(e)} · ${saude}`);
+      }
       TRANSPORTE_REPETICOES += 1;
-      console.log(`   TRANSPORTE: ${rotulo} falhou — ${causaDe(e)} · ${saude} · repetindo UMA vez`);
+      console.log(`   TRANSPORTE: ${rotulo} falhou com o daemon VIVO — ${causaDe(e)} · ${saude} · repetindo UMA vez`);
       try {
         return await f();
       } catch (e2) {
-        throw new Error(`${rotulo}: falhou duas vezes — ${causaDe(e2)} · ${saude}`);
+        throw new Error(`${rotulo}: falhou duas vezes com o daemon vivo — ${causaDe(e2)} · ${saude}`);
       }
     }
   };
@@ -2243,7 +2258,7 @@ async function main(): Promise<void> {
 
   process.stdout.write(`\nESTADO_DO_SERVICO=${ESTADO_DO_SERVICO}\n`);
   process.stdout.write(`RELATORIO=${path.join(OUT, "e2e-final.json")}\n\n`);
-  process.stdout.write(`TRANSPORTE_REPETICOES=${TRANSPORTE_REPETICOES}\nE2E_TOTAL=${REGISTROS.length}\n`);
+  process.stdout.write(`TRANSPORTE_REPETICOES=${TRANSPORTE_REPETICOES}\nTRANSPORTE_APOS_DAEMON_MORTO=${TRANSPORTE_APOS_DAEMON_MORTO}\nE2E_TOTAL=${REGISTROS.length}\n`);
   process.stdout.write(`E2E_PASS=${pass}\n`);
   process.stdout.write(`E2E_FAIL=${fail}\n`);
   process.stdout.write(`BROWSER_E2E_SUITE=${suite}\n`);
@@ -2254,7 +2269,7 @@ try {
   await main();
 } catch (e) {
   process.stdout.write(`\nBATERIA ABORTADA: ${e instanceof Error ? `${e.name}: ${e.message}\n${e.stack ?? ""}` : String(e)}\n`);
-  process.stdout.write(`TRANSPORTE_REPETICOES=${TRANSPORTE_REPETICOES}\nE2E_TOTAL=${REGISTROS.length}\nE2E_PASS=${REGISTROS.filter((r) => r.veredito === "PASS").length}\nE2E_FAIL=${REGISTROS.filter((r) => r.veredito === "FAIL").length}\nBROWSER_E2E_SUITE=FAIL\n`);
+  process.stdout.write(`TRANSPORTE_REPETICOES=${TRANSPORTE_REPETICOES}\nTRANSPORTE_APOS_DAEMON_MORTO=${TRANSPORTE_APOS_DAEMON_MORTO}\nE2E_TOTAL=${REGISTROS.length}\nE2E_PASS=${REGISTROS.filter((r) => r.veredito === "PASS").length}\nE2E_FAIL=${REGISTROS.filter((r) => r.veredito === "FAIL").length}\nBROWSER_E2E_SUITE=FAIL\n`);
   process.exitCode = 1;
 } finally {
   for (const d of sujeira) fs.rmSync(d, { recursive: true, force: true });

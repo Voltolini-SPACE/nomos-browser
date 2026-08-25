@@ -92,7 +92,11 @@ E_FAIL="$(grep -E '^E2E_FAIL=' /tmp/tag-e2e.log | cut -d= -f2)"
 # Repetições de transporte NÃO reprovam sozinhas, mas entram no rodapé como
 # número: uma repetição silenciosa seria maquiagem. Zero é o esperado.
 REPET="$(grep -E '^TRANSPORTE_REPETICOES=' /tmp/tag-e2e.log | cut -d= -f2)"
-grep -n "TRANSPORTE:" /tmp/tag-e2e.log | sed 's/^/    /' || true
+MORTO="$(grep -E '^TRANSPORTE_APOS_DAEMON_MORTO=' /tmp/tag-e2e.log | cut -d= -f2)"
+grep -n "TRANSPORTE" /tmp/tag-e2e.log | sed 's/^/    /' || true
+# Repetição com o daemon VIVO e' o unico numero que fala do produto. Zero e' o
+# esperado; acima disso o E2E passa mas a tag NAO e' revalidada.
+if [ "${REPET:-0}" != "0" ]; then FALHAS=$((FALHAS+1)); fi
 CHECAGENS="$(python3 -c "
 import json
 try:
@@ -123,5 +127,6 @@ echo "REGRESSION_ON_TAG=$REGRESSAO"
 echo "SUITE_ON_TAG=$SUITE (TS_PASS=$TS_PASS)"
 echo "PYTHON_ON_TAG=$PY ($N_PY)"
 echo "E2E_ON_TAG=$E2E ($E_PASS/$E_TOT, $CHECAGENS checagens)"
-echo "TRANSPORTE_REPETICOES_NO_E2E=${REPET:-?}"
+echo "TRANSPORTE_REPETICOES_DAEMON_VIVO=${REPET:-?}   (0 exigido)"
+echo "TRANSPORTE_APOS_DAEMON_MORTO=${MORTO:-?}   (ruido do proprio teste, nao reprova)"
 if [ "$FALHAS" = "0" ]; then echo "TAG_REVALIDATED=YES"; else echo "TAG_REVALIDATED=NO"; fi
