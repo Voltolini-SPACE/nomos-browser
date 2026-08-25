@@ -1,0 +1,47 @@
+▶ parser de argumentos (sem dependência)
+  ✔ separa comando, posicionais e flags nas três formas (1.359792ms)
+  ✔ `--` encerra o parsing: objetivo pode começar com hífen (0.085958ms)
+  ✔ flag booleana não engole o posicional seguinte (0.07925ms)
+  ✔ --no-headless nega; --headless afirma (0.071083ms)
+  ✔ fail closed: flag desconhecida e valor faltando são erro de uso (0.328417ms)
+  ✔ normalizeBaseUrl aceita host:porta e recusa esquema não-HTTP (0.312708ms)
+  ✔ eventsWsUrl deriva ws/wss e carrega os filtros (0.343916ms)
+  ✔ CLI_VERSION casa com packages/cli/package.json (3.896833ms)
+✔ parser de argumentos (sem dependência) (14.231375ms)
+▶ CLI contra runtime falso (subprocesso real)
+  ✔ 1. `health` imprime o estado e sai 0 (165.828ms)
+  ✔ 1b. `health --json` devolve o HealthResponse cru (161.432625ms)
+  ✔ 2. `sessions --json` imprime JSON parseável em stdout (160.111208ms)
+  ✔ 2b. `sessions` sem --json imprime tabela legível com o cabeçalho (163.326208ms)
+  ✔ 3. envelope success=false ⇒ exit 1, com code e message em stderr (166.001ms)
+  ✔ 3b. `--json` numa falha: envelope inteiro em stdout, erro em stderr, exit 1 (165.841875ms)
+  ✔ 4. runtime desligado ⇒ exit 3, sem stack trace (157.278709ms)
+  ✔ 4b. exit 3 é transporte, não HTTP: rota 404 do runtime dá 1, não 3 (161.119333ms)
+  ✔ 5. comando desconhecido ⇒ exit 2 com mensagem de uso (129.973042ms)
+  ✔ 5b. flag fora do comando e argumento faltando também são exit 2 (520.905541ms)
+  ✔ 6. `open` cria sessão e NÃO pede capability sensível nenhuma (186.413667ms)
+  ✔ 6b. `open` com sessão informada não cria sessão nova (169.0435ms)
+  ✔ 6c. `open` com URL sem esquema é erro de uso, não adivinhação (130.086625ms)
+  ✔ 6d. navegação falhada propaga o code do runtime e sai 1 (164.388625ms)
+  ✔ 7. `close` confirma o fechamento e sai 0 (162.119ms)
+  ✔ 8. `screenshot --out` grava os bytes reais do PNG da trilha (168.713833ms)
+  ✔ 8b. binário ausente é reportado, não inventado: exit 1 (165.873ms)
+  ✔ 8c. sem --out o comando não toca disco e sai 0 (165.45075ms)
+  ✔ 9. `replay` reconstrói a linha do tempo gravada (262.683625ms)
+  ✔ 9b. sessão sem trilha nenhuma é falha declarada, não '0 itens' alegre (128.409958ms)
+  ✔ 9c. session_id com travessia de caminho é recusado (exit 2) (128.537292ms)
+  ✔ 10. `events` segue o WebSocket e avisa sobre frame ilegível (143.956792ms)
+  ✔ 10b. `events --session` repassa o filtro ao runtime (141.672375ms)
+  ✔ 10c. `events` sem --max segue até Ctrl-C e encerra em 0 (SIGINT REAL) (139.036833ms)
+  ✔ 10d. `events` contra porta fechada também sai 3, sem stack (135.997375ms)
+  ✔ 11. resposta não-JSON vira INVALID_RESPONSE (exit 1), não crash (161.454291ms)
+  ✔ 12. `--help` e `--version` saem 0 por stdout (257.337334ms)
+✔ CLI contra runtime falso (subprocesso real) (4764.224ms)
+ℹ tests 35
+ℹ suites 2
+ℹ pass 35
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4959.543834

@@ -1,0 +1,26 @@
+✔ 1. dom.html resolve por `selector` e NÃO consulta a visão (703.84575ms)
+✔ 2. ax.html resolve por `accessibility` depois de `role_text` falhar (191.919875ms)
+✔ 3. semantic.html resolve por `semantic` — 'avançar' encontra 'Prosseguir' (366.658583ms)
+✔ 4. vision.html resolve por `vision` — e só com VisionProvider injetado (155.034375ms)
+✔ 5. confiança abaixo do mínimo é DESCARTADA — palpite não vira alvo (80.527958ms)
+✔ 6. sem VisionProvider, o degrau `vision` sai `skipped` COM razão explícita (68.121167ms)
+✔ 7. nenhum.html falha limpo: TARGET_NOT_FOUND, rastro completo, zero coordenada inventada (106.366833ms)
+✔ 8. em DPR 2 o modelo é informado do tamanho REAL da imagem e a caixa volta em CSS px (313.471875ms)
+✔ 9. a cascata que chega na visão deixa `target.cascade` na trilha, com trace (1.176125ms)
+✔ 10. refino DESLIGADO: uma inferência, e o rastro diz que foi escolha (86.23225ms)
+✔ 11. refino LIGADO: recorta, e o mapeamento recorte→viewport é EXATO (112.339417ms)
+✔ 12. GUARDA: refinamento que não cabe no recorte é REJEITADO e vale a 1ª passada (118.983792ms)
+✔ 13. CONVERGÊNCIA: 2ª passada que não move nada para cedo em vez de gastar a 3ª (112.243833ms)
+✔ 14. refino em DPR 2: o mapeamento sobrevive à conversão de pixels de imagem (160.171958ms)
+✔ 15. aim=box_center mira o centro da caixa, mesmo havendo ponto melhor (103.101625ms)
+✔ 16. aim=point recentra no ponto — e o clique cai no ponto, não no centro da caixa (140.59075ms)
+✔ 17. aim=point_then_box: usa o ponto quando concorda com a caixa, e recua quando não (285.137459ms)
+✔ 18. o ponto sofre as MESMAS conversões da caixa (DPR 2 e recorte) (125.321166ms)
+ℹ tests 18
+ℹ suites 0
+ℹ pass 18
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3700.868875

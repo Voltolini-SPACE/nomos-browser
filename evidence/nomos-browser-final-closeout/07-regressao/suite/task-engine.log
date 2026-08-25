@@ -1,0 +1,28 @@
+✔ 0a. transição fora da tabela é recusada, e estado final não tem saída (12.376375ms)
+✔ 0b. ação negada por política NUNCA é retentável; desconhecido também não (fail closed) (0.140583ms)
+✔ 0c. backoff cresce, respeita o teto e o jitter nunca zera a espera (0.155791ms)
+✔ 1. task de 1 passo completa, é persistida em disco e a auditoria fecha o ciclo (181.310917ms)
+✔ 2. task de 12 passos completa e grava checkpoint a cada passo (314.349292ms)
+✔ 3. socket derrubado no passo 3 vira NAVIGATION_FAILED, retenta e completa na 2ª tentativa (285.887875ms)
+✔ 4. CAPABILITY_DENIED real no passo 2 falha na hora, com zero retentativas (175.286125ms)
+✔ 5. alvo que nunca existe esgota max_attempts e falha com last_error preenchido (239.181584ms)
+✔ 6. SIGKILL no meio da task: recuperação, resume e ZERO passos repetidos (1983.949125ms)
+✔ 7. resume de task completa devolve o resultado guardado e não reexecuta nada (193.212541ms)
+✔ 8. mesma idempotency_key: duas chamadas simultâneas viram UMA task; depois de COMPLETED, ecoa (236.706917ms)
+✔ 9. cancel no meio aborta o passo em voo e nenhum passo posterior roda (196.629208ms)
+✔ 10. passo contra servidor que nunca responde estoura o prazo DO MOTOR e retenta (6203.568041ms)
+✔ 11. provider fora do ar registra provider.degraded UMA vez e a task falha (sem fallback) (157.447334ms)
+✔ 12. BrowserContext fechado no meio da task encerra a task; nada fica RUNNING (263.984333ms)
+✔ 13. alvo que muda de identidade entre passos falha e NUNCA é clicado de novo por coordenada (435.726166ms)
+✔ 14. depois do estado final não sobra processo, aba órfã nem lease (289.087333ms)
+✔ 14b. lease desviado para um delegado de task no meio: o instrumento REPROVA (2184.482709ms)
+✔ 15. controle negativo: a task que deve falhar falha, e o instrumento reprova o contrário (313.926625ms)
+[api] audit.append falhou: ENOENT: no such file or directory, open '/tmp/nomos-task-sess-yypVBa/_runtime/actions.jsonl'
+ℹ tests 19
+ℹ suites 0
+ℹ pass 19
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 14089.127875

@@ -1,0 +1,44 @@
+✔ 1a. tools/list devolve exatamente as 16 ferramentas do escopo (5.893292ms)
+✔ 1b. toda ferramenta tem inputSchema JSON Schema utilizável (0.24325ms)
+✔ 1c. campos obrigatórios estão declarados onde a API v1 exige (0.117917ms)
+✔ 2a. browser_navigate com session_id explícito faz UM POST em /api/v1/browser.goto (18.626542ms)
+✔ 2b. sem session_id: cria UMA sessão, reutiliza nas chamadas seguintes (3.730792ms)
+✔ 2c. chamadas concorrentes sem session_id não criam duas sessões (3.374792ms)
+✔ 2e. FASE 7 — o session_id da sessão IMPLÍCITA volta no resultado (2.519875ms)
+✔ 2d. cada ferramenta cai na rota do contrato, com o corpo certo (9.2635ms)
+✔ 3a. runtime com success=false vira isError preservando error.code (0.647458ms)
+✔ 3b. CONTROLE: o mesmo caminho com success=true NÃO marca isError (0.528ms)
+✔ 3c. runtime inalcançável vira isError explícito, não sucesso vazio (0.271875ms)
+✔ 3d. resposta fora do envelope ActionResponse não é aceita como sucesso (0.564833ms)
+✔ 3e. resposta não-JSON do runtime não vira sucesso (2.840041ms)
+✔ 3f. argumento inválido vira erro de PROTOCOLO e não toca o runtime (0.646542ms)
+✔ 3g. ferramenta desconhecida é erro de protocolo, não silêncio (0.069875ms)
+✔ 4a. o fonte do pacote MCP não menciona o motor de navegador (1.485208ms)
+✔ 4b. o pacote MCP importa apenas o contrato e a stdlib do Node (0.548167ms)
+✔ 4c. package.json declara o binário e não tem dependências (0.075459ms)
+✔ 5a. processo real: initialize + tools/list + tools/call por stdio (180.011166ms)
+✔ 5b. processo real: linha inválida vira -32700 e o servidor continua vivo (129.020584ms)
+✔ 5c. processo real: JSON quebrado na linha devolve -32700 (128.956833ms)
+✔ 5d. stdin fechado logo após o pedido não trunca a resposta (174.661583ms)
+✔ 5e. URL de runtime inválida derruba o arranque em vez de cair no default (127.44775ms)
+✔ 6a. buildRuntimeCall é pura e monta o caminho com o prefixo do contrato (0.17325ms)
+✔ 6b. ToolInputError carrega um ActionErrorCode do contrato (0.070084ms)
+✔ 6c. RuntimeClient recusa esquema não-HTTP (0.303125ms)
+✔ 6a. sem credencial o servidor MCP recusa ANTES de abrir socket (0.149208ms)
+✔ 6b. a credencial é PROPAGADA em toda chamada ao runtime (1.232875ms)
+✔ 6c. recusa por ESCOPO do runtime vira erro MCP com nome próprio (0.660833ms)
+✔ 6d. recusa por ARBITRAGEM de lease também tem nome próprio (0.669542ms)
+✔ 7a. as quatro ferramentas de aba têm UMA rota cada (0.164042ms)
+✔ 7b. GUARDA: nenhuma ferramenta despacha rota acima do nível que declara (3.299292ms)
+✔ 7c. dois PROCESSOS one-shot compartilham a mesma sessão (722.994916ms)
+✔ 7d. três processos SIMULTÂNEOS não criam três sessões (307.508834ms)
+✔ 7e. o DONO encerra a sessão sem matar o daemon, e sem tool nova (521.9645ms)
+✔ 7f. o manifesto classifica as quatro ferramentas de aba, cada uma no seu nível (0.212125ms)
+ℹ tests 36
+ℹ suites 0
+ℹ pass 36
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2518.072459

@@ -1,32 +1,32 @@
 {
-  "gerado_em": "2026-08-25T12:16:31.340Z",
-  "duracao_total_ms": 175642,
+  "gerado_em": "2026-08-25T13:23:24.961Z",
+  "duracao_total_ms": 70648,
   "maquina": {
     "plataforma": "darwin",
     "node": "v26.0.0"
   },
   "estado_do_servico": "DESINSTALADO",
   "total": 20,
-  "pass": 19,
-  "fail": 1,
-  "suite": "FAIL",
+  "pass": 20,
+  "fail": 0,
+  "suite": "PASS",
   "cenarios": [
     {
       "n": 1,
       "cenario": "abrir → localizar → clicar (verificado e entregue)",
       "comando": "browser.open → browser.find → browser.click{verification:TEXT_CHANGED}",
       "esperado": "clique resolvido, ENTREGUE ao alvo (delivery_verified=true), verificado, e o <div> dedicado muda de INTOCADO para CLICADO-ALVO-1",
-      "observado": "http://127.0.0.1:57510/app · INTOCADO · strategy=selector box={\"x\":8,\"y\":79.875,\"width\":64.15625,\"height\":21}",
+      "observado": "http://127.0.0.1:55567/app · INTOCADO · strategy=selector box={\"x\":8,\"y\":79.875,\"width\":64.15625,\"height\":21}",
       "classe": "",
       "evidencia": [
-        "/tmp/nomos-e2e19-er7cy7/d1-E0oGzg/sessoes/ses_ad9e549b993440e9/actions.jsonl:11 action=browser.click verified=true",
+        "/tmp/nomos-e2e19-idDc7I/d1-KTrdp1/sessoes/ses_3464041bd965417e/actions.jsonl:11 action=browser.click verified=true",
         "DOM #saida-btn-alvo: \"INTOCADO\" → \"CLICADO-ALVO-1\""
       ],
       "checagens": [
         {
           "ok": true,
           "o_que": "browser.open abriu a fixture",
-          "observado": "http://127.0.0.1:57510/app"
+          "observado": "http://127.0.0.1:55567/app"
         },
         {
           "ok": true,
@@ -69,7 +69,7 @@
           "observado": "linha 11 verified=true"
         }
       ],
-      "duracao_ms": 633,
+      "duracao_ms": 946,
       "veredito": "PASS",
       "erro": null
     },
@@ -78,7 +78,7 @@
       "cenario": "navegação: goto/back/forward/reload",
       "comando": "browser.goto ×2 → browser.back → browser.forward → browser.reload",
       "esperado": "cada passo conferido DUAS vezes: pela URL do runtime e pelo conteúdo do #marca lido do DOM; reload comprovado por nova requisição no ledger do servidor",
-      "observado": "\"ok\" · http://127.0.0.1:57510/pagina-a · PAGINA-A",
+      "observado": "\"ok\" · http://127.0.0.1:55567/pagina-a · PAGINA-A",
       "classe": "",
       "evidencia": [
         "ledger do fixture: /pagina-b pedido 3× (reload comprovado fora do runtime)"
@@ -92,7 +92,7 @@
         {
           "ok": true,
           "o_que": "goto A: URL do runtime é /pagina-a",
-          "observado": "http://127.0.0.1:57510/pagina-a"
+          "observado": "http://127.0.0.1:55567/pagina-a"
         },
         {
           "ok": true,
@@ -107,7 +107,7 @@
         {
           "ok": true,
           "o_que": "goto B: URL do runtime é /pagina-b",
-          "observado": "http://127.0.0.1:57510/pagina-b"
+          "observado": "http://127.0.0.1:55567/pagina-b"
         },
         {
           "ok": true,
@@ -122,7 +122,7 @@
         {
           "ok": true,
           "o_que": "back: URL do runtime é /pagina-a",
-          "observado": "http://127.0.0.1:57510/pagina-a"
+          "observado": "http://127.0.0.1:55567/pagina-a"
         },
         {
           "ok": true,
@@ -137,7 +137,7 @@
         {
           "ok": true,
           "o_que": "forward: URL do runtime é /pagina-b",
-          "observado": "http://127.0.0.1:57510/pagina-b"
+          "observado": "http://127.0.0.1:55567/pagina-b"
         },
         {
           "ok": true,
@@ -152,7 +152,7 @@
         {
           "ok": true,
           "o_que": "reload: URL do runtime é /pagina-b",
-          "observado": "http://127.0.0.1:57510/pagina-b"
+          "observado": "http://127.0.0.1:55567/pagina-b"
         },
         {
           "ok": true,
@@ -165,7 +165,7 @@
           "observado": "/pagina-b: 2 → 3"
         }
       ],
-      "duracao_ms": 328,
+      "duracao_ms": 356,
       "veredito": "PASS",
       "erro": null
     },
@@ -226,7 +226,7 @@
           "observado": "0 → 0"
         }
       ],
-      "duracao_ms": 686,
+      "duracao_ms": 683,
       "veredito": "PASS",
       "erro": null
     },
@@ -235,10 +235,10 @@
       "cenario": "SPA: conteúdo tardio com browser.wait",
       "comando": "browser.click #btn-carregar → browser.wait{condition:element_visible,value:#tardio}",
       "esperado": "o nó não existe antes; wait espera por CONDIÇÃO e o satisfaz; controle negativo: wait por nó que nunca aparece estoura TIMEOUT",
-      "observado": "VAZIO · false TARGET_NOT_FOUND · waited_ms=1290",
+      "observado": "VAZIO · false TARGET_NOT_FOUND · waited_ms=1285",
       "classe": "",
       "evidencia": [
-        "wait real=1290ms · controle negativo TIMEOUT em 1209ms"
+        "wait real=1285ms · controle negativo TIMEOUT em 1205ms"
       ],
       "checagens": [
         {
@@ -254,12 +254,12 @@
         {
           "ok": true,
           "o_que": "browser.wait satisfez a condição verificável",
-          "observado": "waited_ms=1290"
+          "observado": "waited_ms=1285"
         },
         {
           "ok": true,
           "o_que": "a espera foi REAL (o conteúdo era mesmo tardio)",
-          "observado": "1290ms"
+          "observado": "1285ms"
         },
         {
           "ok": true,
@@ -269,10 +269,10 @@
         {
           "ok": true,
           "o_que": "controle negativo: wait por nó inexistente estoura TIMEOUT",
-          "observado": "TIMEOUT em 1209ms"
+          "observado": "TIMEOUT em 1205ms"
         }
       ],
-      "duracao_ms": 2877,
+      "duracao_ms": 2889,
       "veredito": "PASS",
       "erro": null
     },
@@ -281,10 +281,10 @@
       "cenario": "abas: abrir, listar, trocar preservando estado, fechar",
       "comando": "browser.new_tab → browser.tabs → browser.switch_tab → browser.close_tab",
       "esperado": "a aba 1 preserva o texto digitado depois de ida e volta; a listagem cresce e encolhe em exatamente uma aba, e a fechada some por IDENTIDADE",
-      "observado": "ESTADO-DA-ABA-1 · n=2 ids=pg_338a64bf861445be,pg_090cafc4512b41d7 · pg_090cafc4512b41d7 vs pg_753d070ac1ee4612",
+      "observado": "ESTADO-DA-ABA-1 · n=2 ids=pg_7839db098742407b,pg_4882345723fa419c · pg_4882345723fa419c vs pg_96683a5865cd4892",
       "classe": "",
       "evidencia": [
-        "abas: 2 → 3 (new_tab) → 2 (close_tab); ativa após switch=pg_090cafc4512b41d7"
+        "abas: 2 → 3 (new_tab) → 2 (close_tab); ativa após switch=pg_4882345723fa419c"
       ],
       "checagens": [
         {
@@ -295,12 +295,12 @@
         {
           "ok": true,
           "o_que": "a aba do open aparece na listagem",
-          "observado": "n=2 ids=pg_338a64bf861445be,pg_090cafc4512b41d7"
+          "observado": "n=2 ids=pg_7839db098742407b,pg_4882345723fa419c"
         },
         {
           "ok": true,
           "o_que": "nova aba nasceu com page_id próprio",
-          "observado": "pg_090cafc4512b41d7 vs pg_753d070ac1ee4612"
+          "observado": "pg_4882345723fa419c vs pg_96683a5865cd4892"
         },
         {
           "ok": true,
@@ -310,12 +310,12 @@
         {
           "ok": true,
           "o_que": "as duas abas do cenário estão listadas",
-          "observado": "ids=pg_338a64bf861445be,pg_090cafc4512b41d7,pg_753d070ac1ee4612"
+          "observado": "ids=pg_7839db098742407b,pg_4882345723fa419c,pg_96683a5865cd4892"
         },
         {
           "ok": true,
           "o_que": "a aba nova é a ativa",
-          "observado": "[{\"id\":\"pg_338a64bf861445be\",\"active\":false},{\"id\":\"pg_090cafc4512b41d7\",\"active\":false},{\"id\":\"pg_753d070ac1ee4612\",\"active\":true}]"
+          "observado": "[{\"id\":\"pg_7839db098742407b\",\"active\":false},{\"id\":\"pg_4882345723fa419c\",\"active\":false},{\"id\":\"pg_96683a5865cd4892\",\"active\":true}]"
         },
         {
           "ok": true,
@@ -330,7 +330,7 @@
         {
           "ok": true,
           "o_que": "browser.switch_tab voltou para a aba 1",
-          "observado": "pg_090cafc4512b41d7"
+          "observado": "pg_4882345723fa419c"
         },
         {
           "ok": true,
@@ -340,7 +340,7 @@
         {
           "ok": true,
           "o_que": "a troca mudou de fato a aba ativa",
-          "observado": "pg_090cafc4512b41d7"
+          "observado": "pg_4882345723fa419c"
         },
         {
           "ok": true,
@@ -355,12 +355,12 @@
         {
           "ok": true,
           "o_que": "a aba fechada sumiu da listagem",
-          "observado": "ids=pg_338a64bf861445be,pg_090cafc4512b41d7"
+          "observado": "ids=pg_7839db098742407b,pg_4882345723fa419c"
         },
         {
           "ok": true,
           "o_que": "a aba 1 continua lá",
-          "observado": "ids=pg_338a64bf861445be,pg_090cafc4512b41d7"
+          "observado": "ids=pg_7839db098742407b,pg_4882345723fa419c"
         },
         {
           "ok": true,
@@ -368,7 +368,7 @@
           "observado": "ESTADO-DA-ABA-1"
         }
       ],
-      "duracao_ms": 489,
+      "duracao_ms": 568,
       "veredito": "PASS",
       "erro": null
     },
@@ -377,10 +377,10 @@
       "cenario": "download real para dentro da raiz permitida",
       "comando": "browser.download{url} com download_root configurado",
       "esperado": "arquivo existe no disco DENTRO da raiz, e seu conteúdo é byte a byte o que o servidor mandou",
-      "observado": "[] · \"ok\" · /tmp/nomos-e2e19-er7cy7/download-permitido/nomos-e2e-19.txt",
+      "observado": "[] · \"ok\" · /tmp/nomos-e2e19-idDc7I/download-permitido/nomos-e2e-19.txt",
       "classe": "",
       "evidencia": [
-        "arquivo no disco: /tmp/nomos-e2e19-er7cy7/download-permitido/nomos-e2e-19.txt (44 bytes) conteúdo=NOMOS-E2E-19-DOWNLOAD-CONTEUDO-CANONICO-7Q4Z"
+        "arquivo no disco: /tmp/nomos-e2e19-idDc7I/download-permitido/nomos-e2e-19.txt (44 bytes) conteúdo=NOMOS-E2E-19-DOWNLOAD-CONTEUDO-CANONICO-7Q4Z"
       ],
       "checagens": [
         {
@@ -396,12 +396,12 @@
         {
           "ok": true,
           "o_que": "o destino está DENTRO da raiz permitida",
-          "observado": "/tmp/nomos-e2e19-er7cy7/download-permitido/nomos-e2e-19.txt"
+          "observado": "/tmp/nomos-e2e19-idDc7I/download-permitido/nomos-e2e-19.txt"
         },
         {
           "ok": true,
           "o_que": "o arquivo existe no disco",
-          "observado": "/tmp/nomos-e2e19-er7cy7/download-permitido/nomos-e2e-19.txt"
+          "observado": "/tmp/nomos-e2e19-idDc7I/download-permitido/nomos-e2e-19.txt"
         },
         {
           "ok": true,
@@ -414,7 +414,7 @@
           "observado": "nomos-e2e-19.txt"
         }
       ],
-      "duracao_ms": 189,
+      "duracao_ms": 350,
       "veredito": "PASS",
       "erro": null
     },
@@ -460,7 +460,7 @@
           "observado": "ARQUIVO:carta.txt:36"
         }
       ],
-      "duracao_ms": 212,
+      "duracao_ms": 308,
       "veredito": "PASS",
       "erro": null
     },
@@ -472,7 +472,7 @@
       "observado": "false · TARGET_NOT_FOUND: alvo não resolvido após 1 estratégia(s): selector · ACTIVE",
       "classe": "",
       "evidencia": [
-        "/tmp/nomos-e2e19-er7cy7/d1-E0oGzg/sessoes/ses_ab25717f93af4e92/actions.jsonl:7 result=error · :9 result=ok"
+        "/tmp/nomos-e2e19-idDc7I/d1-KTrdp1/sessoes/ses_6edf9dc173c848dc/actions.jsonl:7 result=error · :9 result=ok"
       ],
       "checagens": [
         {
@@ -506,7 +506,7 @@
           "observado": "erro na linha 7, sucesso na linha 9"
         }
       ],
-      "duracao_ms": 3355,
+      "duracao_ms": 3384,
       "veredito": "PASS",
       "erro": null
     },
@@ -527,7 +527,7 @@
         "veredito: REQUIRE_APPROVAL — ação sensível: exige aprovação explícita",
         "na prática: pediria a SUA aprovação; sem aprovador presente, o gate NEGA (fail-closed).",
         "",
-        "controle: /tmp/nomos-e2e19-er7cy7/d1-E0oGzg/sessoes/ses_eac79bb5bbaf48c4/actions.jsonl sem linha browser.click; #saida-btn-alvo=INTOCADO"
+        "controle: /tmp/nomos-e2e19-idDc7I/d1-KTrdp1/sessoes/ses_9292630654e445c1/actions.jsonl sem linha browser.click; #saida-btn-alvo=INTOCADO"
       ],
       "checagens": [
         {
@@ -563,12 +563,12 @@
         {
           "ok": true,
           "o_que": "o loop voltou com o CONTEÚDO REAL da página do Chromium",
-          "observado": "route=browser.extract session_id=ses_eac79bb5bbaf48c4 http=200 action_id=act_mt8mmfha_40 state=ACTIVE duration_ms=6 { \"c"
+          "observado": "route=browser.extract session_id=ses_9292630654e445c1 http=200 action_id=act_mt8p2pzg_40 state=ACTIVE duration_ms=6 { \"c"
         },
         {
           "ok": true,
           "o_que": "a resposta é da sessão preparada (mesmo session_id)",
-          "observado": "session_id=ses_eac79bb5bbaf48c4"
+          "observado": "session_id=ses_9292630654e445c1"
         },
         {
           "ok": true,
@@ -591,7 +591,7 @@
           "observado": "0 linhas de clique"
         }
       ],
-      "duracao_ms": 620,
+      "duracao_ms": 610,
       "veredito": "PASS",
       "erro": null
     },
@@ -606,7 +606,7 @@
         "veredito Gi/NOMOS: browser_extract=ALLOW browser_click=REQUIRE_APPROVAL",
         "motivo verbatim: o NOMOS respondeu REQUIRE_APPROVAL para A2_NET_EGRESS · mcp:nomos-browser:browser_click — a Gi não executa sem o veredito ALLOW",
         "falta ao dono: /Users/AI/.local/bin/nomos mcp chamar /Users/AI/Projects/nomos-browser/packaging/mcp/manifesto.json browser_click --args '{...}'   (num terminal seu; o NOMOS pedirá sua aprovação)",
-        "controle no navegador: #saida-btn-alvo=INTOCADO; /tmp/nomos-e2e19-er7cy7/d1-E0oGzg/sessoes/ses_79c4daa152ad41e6/actions.jsonl sem browser.click"
+        "controle no navegador: #saida-btn-alvo=INTOCADO; /tmp/nomos-e2e19-idDc7I/d1-KTrdp1/sessoes/ses_ae4ac592615c4ccb/actions.jsonl sem browser.click"
       ],
       "checagens": [
         {
@@ -652,12 +652,12 @@
         {
           "ok": true,
           "o_que": "A0: o resultado traz o conteúdo REAL do Chromium",
-          "observado": "route=browser.extract session_id=ses_79c4daa152ad41e6 http=200 action_id=act_mt8mmh4s_4a state=ACTIVE duration"
+          "observado": "route=browser.extract session_id=ses_ae4ac592615c4ccb http=200 action_id=act_mt8p2rqc_4a state=ACTIVE duration"
         },
         {
           "ok": true,
           "o_que": "A0: a Gi operou na sessão preparada",
-          "observado": "ses_79c4daa152ad41e6 vs ses_79c4daa152ad41e6"
+          "observado": "ses_ae4ac592615c4ccb vs ses_ae4ac592615c4ccb"
         },
         {
           "ok": true,
@@ -680,7 +680,7 @@
           "observado": "0 linhas"
         }
       ],
-      "duracao_ms": 2220,
+      "duracao_ms": 2354,
       "veredito": "PASS",
       "erro": null
     },
@@ -694,7 +694,7 @@
       "evidencia": [
         "clique observado pela PÁGINA: (476,171) isTrusted=true",
         "ERRO_PX=4.1 MARGEM_ATE_A_BORDA=49px alvo={\"x\":400,\"y\":120,\"w\":160,\"h\":100}",
-        "/tmp/nomos-e2e19-er7cy7/visao-DSSUm3/sessoes/ses_459fd3c9676a4064/actions.jsonl:9 action=target.cascade strategy=vision"
+        "/tmp/nomos-e2e19-idDc7I/visao-1LYNd5/sessoes/ses_ac3f1656d6e840c2/actions.jsonl:9 action=target.cascade strategy=vision"
       ],
       "checagens": [
         {
@@ -763,7 +763,7 @@
           "observado": "[]"
         }
       ],
-      "duracao_ms": 25482,
+      "duracao_ms": 30095,
       "veredito": "PASS",
       "erro": null
     },
@@ -775,8 +775,8 @@
       "observado": "\"ok\" · COMPLETED · 14/14",
       "classe": "",
       "evidencia": [
-        "/tmp/nomos-e2e19-er7cy7/task12-HmDgGX/sessoes/ses_96f722c0eefa4cd1/tasks/tsk_961c8bfcb1b9454f.json state=COMPLETED step_index=14",
-        "/tmp/nomos-e2e19-er7cy7/task12-HmDgGX/sessoes/ses_96f722c0eefa4cd1/actions.jsonl: 15 linhas task.checkpoint (nºs 7,11,15…)",
+        "/tmp/nomos-e2e19-idDc7I/task12-xJ2J7E/sessoes/ses_6cd779d302cd426c/tasks/tsk_52e36a1743d14379.json state=COMPLETED step_index=14",
+        "/tmp/nomos-e2e19-idDc7I/task12-xJ2J7E/sessoes/ses_6cd779d302cd426c/actions.jsonl: 15 linhas task.checkpoint (nºs 7,11,15…)",
         "DOM #marca=PASSO-C12-FINAL"
       ],
       "checagens": [
@@ -826,7 +826,7 @@
           "observado": "1"
         }
       ],
-      "duracao_ms": 2056,
+      "duracao_ms": 2183,
       "veredito": "PASS",
       "erro": null
     },
@@ -838,7 +838,7 @@
       "observado": "signal=SIGKILL code=null · step_index=6 state_em_disco=RUNNING · RECOVERING last_error=RUNTIME_CRASH",
       "classe": "",
       "evidencia": [
-        "/tmp/nomos-e2e19-er7cy7/task13-tmbuLh/sessoes/ses_fe2d662187a24464/tasks/tsk_0ea84174dcd7492a.json antes do reinício: state=RUNNING step_index=6",
+        "/tmp/nomos-e2e19-idDc7I/task13-yZcRLF/sessoes/ses_9166c6e251054008/tasks/tsk_1be4f347acf04864.json antes do reinício: state=RUNNING step_index=6",
         "após reinício: state=RECOVERING last_error=RUNTIME_CRASH",
         "ledger: /tarefa-c13-01×1 /tarefa-c13-07×1 /passo-c13-final×1"
       ],
@@ -881,7 +881,7 @@
         {
           "ok": true,
           "o_que": "a retomada é uma execução NOVA (run_id diferente)",
-          "observado": "run_776eeb14e2094b9e → run_ed95456109784e0b"
+          "observado": "run_33fa67c85981496b → run_4864245d8aa04710"
         },
         {
           "ok": true,
@@ -899,7 +899,7 @@
           "observado": "PASSO-C13-FINAL"
         }
       ],
-      "duracao_ms": 2085,
+      "duracao_ms": 2169,
       "veredito": "PASS",
       "erro": null
     },
@@ -908,17 +908,17 @@
       "cenario": "handoff entre dois donos com credenciais distintas",
       "comando": "sessão criada por DONO-A → POST /sessions/:id/handoff{to_owner,to_holder} → DONO-B age",
       "esperado": "antes do handoff B é recusado e o DOM não muda; depois, B age e A é recusado; a trilha registra handoff e transferência de lease",
-      "observado": "A=vas3ug… B=M6-Ask… · \"ok\" · DONO-A",
+      "observado": "A=Vgd6lC… B=wuVlQq… · \"ok\" · DONO-A",
       "classe": "",
       "evidencia": [
-        "/tmp/nomos-e2e19-er7cy7/d2-n7G9VL/sessoes/ses_97eeca62729a45d2/actions.jsonl:10 action=session.handoff detail={\"from_owner\":\"DONO-A\",\"to_owner\":\"DONO-B\",\"attached_client\":\"e2e-final-19\",\"lease_holder\":\"DONO-B\"}",
-        "/tmp/nomos-e2e19-er7cy7/d2-n7G9VL/sessoes/ses_97eeca62729a45d2/actions.jsonl:9 action=lease.transferred detail={\"from_holder\":\"DONO-A\",\"to_holder\":\"DONO-B\",\"moved\":true,\"reason\":\"handoff com to_holder\",\"lease_id\":\"lease_09ca9cda54154aa1\"}"
+        "/tmp/nomos-e2e19-idDc7I/d2-bMSFLS/sessoes/ses_1b3298cafbc04a89/actions.jsonl:10 action=session.handoff detail={\"from_owner\":\"DONO-A\",\"to_owner\":\"DONO-B\",\"attached_client\":\"e2e-final-19\",\"lease_holder\":\"DONO-B\"}",
+        "/tmp/nomos-e2e19-idDc7I/d2-bMSFLS/sessoes/ses_1b3298cafbc04a89/actions.jsonl:9 action=lease.transferred detail={\"from_holder\":\"DONO-A\",\"to_holder\":\"DONO-B\",\"moved\":true,\"reason\":\"handoff com to_holder\",\"lease_id\":\"lease_7bbb84aac2704fc5\"}"
       ],
       "checagens": [
         {
           "ok": true,
           "o_que": "duas credenciais distintas emitidas pelo daemon",
-          "observado": "A=vas3ug… B=M6-Ask…"
+          "observado": "A=Vgd6lC… B=wuVlQq…"
         },
         {
           "ok": true,
@@ -976,7 +976,7 @@
           "observado": "handoff na linha 10, lease.transferred na linha 9"
         }
       ],
-      "duracao_ms": 422,
+      "duracao_ms": 445,
       "veredito": "PASS",
       "erro": null
     },
@@ -988,7 +988,7 @@
       "observado": "200 · 200 control=human status=PAUSED · 409 CONTROL_HELD_BY_HUMAN",
       "classe": "",
       "evidencia": [
-        "/tmp/nomos-e2e19-er7cy7/d2-n7G9VL/sessoes/ses_16c5e27830b64240/actions.jsonl: 3 linhas policy.deny com CONTROL_HELD_BY_HUMAN (nºs 9,10,11)",
+        "/tmp/nomos-e2e19-idDc7I/d2-bMSFLS/sessoes/ses_2679acb5fabc4d9b/actions.jsonl: 3 linhas policy.deny com CONTROL_HELD_BY_HUMAN (nºs 9,10,11)",
         "DOM #saida-congelado durante o congelamento: INTOCADO → depois do release: CLICADO-CONGELADO"
       ],
       "checagens": [
@@ -1043,7 +1043,7 @@
           "observado": "3 linhas policy.deny"
         }
       ],
-      "duracao_ms": 378,
+      "duracao_ms": 401,
       "veredito": "PASS",
       "erro": null
     },
@@ -1055,7 +1055,7 @@
       "observado": "403 · CAPABILITY_DENIED: capability \"download\" negada para browser.download (classe COMMIT) · success=false result=null",
       "classe": "",
       "evidencia": [
-        "/tmp/nomos-e2e19-er7cy7/d2-n7G9VL/sessoes/ses_93a20447c7fd44e5/actions.jsonl:6 action=policy.deny capability=download policy_reason=CAPABILITY_DENIED: capability \"download\" negada para browser.download (classe COMMIT)"
+        "/tmp/nomos-e2e19-idDc7I/d2-bMSFLS/sessoes/ses_ab66b81fb6224a80/actions.jsonl:6 action=policy.deny capability=download policy_reason=CAPABILITY_DENIED: capability \"download\" negada para browser.download (classe COMMIT)"
       ],
       "checagens": [
         {
@@ -1101,10 +1101,10 @@
         {
           "ok": true,
           "o_que": "controle positivo: com a capability concedida, a MESMA rota entrega",
-          "observado": "200 /private/tmp/nomos-e2e19-er7cy7/download-permitido/nomos-e2e-19.txt"
+          "observado": "200 /private/tmp/nomos-e2e19-idDc7I/download-permitido/nomos-e2e-19.txt"
         }
       ],
-      "duracao_ms": 370,
+      "duracao_ms": 412,
       "veredito": "PASS",
       "erro": null
     },
@@ -1118,7 +1118,7 @@
       "evidencia": [
         "provenance ataque: detected=true severity=alta raw=false findings=12",
         "provenance benigna: severity=null raw=true",
-        "/tmp/nomos-e2e19-er7cy7/d2-n7G9VL/sessoes/ses_51e54fe351f74c31/actions.jsonl sem trecho literal do payload"
+        "/tmp/nomos-e2e19-idDc7I/d2-bMSFLS/sessoes/ses_0db53d7dc39e416e/actions.jsonl sem trecho literal do payload"
       ],
       "checagens": [
         {
@@ -1149,7 +1149,7 @@
         {
           "ok": true,
           "o_que": "o que chega ao agente vem entre delimitadores com nonce — DADO, não instrução",
-          "observado": "nonce=dc4eedd782da…"
+          "observado": "nonce=07c7548301e2…"
         },
         {
           "ok": true,
@@ -1182,7 +1182,7 @@
           "observado": "bytes=6910 literal=false"
         }
       ],
-      "duracao_ms": 252,
+      "duracao_ms": 281,
       "veredito": "PASS",
       "erro": null
     },
@@ -1191,18 +1191,18 @@
       "cenario": "timeout de provider: porta morta, erro classificado, daemon vivo",
       "comando": "daemon com providers_base_url em porta MORTA e em porta que ACEITA e nunca responde → browser.task",
       "esperado": "as duas falhas vêm CLASSIFICADAS e DISTINGUÍVEIS (recusa imediata vs. prazo estourado); o daemon segue respondendo /health e as ações determinísticas ficam intactas",
-      "observado": "http://127.0.0.1:57727 provider=http://127.0.0.1:57726 · success=false · INTERNAL: raciocínio falhou: fetch failed {\"task_id\":\"tsk_bc359412db3a4de2\",\"run_id\":\"run_b551a6314a724412\",\"state\":\"FAI",
+      "observado": "http://127.0.0.1:55829 provider=http://127.0.0.1:55827 · success=false · INTERNAL: raciocínio falhou: fetch failed {\"task_id\":\"tsk_e70a6498abde43e9\",\"run_id\":\"run_8cbd1097b8fb4ad9\",\"state\":\"FAI",
       "classe": "",
       "evidencia": [
-        "porta MORTA     : code=INTERNAL gasto=25ms — raciocínio falhou: fetch failed {\"task_id\":\"tsk_bc359412db3a4de2\",\"run_id\":\"run_b551a6314a724412\",\"state\":\"FAILED\",\"task",
-        "porta PENDURADA : code=TIMEOUT gasto=4027ms — raciocínio falhou: timeout após 4000 ms {\"task_id\":\"tsk_8f1b70b160e54e4b\",\"run_id\":\"run_d6de4392bd5e4fe8\",\"state\":\"FAILE",
+        "porta MORTA     : code=INTERNAL gasto=30ms — raciocínio falhou: fetch failed {\"task_id\":\"tsk_e70a6498abde43e9\",\"run_id\":\"run_8cbd1097b8fb4ad9\",\"state\":\"FAILED\",\"task",
+        "porta PENDURADA : code=TIMEOUT gasto=4033ms — raciocínio falhou: timeout após 4000 ms {\"task_id\":\"tsk_972696b0efe345a1\",\"run_id\":\"run_a843b250fc4b4e7d\",\"state\":\"FAILE",
         "/health=200 · DOM pós-falha=CLICADO-ALVO-1"
       ],
       "checagens": [
         {
           "ok": true,
           "o_que": "o daemon SOBE mesmo com o provider inalcançável (morta)",
-          "observado": "http://127.0.0.1:57727 provider=http://127.0.0.1:57726"
+          "observado": "http://127.0.0.1:55829 provider=http://127.0.0.1:55827"
         },
         {
           "ok": true,
@@ -1212,22 +1212,22 @@
         {
           "ok": true,
           "o_que": "morta: o erro veio com código do contrato",
-          "observado": "INTERNAL: raciocínio falhou: fetch failed {\"task_id\":\"tsk_bc359412db3a4de2\",\"run_id\":\"run_b551a6314a724412\",\"state\":\"FAI"
+          "observado": "INTERNAL: raciocínio falhou: fetch failed {\"task_id\":\"tsk_e70a6498abde43e9\",\"run_id\":\"run_8cbd1097b8fb4ad9\",\"state\":\"FAI"
         },
         {
           "ok": true,
           "o_que": "porta morta falha DEPRESSA (recusa de conexão, não espera de prazo)",
-          "observado": "25ms"
+          "observado": "30ms"
         },
         {
           "ok": true,
           "o_que": "a causa de rede viaja junto do erro",
-          "observado": "raciocínio falhou: fetch failed {\"task_id\":\"tsk_bc359412db3a4de2\",\"run_id\":\"run_b551a6314a724412\",\"state\":\"FAILED\",\"task"
+          "observado": "raciocínio falhou: fetch failed {\"task_id\":\"tsk_e70a6498abde43e9\",\"run_id\":\"run_8cbd1097b8fb4ad9\",\"state\":\"FAILED\",\"task"
         },
         {
           "ok": true,
           "o_que": "o daemon SOBE mesmo com o provider inalcançável (pendurada)",
-          "observado": "http://127.0.0.1:57734 provider=http://127.0.0.1:57732"
+          "observado": "http://127.0.0.1:55844 provider=http://127.0.0.1:55834"
         },
         {
           "ok": true,
@@ -1237,27 +1237,27 @@
         {
           "ok": true,
           "o_que": "pendurada: o erro veio com código do contrato",
-          "observado": "TIMEOUT: raciocínio falhou: timeout após 4000 ms {\"task_id\":\"tsk_8f1b70b160e54e4b\",\"run_id\":\"run_d6de4392bd5e4fe8\",\"sta"
+          "observado": "TIMEOUT: raciocínio falhou: timeout após 4000 ms {\"task_id\":\"tsk_972696b0efe345a1\",\"run_id\":\"run_a843b250fc4b4e7d\",\"sta"
         },
         {
           "ok": true,
           "o_que": "o PRAZO de fato foi esperado (4000ms de ai_timeout_ms)",
-          "observado": "4027ms"
+          "observado": "4033ms"
         },
         {
           "ok": true,
           "o_que": "a falha foi em prazo LIMITADO — não pendurou o cliente",
-          "observado": "4027ms"
+          "observado": "4033ms"
         },
         {
           "ok": true,
           "o_que": "a causa de PRAZO viaja junto do erro (distinta da causa de rede)",
-          "observado": "raciocínio falhou: timeout após 4000 ms {\"task_id\":\"tsk_8f1b70b160e54e4b\",\"run_id\":\"run_d6de4392bd5e4fe8\",\"state\":\"FAILED\",\"task_code\":\"TIME"
+          "observado": "raciocínio falhou: timeout após 4000 ms {\"task_id\":\"tsk_972696b0efe345a1\",\"run_id\":\"run_a843b250fc4b4e7d\",\"state\":\"FAILED\",\"task_code\":\"TIME"
         },
         {
           "ok": true,
           "o_que": "as duas falhas são DISTINGUÍVEIS pelo tempo, não só pelo texto",
-          "observado": "morta=25ms vs pendurada=4027ms"
+          "observado": "morta=30ms vs pendurada=4033ms"
         },
         {
           "ok": true,
@@ -1280,7 +1280,7 @@
           "observado": "PAGINA-C18-DEPOIS"
         }
       ],
-      "duracao_ms": 5477,
+      "duracao_ms": 5622,
       "veredito": "PASS",
       "erro": null
     },
@@ -1289,18 +1289,18 @@
       "cenario": "crash recovery do daemon: SIGKILL real → sobe de novo",
       "comando": "SIGKILL no daemon com task em voo → reinício sobre o mesmo runtime_dir/sessions_root",
       "esperado": "o disco guardava RUNNING; ao subir, nada continua RUNNING, a varredura de arranque decide e registra, e o runtime volta utilizável",
-      "observado": "pid=27811 signal=SIGKILL · state=RUNNING step_index=4 · 27811 → 27826",
+      "observado": "pid=73348 signal=SIGKILL · state=RUNNING step_index=4 · 73348 → 73382",
       "classe": "",
       "evidencia": [
-        "disco antes do reinício: state=RUNNING (/tmp/nomos-e2e19-er7cy7/crash19-cZv0zQ/sessoes/ses_35014d27096446df/tasks/tsk_6e2c9f682a4041d9.json)",
+        "disco antes do reinício: state=RUNNING (/tmp/nomos-e2e19-idDc7I/crash19-QXdpfi/sessoes/ses_b64788795a5645e9/tasks/tsk_ea93145f22354e0e.json)",
         "depois do reinício: RECOVERING last_error=RUNTIME_CRASH; RUNNING=0",
-        "/tmp/nomos-e2e19-er7cy7/crash19-cZv0zQ/sessoes/ses_35014d27096446df/actions.jsonl: 1 linhas de recuperação"
+        "/tmp/nomos-e2e19-idDc7I/crash19-QXdpfi/sessoes/ses_b64788795a5645e9/actions.jsonl: 1 linhas de recuperação"
       ],
       "checagens": [
         {
           "ok": true,
           "o_que": "SIGKILL real no processo do daemon",
-          "observado": "pid=27811 signal=SIGKILL"
+          "observado": "pid=73348 signal=SIGKILL"
         },
         {
           "ok": true,
@@ -1310,7 +1310,7 @@
         {
           "ok": true,
           "o_que": "o daemon subiu de novo com PID novo",
-          "observado": "27811 → 27826"
+          "observado": "73348 → 73382"
         },
         {
           "ok": true,
@@ -1320,7 +1320,7 @@
         {
           "ok": true,
           "o_que": "NENHUMA task voltou como RUNNING",
-          "observado": "tasks=tsk_6e2c9f682a4041d9:RECOVERING"
+          "observado": "tasks=tsk_ea93145f22354e0e:RECOVERING"
         },
         {
           "ok": true,
@@ -1343,7 +1343,7 @@
           "observado": "PAGINA-C19-POS"
         }
       ],
-      "duracao_ms": 1497,
+      "duracao_ms": 1648,
       "veredito": "PASS",
       "erro": null
     },
@@ -1352,18 +1352,18 @@
       "cenario": "supervisor: install → start → health → SIGKILL → restart → stop → uninstall",
       "comando": "scripts/service.sh com LaunchAgent REAL, e guarda de produção label→pid antes/depois",
       "esperado": "cada degrau conferido pelo estado do launchd e pelo PID do lock; o launchd ressobe com PID NOVO após SIGKILL; a máquina termina como começou (serviço DESINSTALADO)",
-      "observado": "`health` responde ok ⇒ pid=19912",
+      "observado": "br.com.se7enpay.nomos.servico=83005;com.nomos.panel=83034;ai.sovereign.omniroute=12728;com.gijarvis.backend=51446; · carregada=false · rc=0 INSTALL=OK label=ai.nomos.browser plist=/Users/AI/Library/LaunchAgents/ai.nomos.browser.plist log=/Users/AI/Library/Logs/nomos-browser",
       "classe": "",
       "evidencia": [
-        "producao antes : br.com.se7enpay.nomos.servico=83005;com.nomos.panel=83034;ai.sovereign.omniroute=12728;com.gijarvis.backend=29108;",
-        "producao depois: br.com.se7enpay.nomos.servico=83005;com.nomos.panel=83034;ai.sovereign.omniroute=12728;com.gijarvis.backend=29108;",
+        "producao antes : br.com.se7enpay.nomos.servico=83005;com.nomos.panel=83034;ai.sovereign.omniroute=12728;com.gijarvis.backend=51446;",
+        "producao depois: br.com.se7enpay.nomos.servico=83005;com.nomos.panel=83034;ai.sovereign.omniroute=12728;com.gijarvis.backend=51446;",
         "ESTADO_DO_SERVICO=DESINSTALADO"
       ],
       "checagens": [
         {
           "ok": true,
           "o_que": "a guarda de produção está MEDINDO (pids não vazios)",
-          "observado": "br.com.se7enpay.nomos.servico=83005;com.nomos.panel=83034;ai.sovereign.omniroute=12728;com.gijarvis.backend=29108;"
+          "observado": "br.com.se7enpay.nomos.servico=83005;com.nomos.panel=83034;ai.sovereign.omniroute=12728;com.gijarvis.backend=51446;"
         },
         {
           "ok": true,
@@ -1378,32 +1378,32 @@
         {
           "ok": true,
           "o_que": "start é aceito (0) ou recusado por instância única (9) — nunca erro obscuro",
-          "observado": "rc=9 erro: já há um nomos-browser vivo (pid 19912) — instância única."
+          "observado": "rc=0 START=OK label=ai.nomos.browser"
         },
         {
           "ok": true,
           "o_que": "o lock em disco tem o PID de um processo VIVO",
-          "observado": "19912"
+          "observado": "73445"
         },
         {
-          "ok": false,
+          "ok": true,
           "o_que": "`health` responde ok",
-          "observado": "pid=19912"
+          "observado": "pid=73445"
         },
         {
           "ok": true,
           "o_que": "o SIGKILL de fato matou o processo do serviço",
-          "observado": "kill rc=0 pid=19912 morreu=true"
+          "observado": "kill rc=0 pid=73445 morreu=true"
         },
         {
           "ok": true,
           "o_que": "após SIGKILL o launchd reiniciou com PID NOVO",
-          "observado": "19912 → 38082"
+          "observado": "73445 → 73697"
         },
         {
           "ok": true,
           "o_que": "o serviço reiniciado volta SAUDÁVEL",
-          "observado": "health rc=0 com pid 38082"
+          "observado": "health rc=0 com pid 73697"
         },
         {
           "ok": true,
@@ -1418,11 +1418,11 @@
         {
           "ok": true,
           "o_que": "serviços de PRODUÇÃO intactos (mesmos PIDs)",
-          "observado": "antes=br.com.se7enpay.nomos.servico=83005;com.nomos.panel=83034;ai.sovereign.omniroute=12728;com.gijarvis.backend=29108; depois=br.com.se7enpay.nomos.servico=83005;com.nomos.panel=83034;ai.sovereign.omniroute=12728;com.gijarvis.backend=29108;"
+          "observado": "antes=br.com.se7enpay.nomos.servico=83005;com.nomos.panel=83034;ai.sovereign.omniroute=12728;com.gijarvis.backend=51446; depois=br.com.se7enpay.nomos.servico=83005;com.nomos.panel=83034;ai.sovereign.omniroute=12728;com.gijarvis.backend=51446;"
         }
       ],
-      "duracao_ms": 125303,
-      "veredito": "FAIL",
+      "duracao_ms": 14181,
+      "veredito": "PASS",
       "erro": null
     }
   ]

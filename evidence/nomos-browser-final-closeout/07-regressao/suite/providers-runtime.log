@@ -1,0 +1,22 @@
+✔ 1. provider disponível: browser.task observa, raciocina, planeja, AGE e verifica (3795.537791ms)
+✔ 2. backend fora do ar: erro classificado, daemon vivo, ações determinísticas intactas (403.636334ms)
+✔ 3. timeout do provider vira TIMEOUT e é respeitado dentro da margem (811.119291ms)
+✔ 4. cancelar devolve ABORTED e NÃO aciona o fallback (152.845334ms)
+✔ 5. saída vazia é classificada como EMPTY_OUTPUT e aciona o secundário (5.429333ms)
+✔ 7. a degradação deixa `provider.degraded` na trilha, com motivo e fallback (53.067083ms)
+✔ 6. JSON quebrado vira BAD_RESPONSE, não derruba, e NÃO gasta o secundário (129.372916ms)
+✔ 6b. HTTP 5xx degrada e 4xx não — pedido errado não vira fallback (3.992834ms)
+✔ 8. principal volta ao ar e volta a ser usado — a degradação não é permanente (4.6645ms)
+✔ 10. visão configurada resolve o alvo só-pixel pelo degrau `vision` (118.618208ms)
+✔ 9. visão que não vê o alvo devolve null — e o runtime NÃO inventa coordenada (78.362083ms)
+✔ 11. identificador de backend desconhecido é ConfigError NO ARRANQUE (0.99475ms)
+✔ 12. sem provider configurado: nada é construído e o degrau `vision` sai `skipped` (80.187416ms)
+✔ [OLLAMA REAL] provider construído da config fala com qwen2.5-coder:7b e é descarregado depois (1645.562667ms)
+ℹ tests 14
+ℹ suites 0
+ℹ pass 14
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 9400.582917

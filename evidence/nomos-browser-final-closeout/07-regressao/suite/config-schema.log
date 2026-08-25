@@ -1,0 +1,24 @@
+✔ toda chave de DaemonConfig tem entrada no schema (2.032125ms)
+✔ toda entrada do schema corresponde a uma chave real de DaemonConfig (1.550375ms)
+✔ CONFIG_SCHEMA e ENV_KEYS cobrem exatamente o mesmo conjunto, menos as exceções declaradas (0.235583ms)
+✔ toda variável de ambiente declarada muda a config e registra a proveniência (1.976542ms)
+✔ controle negativo: sem a variável, a proveniência é default (0.12475ms)
+✔ toda variável recusa valor inválido com mensagem que nomeia campo e origem (3.660959ms)
+✔ faixa declarada é imposta pelo código: min e max passam, min-1 e max+1 são recusados (2.600875ms)
+✔ inteiro declarado não aceita fracionário — nem por arredondamento silencioso (0.842875ms)
+✔ enum declarado aceita todos os seus valores e recusa qualquer outro (0.526708ms)
+✔ todo exemplo declarado no schema é válido (1.168833ms)
+✔ provider-ref declarado recusa backend desconhecido e modelo vazio (0.323792ms)
+✔ chave sensível sai redigida e chave comum sai em claro (0.307917ms)
+✔ controle negativo: describeConfig sem redação DEIXA o caminho passar (0.217958ms)
+✔ o schema exposto carrega default e env LIDOS do código, não redigitados (7.975ms)
+✔ a tabela markdown lista TODAS as variáveis de ambiente (0.540959ms)
+✔ a rota de schema não carrega valor efetivo nenhum (0.407125ms)
+ℹ tests 16
+ℹ suites 0
+ℹ pass 16
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 178.615708

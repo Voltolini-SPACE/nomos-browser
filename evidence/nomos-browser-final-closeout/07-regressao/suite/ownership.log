@@ -1,0 +1,30 @@
+✔ 1. allow_unleased nasce FALSE e só vira true por ato escrito (12.192291ms)
+✔ 2. quem cria a sessão recebe o lease, e o segundo agente é barrado (202.614916ms)
+✔ 3. sessão sem lease algum é recusada — fail closed, não permissiva (147.742709ms)
+✔ 4. sessão inexistente responde 404, não 409 — recusa não vaza existência (1.610292ms)
+✔ 5. x-nomos-client não confere controle, e delegação exige ADMIN (148.680042ms)
+✔ 6. lease expirado libera a sessão; o dono morto não segura o volante (1372.075417ms)
+✔ 7. handoff entrega o volante a quem foi nomeado, e só a ele (146.835209ms)
+✔ 8. takeover arranca o lease — e é privilégio de ADMIN, não de agente (140.548125ms)
+✔ 9. duas IAs disputam a mesma sessão: uma vence, a outra é recusada e registrada (321.771583ms)
+ALLOW_UNLEASED_DEFAULT=FALSE
+NO_DOUBLE_OWNER=PASS
+LEASE_EXPIRY=PASS
+HANDOFF=PASS
+TAKEOVER=PASS
+MULTI_AI_PASS=PASS
+SIMULTANEOUS_CONFLICT=PASS
+DEAD_OWNER_RECOVERY=PASS
+TASK_ON_OWNER_CHANGE=PASS
+IMPERSONATION_BLOCKED=PASS
+✔ 10. task em curso PARA quando o dono muda — não segue agindo pelo dono antigo (191.020917ms)
+✔ 99. portões da FASE 10 (0.211917ms)
+[api] audit.append falhou: ENOENT: no such file or directory, open '/tmp/nomos-own-sess-H8jLz6/_runtime/actions.jsonl'
+ℹ tests 11
+ℹ suites 0
+ℹ pass 11
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3074.301125

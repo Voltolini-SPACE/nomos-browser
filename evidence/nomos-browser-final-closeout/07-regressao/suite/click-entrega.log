@@ -1,0 +1,29 @@
+✔ 9. controle negativo do teste: alvo trivial dentro do viewport passa (606.240792ms)
+✔ 1. alvo ACIMA do viewport: rola de volta, clica, erro 0px (350.212541ms)
+✔ 2. alvo ABAIXO do viewport: rola e clica, erro 0px (322.886208ms)
+✔ 3. fora HORIZONTALMENTE em conteiner lateral: o correto e CLICAR, nao recusar (389.798709ms)
+✔ 4. header GRUDADO: rola o suficiente para descobrir e clica (324.756875ms)
+✔ 5. coberto por overlay fixo: TARGET_NOT_ACTIONABLE e o overlay e nomeado (148.356583ms)
+✔ 6. removido do DOM DURANTE a rolagem: TARGET_NOT_ACTIONABLE, nunca sucesso (1209.111417ms)
+✔ 7a. SPA em movimento PERPETUO: recusa; nunca clica em coordenada velha (1983.628958ms)
+✔ 7b. SPA que ASSENTA: espera, remede e acerta com erro 0px (480.034708ms)
+✔ 8. deviceScaleFactor 2: coordenada continua exata (201.93475ms)
+✔ 10a. click_delivery_check:false — coordenada vazia nao traz prova nenhuma (49.466209ms)
+✔ 10b. mesma fixture: com checagem = CLICK_NOT_DELIVERED; sem checagem = sucesso falso (330.151833ms)
+✔ 11. isTrusted===true em todo clique entregue, e a trilha registra a mira (336.803458ms)
+✔ 4b-1. link mesma origem que NAVEGA: success + delivery_evidence=navegacao (330.366292ms)
+✔ 4b-2. link que navega para outra rota: browser.back continua funcionando depois (315.953334ms)
+✔ 4b-3. <a target="_blank">: delivery_evidence=nova_aba e a aba aparece em browser.tabs (204.386542ms)
+✔ 4b-4. link "#ancora" NAO destroi contexto: a prova continua sendo a SONDA (154.228917ms)
+✔ 4b-5. <button> que chama location.assign(): sonda E navegacao, nenhuma vira falso positivo (337.168ms)
+✔ 4b-6. CONTROLE NEGATIVO: overlay sobre um LINK continua TARGET_NOT_ACTIONABLE (146.409167ms)
+✔ 4b-7. CONTROLE NEGATIVO 2: coordenada vazia em pagina que NAO navega nao vira 'navegacao' (18.929416ms)
+✔ 4b-8. o caso REAL de nao-entrega continua reprovando (nao navegou, nao chegou) (146.743208ms)
+ℹ tests 21
+ℹ suites 0
+ℹ pass 21
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 8840.787083

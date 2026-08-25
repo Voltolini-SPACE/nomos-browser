@@ -28,7 +28,7 @@
  * Saída: uma linha por cenário + rodapé com E2E_TOTAL/E2E_PASS/E2E_FAIL/
  *        BROWSER_E2E_SUITE, e `out/e2e-final.json` completo.
  */
-import { spawn, spawnSync, type ChildProcess } from "node:child_process";
+import { execFileSync, spawn, spawnSync, type ChildProcess } from "node:child_process";
 import fs from "node:fs";
 import http from "node:http";
 import os from "node:os";
@@ -2040,6 +2040,28 @@ async function cenario20(): Promise<void> {
         // ter sido escrito. Qualquer OUTRO código é defeito.
         const st = sh(`bash ${JSON.stringify(SERVICE_SH)} start`);
         p.exigir(st.rc === 0 || st.rc === 9, "start é aceito (0) ou recusado por instância única (9) — nunca erro obscuro", `rc=${st.rc} ${st.saida.split("\n").slice(-1)[0] ?? ""}`);
+        // CONSERTO DE INSTRUMENTO (declarado). `rc=9` tem DUAS causas muito
+        // diferentes: (a) o nosso serviço já estava de pé, e aí medir segue
+        // válido; (b) um daemon ESTRANHO — iniciado à mão fora do supervisor —
+        // é dono do lock, e aí todo degrau seguinte mede o processo errado.
+        // A primeira execução caiu no caso (b): um daemon meu, do trabalho de
+        // MCP, segurava o lock, e o cenário reprovou no `health` como se fosse
+        // defeito do produto. O guarda de instância única estava CERTO; o
+        // instrumento é que confundia as duas causas. Agora ele as separa e diz
+        // o nome do intruso em vez de acusar o produto.
+        if (st.rc === 9) {
+          const donoDoLock = (() => {
+            try {
+              const j = JSON.parse(fs.readFileSync(path.join(os.homedir(), ".nomos-browser", "daemon.lock"), "utf8")) as { pid?: number };
+              const pid = Number(j.pid ?? 0);
+              const cmd = execFileSync("ps", ["-o", "command=", "-p", String(pid)], { encoding: "utf8" }).trim();
+              return { pid, cmd, doSupervisor: /LaunchAgents|ai\.nomos\.browser/.test(cmd) || cmd.includes("service.sh") };
+            } catch { return { pid: 0, cmd: "(sem lock legível)", doSupervisor: false }; }
+          })();
+          p.exigir(donoDoLock.doSupervisor || donoDoLock.pid === 0,
+            "o rc=9 vem do NOSSO serviço, não de um daemon estranho segurando o lock",
+            `pid=${donoDoLock.pid} cmd=${donoDoLock.cmd.slice(0, 110)}`);
+        }
 
         const pid1 = await pidVivo("", 120_000, "PID vivo no lock depois do start");
         p.exigir(/^\d+$/.test(pid1), "o lock em disco tem o PID de um processo VIVO", pid1 === "" ? "(lock vazio)" : pid1);

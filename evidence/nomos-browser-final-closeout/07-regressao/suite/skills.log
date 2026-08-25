@@ -1,0 +1,18 @@
+✔ parseia a forma curta do exemplo da missão (2.246584ms)
+✔ parseia a forma completa com alvo, retry, fallback e credential_ref (0.450875ms)
+✔ rejeita segredo literal em vez de credential_ref (0.123833ms)
+✔ rejeita retry infinito e fallback inexistente (0.106833ms)
+✔ avisa sobre alvo frágil (só selector, só coordenada) (0.106916ms)
+✔ avisa quando não há bloco verification (0.061583ms)
+✔ nome duplicado de passo é erro (fallback ficaria ambíguo) (0.067416ms)
+✔ resolveVariables substitui e falha em variável ausente (0.249875ms)
+✔ comentário fora de aspas é removido, dentro de aspas é preservado (0.095ms)
+✔ tab na indentação é rejeitado com linha apontada (0.122375ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 10
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 137.991625

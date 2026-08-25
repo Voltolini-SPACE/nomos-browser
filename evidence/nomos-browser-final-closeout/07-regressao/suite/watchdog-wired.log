@@ -1,0 +1,23 @@
+✔ 1. o daemon INSTANCIA o watchdog e o publica no /health (23.670667ms)
+✔ 2. NAVEGADOR MORTO por baixo: SIGKILL real, sessão FAILED e nada pendurado (349.244875ms)
+✔ 3. WORKER PRESO numa ação real que trava é detectado (1274.203625ms)
+✔ 4. DAEMON CONGELADO: o event loop bloqueado é denunciado por deriva (602.939917ms)
+✔ 5. TASK ESTAGNADA é pausada de forma declarada, nunca abandonada em RUNNING (6149.440084ms)
+✔ 6. CRASH-LOOP: depois do teto o vigia DEGRADA e para de tentar (0.621125ms)
+WATCHDOG_WIRED=PASS
+WATCHDOG_HANG_RECOVERY=PASS
+WATCHDOG_CRASH_LOOP_PROTECTION=PASS
+WATCHDOG_TASK_STALL=PASS
+WATCHDOG_BROWSER_DEAD=PASS
+WATCHDOG_WORKER_STUCK=PASS
+✔ 7. watchdog_enabled:false desliga de verdade — e isso é dito no /health (3.62575ms)
+✔ 99. portões da FASE 13 (0.940042ms)
+[api] audit.append falhou: ENOENT: no such file or directory, mkdir '/tmp/nomos-wd-sess-Tio3W0/_runtime'
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 8816.080875

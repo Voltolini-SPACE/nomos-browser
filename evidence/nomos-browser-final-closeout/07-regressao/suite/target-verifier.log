@@ -1,0 +1,36 @@
+✔ cascata é exatamente a normativa da FASE 13 (125.902208ms)
+✔ 1. selector válido resolve com strategy=selector e healed=false (45.448833ms)
+✔ 2. selector QUEBRADO + text válido cura para role_text (healed=true, attempted contém selector) (34.891334ms)
+✔ 3. semantic "login" acha o botão "Entrar" (35.9045ms)
+✔ 3b. sinônimos pt+en caem na mesma intenção; desconhecido vira termo literal (0.195084ms)
+✔ 3c. semantic "sign in" e "acessar" também acham o botão Entrar (42.602625ms)
+✔ 4. dois botões com o mesmo texto e sem nth ⇒ TARGET_AMBIGUOUS (19.483917ms)
+✔ 4b. o mesmo alvo com nth resolve sem ambiguidade (34.292291ms)
+✔ 4c. nth fora do intervalo não escolhe outro elemento em silêncio (26.527125ms)
+✔ 5. accessibility cura quando só há placeholder (30.1775ms)
+✔ 6. vision é PULADA e registrada quando nenhum VisionProvider é injetado (23.619791ms)
+✔ 6b. VisionProvider injetado vence quando as demais falham (healed=true) (35.656459ms)
+✔ 6c. vision abaixo da confiança mínima NÃO resolve (41.155167ms)
+✔ 7. coordenada NUNCA vence quando outra estratégia estava disponível (31.388625ms)
+✔ 8. descriptor vazio é INVALID_REQUEST, não um chute (8.993083ms)
+✔ 9. URL_CHANGED verifica true após clique que muda o hash (59.494792ms)
+✔ 10. URL_CHANGED verifica false quando nada muda (controle negativo) (437.681583ms)
+✔ 11. confidence de uma verificação NONE não é 1.0 (20.140166ms)
+✔ 12. ELEMENT_APPEARED exige a TRANSIÇÃO (ausente antes, visível depois) (59.499667ms)
+✔ 13. ELEMENT_DISAPPEARED confirma remoção real (42.384583ms)
+✔ 14. ELEMENT_APPEARED sem `expect` sai não-executado, não sai verificado (14.125458ms)
+✔ 15. TEXT_CHANGED escopado ao alvo, com corroboração (43.345208ms)
+✔ 16. DOM_CHANGED usa MutationObserver e deriva confiança dos sinais (463.403416ms)
+✔ 17. NETWORK_SUCCESS sem gravador acoplado NÃO passa (25.207542ms)
+✔ 18. NETWORK_SUCCESS com gravador confirma resposta 200 e redige a query (22.09275ms)
+✔ 19. snapshot de kind diferente é recusado (não se verifica com a régua errada) (16.90875ms)
+✔ 20. retryStrategy tem backoff limitado e proíbe retry infinito (0.315875ms)
+✔ 21. superfície pública dos dois módulos está montada (0.122417ms)
+ℹ tests 28
+ℹ suites 0
+ℹ pass 28
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2097.023167

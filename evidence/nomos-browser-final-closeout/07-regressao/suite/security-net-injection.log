@@ -1,0 +1,40 @@
+▶ FASE 29 — NetworkPolicy: formas ofuscadas
+  ✔ 1. toda forma ofuscada de loopback/metadata é barrada no modo strict (2.205709ms)
+  ✔ 1b. classificação de host distingue loopback de interno de metadata (0.106541ms)
+  ✔ 1c. esquemas perigosos e data: grande (0.386041ms)
+✔ FASE 29 — NetworkPolicy: formas ofuscadas (108.246792ms)
+▶ FASE 29 — modos nomeados
+  ✔ 2. lab permite a porta listada e barra as demais (0.265583ms)
+  ✔ 2b. metadata é negada em TODOS os modos, inclusive custom permissivo (0.319333ms)
+  ✔ 2c. configuração inválida LANÇA em vez de degradar (1.1975ms)
+  ✔ 2d. networkActionError produz ActionError do contrato (0.124834ms)
+✔ FASE 29 — modos nomeados (2.121833ms)
+▶ FASE 30 — redirect é decidido no destino
+  ✔ 3. checkRedirect barra destino interno vindo de origem pública (0.150875ms)
+  ✔ 3b. chainKeyOf agrupa os saltos de uma mesma navegação (0.124166ms)
+✔ FASE 30 — redirect é decidido no destino (0.370625ms)
+▶ FASE 30 — guarda de navegação em Chromium real
+  ✔ 4. a fixture na porta listada carrega; porta não listada é barrada (103.683167ms)
+  ✔ 4b. redirect para a metadata é barrado NO DESTINO, não na origem (73.216042ms)
+  ✔ 4c. CONTROLE NEGATIVO: sem a guarda, o mesmo redirect chega ao serviço interno (118.194083ms)
+  ✔ 4d. cadeia de vários saltos: cada salto é decidido; o teto aborta o laço (128.701833ms)
+  ✔ 4e. subrecurso também é SSRF: <img src=metadata> é barrado (56.229125ms)
+  ✔ 4f. detach devolve a página ao comportamento normal e é idempotente (114.014458ms)
+✔ FASE 30 — guarda de navegação em Chromium real (594.428708ms)
+▶ FASE 29 — sanitizeObservation
+  ✔ 5. detecta as injeções visível e ocultas da fixture e NÃO apaga nada (71.262125ms)
+  ✔ 5b. FALSO POSITIVO BAIXO: o conteúdo benigno da mesma página não é marcado (57.849625ms)
+  ✔ 5c. quase-acertos de texto benigno não disparam (0.708792ms)
+  ✔ 5d. o delimitador não é forjável: nonce aleatório e tentativa é marcada (0.21025ms)
+  ✔ 5e. tecnicasDeOcultacao nomeia a técnica e não acusa o visível (0.341209ms)
+  ✔ 5f. LIMITE MEDIDO: carga além do corte de texto do observador não é vista (57.005459ms)
+✔ FASE 29 — sanitizeObservation (187.719875ms)
+✔ 6. o conteúdo entregue ao modelo não concede rede: as duas camadas somam (53.03825ms)
+ℹ tests 22
+ℹ suites 5
+ℹ pass 22
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1299.443708
