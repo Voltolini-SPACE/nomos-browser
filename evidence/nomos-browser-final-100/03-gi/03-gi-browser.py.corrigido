@@ -1,0 +1,625 @@
+"""gi_nomos.browser — o navegador da Gi, com o NOMOS como autoridade.
+
+Caminho, sem atalho em ponto nenhum:
+
+    Gi  --pergunta o veredito-->  NOMOS  (nomos approvals testar <CAT> <alvo>)
+        --se ALLOW, executa via-->  NOMOS Browser (adaptador MCP, stdio)
+                                    --> HTTP API v1 --> Chromium
+        <--resultado estruturado--  NOMOS Browser  <--  NOMOS  <--  Gi
+
+Três invariantes que este módulo se obriga a manter — e que os testes em
+``evidence/nomos-browser-final-loop/08-gi/e2e-gi.py`` medem uma a uma:
+
+1. A CATEGORIA VEM DO MANIFESTO, NUNCA DAQUI. O mapa tool->A0..A6 é lido de
+   ``packaging/mcp/manifesto.json`` — o MESMO arquivo cujo SHA-256 o dono
+   registra no catálogo do NOMOS. Inventar aqui uma categoria mais baixa que a
+   do manifesto seria gate-shopping: a Gi pediria vereditos sobre uma ação que
+   não é a que ela vai executar. Tool que o manifesto não declara herda o
+   ``nivel_padrao`` (A5, fail-closed), exatamente como ``nivel_da_tool`` do NOMOS.
+   Manifesto ausente ou torto ⇒ TUDO vira A5. Nunca A0.
+
+2. O VEREDITO VEM DO NOMOS, PELO CAMINHO QUE A GI JÁ USA. É o mesmo
+   ``subprocess.run([NOMOS_BIN, "approvals", "testar", ...])`` de
+   ``gi_intents.action_gate``. Não há cópia da política aqui dentro: se o dono
+   mudar ``~/.nomos/policy.json``, este módulo muda de comportamento no mesmo
+   instante, sem redeploy. Veredito != ALLOW ⇒ NÃO EXECUTA e devolve o motivo.
+
+3. A GI NUNCA APROVA POR NINGUÉM. Não há caminho neste arquivo que digite
+   "CONFIO", "ACEITO O RISCO" ou responda uma fila de aprovação. Quando o NOMOS
+   responde REQUIRE_APPROVAL, o resultado é ``NEGADO_POR_POLITICA`` com o comando
+   exato que o dono teria de rodar. Isso é o produto funcionando, não uma falha.
+
+Este módulo é NOVO e não é importado por nenhum arquivo que o serviço vivo
+carrega. Ligar as tools na Gi é um ato do dono — ver ``docs/GI-INTEGRATION.md``.
+"""
+from __future__ import annotations
+
+import json
+import os
+import queue as _queue
+import shutil
+import subprocess
+import threading as _threading
+import time as _time
+from pathlib import Path
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Configuração — tudo sobrescrevível por ambiente, nada adivinhado
+# ─────────────────────────────────────────────────────────────────────────────
+
+NOMOS_BIN = os.environ.get("NOMOS_BIN", "/Users/AI/.local/bin/nomos")
+MANIFESTO = Path(os.environ.get(
+    "NOMOS_BROWSER_MANIFESTO",
+    "/Users/AI/Projects/nomos-browser/packaging/mcp/manifesto.json"))
+#: Prefixo do alvo mostrado ao dono na fila de aprovação. Precisa ser legível:
+#: é o texto que ele lê antes de decidir.
+ALVO_PREFIXO = "mcp:nomos-browser"
+TIMEOUT_VEREDITO_S = float(os.environ.get("GI_BROWSER_TIMEOUT_VEREDITO", "3"))
+TIMEOUT_TOOL_S = float(os.environ.get("GI_BROWSER_TIMEOUT_TOOL", "90"))
+
+#: A0..A6 -> nome da categoria no NOMOS (``nomos/kernel/policy.py::Category``).
+CATEGORIA_DO_NIVEL = {
+    "A0": "A0_READ_LOCAL",
+    "A1": "A1_WRITE_LOCAL",
+    "A2": "A2_NET_EGRESS",
+    "A3": "A3_CONNECTOR_USE",
+    "A4": "A4_DEVICE_SCREEN",
+    "A5": "A5_CODE_EXEC",
+    "A6": "A6_DESTRUCTIVE",
+}
+#: O padrão do padrão do NOMOS: capacidade desconhecida = execução de código.
+NIVEL_FAIL_CLOSED = "A5"
+
+
+class BrowserIndisponivel(Exception):
+    """O caminho até o navegador não existe (manifesto, node, daemon)."""
+
+
+class BrowserCancelado(Exception):
+    """A chamada foi abandonada por quem pediu — barge-in de voz, por exemplo.
+
+    Cancelar, no modelo one-shot do NOMOS, é abandonar a chamada E derrubar o
+    subprocesso: não existe `cancel` de servidor a que apelar. O que este módulo
+    garante é que o abandono vira ERRO no chamador, e não uma promessa pendurada
+    que a Gi ficaria esperando com o rosto parado."""
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 1. O mapa de risco — LIDO DO MANIFESTO
+# ─────────────────────────────────────────────────────────────────────────────
+
+def carregar_manifesto(caminho: Path | None = None) -> dict:
+    """Os 4 campos canônicos do manifesto (os mesmos que entram no SHA-256).
+
+    Fail-closed: qualquer defeito devolve um manifesto SEM tools declaradas e
+    com piso A5 — o que faz toda tool exigir o dono. Um ``except`` que caísse
+    para "A0" aqui seria a falha mais cara possível neste arquivo.
+    """
+    alvo = Path(caminho) if caminho is not None else MANIFESTO
+    vazio = {"nome": "nomos-browser", "comando": [], "nivel_padrao": NIVEL_FAIL_CLOSED,
+             "tools": {}, "_origem": str(alvo), "_ok": False}
+    try:
+        bruto = json.loads(alvo.read_text(encoding="utf-8"))
+    except Exception:
+        return vazio
+    nome = bruto.get("nome")
+    comando = bruto.get("comando")
+    if not isinstance(nome, str) or not nome:
+        return vazio
+    if (not isinstance(comando, list) or not comando
+            or not all(isinstance(c, str) for c in comando)):
+        return vazio
+    nivel_padrao = str(bruto.get("nivel_padrao", NIVEL_FAIL_CLOSED))
+    if nivel_padrao not in CATEGORIA_DO_NIVEL:
+        return vazio
+    tools = bruto.get("tools", {})
+    if not isinstance(tools, dict):
+        return vazio
+    limpo = {}
+    for t, n in tools.items():
+        if str(n) not in CATEGORIA_DO_NIVEL:
+            return vazio          # um nível torto invalida o mapa INTEIRO
+        limpo[str(t)] = str(n)
+    return {"nome": nome, "comando": comando, "nivel_padrao": nivel_padrao,
+            "tools": limpo, "_origem": str(alvo), "_ok": True}
+
+
+def nivel_da_tool(tool: str, manifesto: dict | None = None) -> str:
+    """Réplica de ``nomos.interface.mcp_client.nivel_da_tool``: não declarada
+    herda o piso. Aqui isso importa duas vezes, porque é a mesma resposta que o
+    NOMOS dará quando ELE for chamar a tool — os dois lados têm de concordar."""
+    m = manifesto if manifesto is not None else carregar_manifesto()
+    return m["tools"].get(tool, m["nivel_padrao"])
+
+
+def categoria_da_tool(tool: str, manifesto: dict | None = None) -> str:
+    """A CATEGORIA NOMOS da tool. É esta string que vai ao ``approvals testar``."""
+    return CATEGORIA_DO_NIVEL[nivel_da_tool(tool, manifesto)]
+
+
+def alvo_da_tool(tool: str) -> str:
+    return f"{ALVO_PREFIXO}:{tool}"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 2. O veredito — pedido ao NOMOS, pelo caminho que a Gi já usa
+# ─────────────────────────────────────────────────────────────────────────────
+
+VEREDITOS = ("DENY", "REQUIRE_APPROVAL", "ALLOW")
+
+
+def veredito(tool: str, manifesto: dict | None = None) -> dict:
+    """Pergunta ao NOMOS o que ele faria com esta tool. NÃO executa nada.
+
+    Mesma forma de ``gi_intents.action_gate``: ``nomos approvals testar`` é
+    dry-run por construção — ele imprime o veredito e sai. A ordem de busca em
+    ``VEREDITOS`` é a mais restritiva primeiro, para que um texto que contenha
+    duas palavras nunca seja lido como o mais permissivo dos dois.
+    """
+    cat = categoria_da_tool(tool, manifesto)
+    alvo = alvo_da_tool(tool)
+    v, bruto = "INDISPONIVEL", ""
+    try:
+        proc = subprocess.run([NOMOS_BIN, "approvals", "testar", cat, alvo],
+                              capture_output=True, text=True,
+                              timeout=TIMEOUT_VEREDITO_S)
+        bruto = (proc.stdout or "") + (proc.stderr or "")
+        alto = bruto.upper()
+        for cand in VEREDITOS:
+            if cand in alto:
+                v = cand
+                break
+    except Exception as exc:
+        bruto = f"{type(exc).__name__}: {exc}"
+    return {"tool": tool, "nivel": nivel_da_tool(tool, manifesto), "categoria": cat,
+            "alvo": alvo, "veredito": v, "saida_nomos": bruto.strip()}
+
+
+def _comando_de_aprovacao(tool: str, manifesto: dict) -> str:
+    """O comando EXATO que falta ao dono. Vai dentro da recusa, para que a Gi
+    possa dizer o que fazer em vez de só dizer não."""
+    return (f"{NOMOS_BIN} mcp chamar {manifesto.get('_origem', MANIFESTO)} "
+            f"{tool} --args '{{...}}'   (num terminal seu; o NOMOS pedirá sua aprovação)")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 3. O transporte — cliente stdio fiel ao ``ClienteMCP`` do NOMOS
+# ─────────────────────────────────────────────────────────────────────────────
+
+PROTOCOLO = "2024-11-05"
+
+
+#: Fatia de espera entre duas conferências de cancelamento. Mesma grandeza dos
+#: 0,2 s do `_ClienteStdio`: curta o bastante para um barge-in de voz parecer
+#: instantâneo, longa o bastante para não virar espera ocupada.
+_FATIA_CANCELAMENTO_S = 0.2
+
+
+def _derrubar_arvore(proc) -> None:
+    """Mata o processo E os filhos dele. TERM primeiro, KILL se insistir.
+
+    `nomos mcp chamar` gera `node servidor.mjs`; matar só o pai deixaria o neto
+    segurando a sessão do runtime. Como o processo nasce com `start_new_session`,
+    ele é líder do próprio grupo e `killpg` alcança a árvore inteira.
+    """
+    import signal as _signal
+    try:
+        gid = os.getpgid(proc.pid)
+    except (ProcessLookupError, PermissionError, OSError):
+        gid = None
+    for sinal in (_signal.SIGTERM, _signal.SIGKILL):
+        if proc.poll() is not None:
+            break
+        try:
+            if gid is not None:
+                os.killpg(gid, sinal)
+            else:
+                proc.send_signal(sinal)
+        except (ProcessLookupError, PermissionError, OSError):
+            break
+        try:
+            proc.wait(timeout=3)
+        except subprocess.TimeoutExpired:
+            continue
+    for fluxo in (proc.stdout, proc.stderr):
+        try:
+            if fluxo is not None:
+                fluxo.close()
+        except Exception:
+            pass
+
+
+class _ClienteStdio:
+    """Sessão one-shot com o nosso server MCP, pelo mesmo protocolo do NOMOS.
+
+    Existe porque o NOMOS só chama tools de manifesto REGISTRADO — e enquanto o
+    dono não registrou, ``nomos mcp chamar`` recusa (corretamente). Este caminho
+    NÃO é um contorno da governança: ele roda o MESMO comando do manifesto, com
+    o MESMO cwd, e só depois de o veredito do NOMOS ter dito ALLOW. O que ele
+    contorna é a ausência do REGISTRO, não a ausência da APROVAÇÃO.
+    """
+
+    #: Fatia de espera. Curta o bastante para que um barge-in de voz não fique
+    #: preso atrás de um `queue.get(timeout=90)`.
+    _FATIA_S = 0.2
+
+    def __init__(self, comando: list[str], base: str, timeout: float,
+                 env: dict | None = None, cancelar=None):
+        self.comando, self._base, self.timeout = comando, base, timeout
+        self._env = env
+        self._cancelar = cancelar          # threading.Event | None
+        self._proc: subprocess.Popen | None = None
+        self._mid = 0
+        self.server_info: dict = {}
+
+    def __enter__(self) -> "_ClienteStdio":
+        self._proc = subprocess.Popen(
+            self.comando, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL, text=True, encoding="utf-8",
+            cwd=self._base, env=self._env)
+        self._fila: _queue.Queue = _queue.Queue()
+        proc = self._proc
+
+        def _ler() -> None:
+            try:
+                assert proc.stdout is not None
+                for linha in proc.stdout:
+                    self._fila.put(linha)
+            except Exception:
+                pass
+            self._fila.put(None)
+
+        _threading.Thread(target=_ler, daemon=True).start()
+        init = self._rpc("initialize", {"protocolVersion": PROTOCOLO,
+                                        "capabilities": {},
+                                        "clientInfo": {"name": "gi-nomos-browser"}})
+        self.server_info = init.get("serverInfo", {})
+        self._enviar({"jsonrpc": "2.0", "method": "notifications/initialized"})
+        return self
+
+    def __exit__(self, *exc) -> None:
+        if self._proc is not None:
+            try:
+                assert self._proc.stdin is not None
+                self._proc.stdin.close()
+                self._proc.wait(timeout=5)
+            except Exception:
+                self._proc.kill()
+
+    def _enviar(self, payload: dict) -> None:
+        assert self._proc and self._proc.stdin
+        self._proc.stdin.write(json.dumps(payload, ensure_ascii=False) + "\n")
+        self._proc.stdin.flush()
+
+    def _rpc(self, metodo: str, params: dict | None = None) -> dict:
+        self._mid += 1
+        self._enviar({"jsonrpc": "2.0", "id": self._mid, "method": metodo,
+                      **({"params": params} if params is not None else {})})
+        prazo = _time.monotonic() + self.timeout
+        while True:
+            restante = prazo - _time.monotonic()
+            if restante <= 0:
+                raise BrowserIndisponivel(
+                    f"server MCP não respondeu em {self.timeout:.0f}s")
+            # Cancelamento é conferido a cada fatia, ANTES de esperar de novo: um
+            # `get(timeout=restante)` inteiro deixaria o pedido de cancelar preso
+            # por até `timeout` segundos, que é o oposto de cancelar.
+            if self._cancelar is not None and self._cancelar.is_set():
+                if self._proc is not None:
+                    self._proc.kill()
+                raise BrowserCancelado("chamada cancelada por quem pediu; "
+                                       "subprocesso do conector derrubado")
+            try:
+                linha = self._fila.get(timeout=min(restante, self._FATIA_S))
+            except _queue.Empty:
+                continue
+            if linha is None:
+                raise BrowserIndisponivel("server MCP encerrou sem responder")
+            try:
+                msg = json.loads(linha)
+            except Exception:
+                continue                      # linha que não é JSON: não é minha
+            if not isinstance(msg, dict) or msg.get("id") != self._mid:
+                continue
+            if "error" in msg:
+                raise BrowserIndisponivel(str(msg["error"].get("message", "erro do server")))
+            return msg.get("result", {})
+
+    def tools(self) -> list[dict]:
+        return self._rpc("tools/list").get("tools", [])
+
+    def chamar(self, tool: str, argumentos: dict | None = None) -> dict:
+        return self._rpc("tools/call", {"name": tool, "arguments": argumentos or {}})
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 4. Execução — só depois do ALLOW, e pela porta que o dono já abriu
+# ─────────────────────────────────────────────────────────────────────────────
+
+def impressao(manifesto: dict) -> str:
+    """SHA-256 do manifesto canônico — a MESMA conta de
+    ``nomos.interface.mcp_catalogo.impressao``. É como se descobre se o dono já
+    registrou ESTE manifesto (e não um parecido)."""
+    import hashlib
+    canon = {k: manifesto[k] for k in ("nome", "comando", "nivel_padrao", "tools")}
+    bruto = json.dumps(canon, sort_keys=True, ensure_ascii=False,
+                       separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(bruto).hexdigest()
+
+
+def registrado(manifesto: dict | None = None) -> bool:
+    """O dono já confiou neste manifesto exato? Consulta o catálogo do NOMOS.
+
+    Só-leitura. Nunca registra, nunca pede. Um ``False`` aqui não é erro: é o
+    estado normal antes do consentimento.
+    """
+    m = manifesto if manifesto is not None else carregar_manifesto()
+    if not m.get("_ok"):
+        return False
+    try:
+        proc = subprocess.run([NOMOS_BIN, "mcp", "catalogo"],
+                              capture_output=True, text=True, timeout=TIMEOUT_VEREDITO_S)
+    except Exception:
+        return False
+    return impressao(m)[:16] in (proc.stdout or "")
+
+
+def _ambiente_do_conector() -> dict:
+    """O ambiente que o conector herda. Repassa a credencial do runtime SE ela
+    já estiver no ambiente do processo da Gi — este módulo não vai ler o cofre do
+    dono por conta própria; sem credencial o adaptador recusa, e recusar é certo.
+    """
+    env = dict(os.environ)
+    env.setdefault("NOMOS_BROWSER_URL",
+                   os.environ.get("NOMOS_BROWSER_URL", "http://127.0.0.1:7777"))
+    return env
+
+
+def _texto_do_resultado(res: dict) -> str:
+    return "\n".join(b.get("text", "") for b in res.get("content", [])
+                     if b.get("type") == "text")
+
+
+def _session_id(texto: str) -> str | None:
+    import re
+    m = re.search(r"session_id=(\S+)", texto)
+    return m.group(1) if m else None
+
+
+def executar(tool: str, args: dict | None = None, *,
+             cancelar=None, timeout_s: float | None = None) -> dict:
+    """Executa uma ação de navegador PARA a Gi — se, e só se, o NOMOS permitir.
+
+    Devolve sempre um dicionário; nunca levanta por causa de política. Campos:
+      ok            bool
+      status        EXECUTADO | NEGADO_POR_POLITICA | BLOQUEADO_POR_APROVACAO
+                    | CANCELADO | INDISPONIVEL
+      veredito      o veredito literal do NOMOS (ALLOW/REQUIRE_APPROVAL/DENY/…)
+      categoria     a categoria NOMOS consultada (vinda do MANIFESTO)
+      via           por onde a execução saiu ('nomos-mcp' ou 'mcp-stdio')
+      texto         o resultado do adaptador, já em texto
+      session_id    a sessão do runtime, para continuar depois
+      falta         (quando negado) o comando exato que o dono teria de rodar
+    """
+    args = dict(args or {})
+    m = carregar_manifesto()
+    v = veredito(tool, m)
+    base = {"tool": tool, "nivel": v["nivel"], "categoria": v["categoria"],
+            "alvo": v["alvo"], "veredito": v["veredito"],
+            "manifesto": m.get("_origem"), "registrado": registrado(m)}
+
+    # ── O GATE. Nada abaixo desta linha roda sem ALLOW. ──────────────────────
+    if v["veredito"] != "ALLOW":
+        status = ("BLOQUEADO_POR_APROVACAO" if v["veredito"] == "REQUIRE_APPROVAL"
+                  else "NEGADO_POR_POLITICA")
+        return {**base, "ok": False, "status": status, "texto": "",
+                "motivo": (f"o NOMOS respondeu {v['veredito']} para "
+                           f"{v['categoria']} · {v['alvo']} — a Gi não executa "
+                           "sem o veredito ALLOW"),
+                "falta": _comando_de_aprovacao(tool, m),
+                "saida_nomos": v["saida_nomos"]}
+
+    if not m.get("_ok"):
+        return {**base, "ok": False, "status": "INDISPONIVEL", "texto": "",
+                "motivo": f"manifesto ausente ou inválido: {m.get('_origem')}"}
+
+    timeout = TIMEOUT_TOOL_S if timeout_s is None else timeout_s
+
+    # ── Porta 1: o dono JÁ registrou ⇒ vai pelo NOMOS, com auditoria dele ────
+    if base["registrado"]:
+        cmd = [NOMOS_BIN, "mcp", "chamar", str(m["_origem"]), tool,
+               "--args", json.dumps(args, ensure_ascii=False)]
+        # `subprocess.run` NÃO serve aqui, e o motivo é o oposto do que parece.
+        # Enquanto o manifesto estava EXPERIMENTAL, `executar` caía na Porta 2 e
+        # o barge-in funcionava — era o `_ClienteStdio` quem olhava `cancelar`.
+        # No dia em que o dono REGISTRA o manifesto, o fluxo muda para cá, e um
+        # `run()` bloqueia até o fim: a Gi continuaria navegando depois de o dono
+        # mandar parar. O defeito nasce exatamente na transição para produção.
+        # Por isso: Popen + sessão nova (o `nomos` gera `node servidor.mjs`, e
+        # matar só o pai deixaria o neto vivo), conferindo `cancelar` a cada
+        # fatia, do mesmo jeito e com a mesma fatia do `_ClienteStdio`.
+        try:
+            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                                    stderr=subprocess.PIPE, text=True,
+                                    env=_ambiente_do_conector(),
+                                    start_new_session=True)
+        except OSError as exc:
+            return {**base, "ok": False, "status": "INDISPONIVEL", "via": "nomos-mcp",
+                    "texto": "", "motivo": f"não consegui rodar {NOMOS_BIN}: {exc}"}
+        prazo = _time.monotonic() + timeout
+        while True:
+            if cancelar is not None and cancelar.is_set():
+                _derrubar_arvore(proc)
+                return {**base, "ok": False, "status": "CANCELADO", "via": "nomos-mcp",
+                        "texto": "", "motivo": "chamada cancelada por quem pediu; "
+                                               "processo do nomos derrubado"}
+            restante = prazo - _time.monotonic()
+            if restante <= 0:
+                _derrubar_arvore(proc)
+                return {**base, "ok": False, "status": "INDISPONIVEL", "via": "nomos-mcp",
+                        "texto": "", "motivo": f"nomos mcp chamar não respondeu em {timeout:.0f}s"}
+            try:
+                saida, erro_bruto = proc.communicate(
+                    timeout=min(restante, _FATIA_CANCELAMENTO_S))
+                break
+            except subprocess.TimeoutExpired:
+                continue          # documentado: dá para chamar communicate de novo
+        texto = (saida or "").strip()
+        erro = (erro_bruto or "").strip()
+        if proc.returncode != 0:
+            # Recusa do NOMOS (ex.: gate interativo) não é falha nossa nem sucesso.
+            return {**base, "ok": False, "via": "nomos-mcp",
+                    "status": "BLOQUEADO_POR_APROVACAO" if "E002" in erro else "INDISPONIVEL",
+                    "texto": texto, "motivo": erro or f"nomos saiu com {proc.returncode}",
+                    "falta": _comando_de_aprovacao(tool, m)}
+        return {**base, "ok": "NOMOS_BROWSER_ERROR" not in texto, "status": "EXECUTADO",
+                "via": "nomos-mcp", "texto": texto, "session_id": _session_id(texto)}
+
+    # ── Porta 2: ainda não registrado ⇒ mesmo comando, mesmo cwd, mesmo gate ─
+    try:
+        with _ClienteStdio(m["comando"], str(Path(m["_origem"]).parent), timeout,
+                           env=_ambiente_do_conector(), cancelar=cancelar) as cli:
+            res = cli.chamar(tool, args)
+    except BrowserCancelado as exc:
+        return {**base, "ok": False, "status": "CANCELADO", "via": "mcp-stdio",
+                "texto": "", "motivo": str(exc)}
+    except BrowserIndisponivel as exc:
+        return {**base, "ok": False, "status": "INDISPONIVEL", "via": "mcp-stdio",
+                "texto": "", "motivo": str(exc)}
+    texto = _texto_do_resultado(res)
+    return {**base, "ok": res.get("isError") is not True, "status": "EXECUTADO",
+            "via": "mcp-stdio", "texto": texto, "session_id": _session_id(texto),
+            "is_error": res.get("isError") is True}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 5. Descoberta — o que a Gi pode fazer, e o que precisa do dono
+# ─────────────────────────────────────────────────────────────────────────────
+
+def descobrir(consultar_nomos: bool = True) -> dict:
+    """Inventário honesto: cada tool, sua categoria (do manifesto) e o veredito.
+
+    ``browser_observe``/``find``/``extract``/``tabs``/``screenshot`` são A0 porque
+    LEEM uma página JÁ CARREGADA: nenhuma navegação nova, nenhum byte a mais para
+    fora, nenhuma mutação de DOM. Quem carregou a página foi um ``navigate``
+    anterior — e AQUELE é A2. Ver a justificativa completa em
+    ``docs/NOMOS-INTEGRATION.md``.
+    """
+    m = carregar_manifesto()
+    itens = []
+    for tool, nivel in sorted(m["tools"].items()):
+        item = {"tool": tool, "nivel": nivel,
+                "categoria": CATEGORIA_DO_NIVEL[nivel], "alvo": alvo_da_tool(tool)}
+        if consultar_nomos:
+            item["veredito"] = veredito(tool, m)["veredito"]
+            item["headless"] = item["veredito"] == "ALLOW"
+        itens.append(item)
+    return {"manifesto": m.get("_origem"), "manifesto_valido": bool(m.get("_ok")),
+            "nome": m["nome"], "nivel_padrao": m["nivel_padrao"],
+            "impressao": impressao(m) if m.get("_ok") else None,
+            "registrado": registrado(m), "tools": itens}
+
+
+def diagnostico() -> dict:
+    """Só-leitura: o que está no lugar e o que falta para o caminho funcionar."""
+    m = carregar_manifesto()
+    node = m["comando"][0] if m["comando"] else ""
+    return {
+        "manifesto": str(m.get("_origem")), "manifesto_valido": bool(m.get("_ok")),
+        "nomos_bin": NOMOS_BIN, "nomos_ok": bool(shutil.which(NOMOS_BIN) or Path(NOMOS_BIN).exists()),
+        "interpretador": node, "interpretador_ok": bool(shutil.which(node)) if node else False,
+        "credencial_no_ambiente": bool(os.environ.get("NOMOS_BROWSER_TOKEN")
+                                       or os.environ.get("NOMOS_BROWSER_TOKEN_FILE")),
+        "runtime_url": os.environ.get("NOMOS_BROWSER_URL", "http://127.0.0.1:7777"),
+        "registrado_no_nomos": registrado(m),
+    }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 6. Ligação com o dispatcher da Gi — DECLARADA aqui, LIGADA pelo dono
+# ─────────────────────────────────────────────────────────────────────────────
+
+#: Declaração das tools para o modelo de voz (mesmo formato do ``TOOLS`` de
+#: ``device_voice_gateway``). Só as que rodam headless hoje entram por padrão:
+#: oferecer ao modelo uma tool que sempre será negada ensina a Gi a prometer o
+#: que não cumpre.
+TOOLS_REALTIME = [
+    {"type": "function", "name": "navegador_ler",
+     "description": ("Lê a página que já está aberta no navegador do NOMOS: texto, "
+                     "título e URL. Não abre site nenhum."),
+     "parameters": {"type": "object", "properties": {
+         "session_id": {"type": "string", "description": "sessão a continuar (opcional)"}}}},
+    {"type": "function", "name": "navegador_abas",
+     "description": "Lista as abas abertas no navegador do NOMOS.",
+     "parameters": {"type": "object", "properties": {}}},
+    {"type": "function", "name": "navegador_ver",
+     "description": ("Tira uma captura da página aberta para você OLHAR (visão). "
+                     "Devolve a referência da imagem, não a imagem."),
+     "parameters": {"type": "object", "properties": {
+         "session_id": {"type": "string"}}}},
+    {"type": "function", "name": "navegador_abrir",
+     "description": ("Abre um site no navegador do NOMOS. Sai para a rede: o NOMOS "
+                     "vai pedir a aprovação do dono antes."),
+     "parameters": {"type": "object", "properties": {
+         "url": {"type": "string"}, "session_id": {"type": "string"}},
+         "required": ["url"]}},
+]
+
+#: Nome da capability na Gi -> (tool MCP, tradutor de argumentos).
+#: O tradutor existe para que a Gi fale como gente ("navegador_ler") e o
+#: adaptador continue falando o contrato ("browser_extract").
+_LIGACOES = {
+    "navegador_ler": ("browser_extract", lambda a: {**({"session_id": a["session_id"]}
+                                                       if a.get("session_id") else {}),
+                                                    "format": "text"}),
+    "navegador_abas": ("browser_tabs", lambda a: {**({"session_id": a["session_id"]}
+                                                     if a.get("session_id") else {})}),
+    "navegador_ver": ("browser_screenshot", lambda a: {**({"session_id": a["session_id"]}
+                                                          if a.get("session_id") else {}),
+                                                       "scope": "viewport"}),
+    "navegador_abrir": ("browser_abrir_url", None),   # substituído abaixo
+}
+_LIGACOES["navegador_abrir"] = ("browser_navigate",
+                                lambda a: {**({"session_id": a["session_id"]}
+                                              if a.get("session_id") else {}),
+                                           "url": a.get("url", "")})
+
+
+def _handler(tool: str, traduzir):
+    def _h(args: dict) -> dict:
+        r = executar(tool, traduzir(dict(args or {})))
+        # O dispatcher da Gi loga o retorno; o veredito do NOMOS vai JUNTO, para
+        # que a auditoria da Gi e a do NOMOS contem a mesma história.
+        saida = {"status": r["status"], "veredito": r["veredito"],
+                 "categoria": r["categoria"], "via": r.get("via"),
+                 "session_id": r.get("session_id"),
+                 "texto": r.get("texto", "")[:4000]}
+        if r.get("motivo"):
+            saida["motivo"] = r["motivo"]
+        if r.get("falta"):
+            saida["falta"] = r["falta"]
+        return saida
+    return _h
+
+
+def registrar(dispatcher) -> list[str]:
+    """Registra as capabilities de navegador no ``NomosDispatcher`` da Gi.
+
+    ESTA FUNÇÃO NÃO É CHAMADA POR NINGUÉM neste repositório — de propósito.
+    Ligar o navegador na Gi muda o que o serviço vivo (:8321) pode fazer, e isso
+    é decisão do dono. A linha exata está em ``docs/GI-INTEGRATION.md``.
+
+    A categoria de cada Capability vem do MANIFESTO, não de uma escolha local:
+    é a mesma que foi ao ``approvals testar``. Assim o fail-closed do dispatcher
+    (A6 negado, desconhecida negada) e o gate do NOMOS concordam por construção.
+    """
+    from .dispatcher import Capability
+    m = carregar_manifesto()
+    nomes = []
+    for nome, (tool, traduzir) in _LIGACOES.items():
+        nivel = nivel_da_tool(tool, m)
+        dispatcher.register(Capability(
+            nome, nivel, _handler(tool, traduzir),
+            read_only=(nivel == "A0")))
+        nomes.append(nome)
+    return nomes

@@ -148,14 +148,22 @@ def main() -> int:
         a0 = {"browser_observe", "browser_find", "browser_extract", "browser_tabs",
               "browser_screenshot"}
         a2 = {"browser_navigate", "browser_click", "browser_type", "browser_press",
-              "browser_scroll", "browser_download", "browser_upload"}
+              "browser_scroll", "browser_download", "browser_upload",
+              "browser_tab_open"}
+        # A1: as duas tools de aba que MUTAM a sessão sem sair para a rede. Elas
+        # não existiam quando este caso foi escrito — nasceram da correção da
+        # elevação de privilégio, que quebrou `browser_tabs` (uma tool A0 que
+        # despachava quatro rotas) em quatro tools com níveis próprios. O número
+        # 13 aqui era a contagem do manifesto VULNERÁVEL.
+        a1 = {"browser_tab_switch", "browser_tab_close"}
         classificacao_ok = (
-            len(tools) == 13
+            len(tools) == 16
             and all(tools[t]["categoria"] == "A0_READ_LOCAL" for t in a0)
+            and all(tools[t]["categoria"] == "A1_WRITE_LOCAL" for t in a1)
             and all(tools[t]["categoria"] == "A2_NET_EGRESS" for t in a2)
             and tools["browser_task"]["categoria"] == "A5_CODE_EXEC")
         ok_desc = caso(
-            "1. descoberta — 13 tools, categoria vinda do MANIFESTO registrado",
+            "1. descoberta — 16 tools, categoria vinda do MANIFESTO registrado",
             classificacao_ok and d["manifesto_valido"],
             f"manifesto={d['manifesto']} impressao={str(d['impressao'])[:16]}… "
             f"registrado_no_nomos={d['registrado']}")
@@ -164,6 +172,7 @@ def main() -> int:
             "2. consulta — o veredito de CADA tool veio do NOMOS, não daqui",
             all(v in ("ALLOW", "REQUIRE_APPROVAL", "DENY") for v in vereditos.values())
             and all(vereditos[t] == "ALLOW" for t in a0)
+            and all(vereditos[t] == "REQUIRE_APPROVAL" for t in a1)
             and all(vereditos[t] == "REQUIRE_APPROVAL" for t in a2)
             and vereditos["browser_task"] == "REQUIRE_APPROVAL",
             "ALLOW=" + ",".join(sorted(t for t, v in vereditos.items() if v == "ALLOW"))

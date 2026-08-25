@@ -1,0 +1,13 @@
+=== TESTE DE MUTACAO: com o defeito original de volta ===
+FAILED test_gi_nomos_browser_cancelamento.py::test_porta_canonica_honra_cancelar
+FAILED test_gi_nomos_browser_cancelamento.py::test_cancelamento_no_meio_da_chamada
+FAILED test_gi_nomos_browser_cancelamento.py::test_cancelamento_derruba_a_arvore_nao_so_o_pai
+3 failed, 1 passed in 93.11s (0:01:33)
+
+=== com a correcao ===
+....                                                                     [100%]
+4 passed in 5.07s
+=== suite Gi inteira apos a correcao ===
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+138 passed, 2 warnings in 12.76s
