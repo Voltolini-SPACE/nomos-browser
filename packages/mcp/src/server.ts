@@ -269,6 +269,16 @@ export interface SessionOptions {
  * default restrito (download/upload/send/purchase/payment/delete negados). Pedir
  * capability aqui seria o servidor MCP se autoconceder poder — concessão é ato
  * do dono, não do adaptador de protocolo.
+ *
+ * FASE 7 — LEASE. A criação vai pela MESMA rota da API v1 que todo mundo usa
+ * (`POST /api/v1/sessions`), e é o runtime que, no mesmo ato, concede o lease
+ * EXCLUSIVO ao principal do token (`sessions.create` em `api/src/daemon.ts`).
+ * Isto NÃO é um atalho do adaptador: sob `allow_unleased:false` — o default do
+ * produto — uma sessão criada por qualquer outro caminho nasceria sem dono e
+ * toda ação seguinte bateria em `CONTROL_NOT_OWNED`. O adaptador não pede lease,
+ * não renova lease e não rouba lease de ninguém; ele herda o que o runtime deu a
+ * quem apresentou a credencial, e o `session_id` resultante volta no cabeçalho
+ * de toda resposta (ver `envelopeToResult`) para que o chamador possa continuar.
  */
 export class SessionResolver {
   #id: string | null = null;
@@ -336,9 +346,22 @@ function textResult(text: string, isError: boolean): McpToolResult {
   return isError ? { content: [{ type: "text", text }], isError: true } : { content: [{ type: "text", text }] };
 }
 
-/** Envelope do contrato → resultado MCP. Único lugar onde success vira isError. */
-function envelopeToResult(route: string, httpStatus: number, envelope: ActionResponse): McpToolResult {
-  const head = `route=${route} http=${httpStatus} action_id=${envelope.action_id} state=${envelope.state} duration_ms=${envelope.timing?.duration_ms ?? "?"}`;
+/**
+ * Envelope do contrato → resultado MCP. Único lugar onde success vira isError.
+ *
+ * FASE 7 — `session_id` VOLTA NO CABEÇALHO.
+ *
+ * O bootstrap de sessão (ver `SessionResolver`) existe para que um chamador
+ * NOMOS não precise entender sessões: ele chama `browser_extract` e funciona.
+ * O efeito colateral era que ele TAMBÉM não tinha como continuar de propósito —
+ * `nomos mcp chamar` é one-shot (sobe o server, executa, encerra), então a
+ * sessão implícita morre com o processo e a chamada seguinte abria outra aba em
+ * branco. Devolver o `session_id` na resposta é o que torna a continuidade
+ * possível sem obrigar ninguém a criá-la: quem quiser continuar repassa o mesmo
+ * `session_id` na chamada seguinte; quem não quiser, ignora a linha.
+ */
+function envelopeToResult(route: string, sessionId: string, httpStatus: number, envelope: ActionResponse): McpToolResult {
+  const head = `route=${route} session_id=${sessionId} http=${httpStatus} action_id=${envelope.action_id} state=${envelope.state} duration_ms=${envelope.timing?.duration_ms ?? "?"}`;
   if (envelope.success === true) {
     return textResult(`${head}\n${JSON.stringify(envelope.result, null, 2)}`, false);
   }
@@ -461,7 +484,7 @@ export function createMcpServer(opts: McpServerOptions = {}): McpServer {
           contract: CONTRACT_VERSION,
         });
       }
-      return envelopeToResult(rpc.route, status, json);
+      return envelopeToResult(rpc.route, sessionId, status, json);
     } catch (err) {
       if (err instanceof RuntimeAuthError) {
         return textResult(

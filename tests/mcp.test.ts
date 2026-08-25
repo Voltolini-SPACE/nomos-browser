@@ -311,6 +311,30 @@ test("2c. chamadas concorrentes sem session_id não criam duas sessões", async 
   assert.equal(criacoes.length, 1, `criou ${criacoes.length} sessões em corrida — deveria criar 1`);
 });
 
+test("2e. FASE 7 — o session_id da sessão IMPLÍCITA volta no resultado", async () => {
+  // Sem isto, o bootstrap automático de sessão é uma via de mão única: o chamador
+  // NOMOS ganha "funciona sem saber de sessão" e perde "consigo continuar de
+  // propósito". `nomos mcp chamar` é one-shot — um processo por chamada — então
+  // sem o id na resposta a chamada seguinte SEMPRE abriria outra aba em branco.
+  fake.reset();
+  const srv = novoServidor();
+  const out = await srv.callTool("browser_navigate", { url: "http://exemplo.local/a" });
+  const t = textoDe(out);
+  assert.match(t, /session_id=sess_fake_001/, `resultado não expôs o session_id: ${t.slice(0, 200)}`);
+
+  // CONTROLE: com sessão FIXADA pelo cliente, o id devolvido é o do cliente —
+  // senão "expõe a sessão" poderia ser um literal fixo no cabeçalho.
+  fake.reset();
+  const srv2 = novoServidor();
+  const out2 = await srv2.callTool("browser_observe", { session_id: "sess_do_cliente" });
+  assert.match(textoDe(out2), /session_id=sess_do_cliente/);
+  assert.equal(
+    fake.recebidas.filter((r) => r.url === "/api/v1/sessions").length,
+    0,
+    "com session_id explícito o adaptador não pode criar sessão nenhuma",
+  );
+});
+
 test("2d. cada ferramenta cai na rota do contrato, com o corpo certo", async () => {
   const casos: Array<[string, Record<string, unknown>, string, Record<string, unknown>]> = [
     ["browser_navigate", { url: "http://a.local/p" }, "/api/v1/browser.goto", { session_id: "S", url: "http://a.local/p" }],

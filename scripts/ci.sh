@@ -76,6 +76,49 @@ if [ "$ESTAGIO" = "fast" ] || [ "$ESTAGIO" = "all" ]; then
   # typechecker. Foi assim que um `--token` silenciosamente ignorado sobreviveu a
   # 551 testes verdes.
   checar "typecheck" npx tsc --noEmit -p tsconfig.json
+
+  # FASE 7 — O MANIFESTO MCP NÃO PODE DESCLASSIFICAR NADA POR OMISSÃO.
+  #
+  # `packaging/mcp/manifesto.json` é o que o dono registra no NOMOS; o SHA-256
+  # dele vira a confiança. O risco real não é um manifesto inválido (o NOMOS
+  # recusa isso sozinho, fail-closed) — é uma tool NOVA em `tools.ts` que ninguém
+  # classificou: `nivel_da_tool` devolve o `nivel_padrao` para toda tool não
+  # declarada, então a tool nasceria com o piso, e um piso baixo a faria rodar
+  # SEM aprovação do dono. Este passo é unidade pura: lê os dois arquivos e
+  # compara. Sem Chromium, sem rede, sem NOMOS instalado.
+  checar "mcp:manifesto-classifica-todas-as-tools" node --input-type=module -e '
+    const { readFileSync } = await import("node:fs");
+    const { TOOL_NAMES } = await import("./packages/mcp/src/tools.ts");
+    const NIVEIS = ["A0", "A1", "A2", "A3", "A4", "A5", "A6"];
+    let m;
+    try { m = JSON.parse(readFileSync("packaging/mcp/manifesto.json", "utf8")); }
+    catch (e) { console.error(`manifesto nao e JSON valido: ${e.message}`); process.exit(1); }
+    if (typeof m.nome !== "string" || m.nome === "") { console.error("manifesto sem nome"); process.exit(1); }
+    if (!Array.isArray(m.comando) || m.comando.length === 0 || !m.comando.every((c) => typeof c === "string")) {
+      console.error("comando deve ser lista de strings nao vazia"); process.exit(1);
+    }
+    // O piso vale para tool DESCONHECIDA (inclusive a que ainda nao existe).
+    // A5 e a unica escolha honesta: capacidade nao classificada e tratada como
+    // execucao de codigo, e o NOMOS exige o dono antes de rodar.
+    if (m.nivel_padrao !== "A5") { console.error(`nivel_padrao deve ser A5 (fail-closed), veio ${m.nivel_padrao}`); process.exit(1); }
+    const tools = m.tools ?? {};
+    if (typeof tools !== "object" || tools === null || Array.isArray(tools)) { console.error("tools deve ser objeto"); process.exit(1); }
+    for (const [t, n] of Object.entries(tools)) {
+      if (!NIVEIS.includes(String(n))) { console.error(`nivel invalido para ${t}: ${n}`); process.exit(1); }
+    }
+    const faltando = TOOL_NAMES.filter((t) => !(t in tools));
+    if (faltando.length > 0) { console.error(`tool sem classificacao no manifesto: ${faltando.join(", ")}`); process.exit(1); }
+    const sobrando = Object.keys(tools).filter((t) => !TOOL_NAMES.includes(t));
+    if (sobrando.length > 0) { console.error(`manifesto classifica tool inexistente: ${sobrando.join(", ")}`); process.exit(1); }
+  '
+
+  # O lancador do manifesto tem de arrancar de verdade. `comando` quebrado so
+  # apareceria no dia em que o dono rodasse `nomos mcp conectar`.
+  checar "mcp:lancador-do-manifesto-fala-mcp" bash -c '
+    cd packaging/mcp || exit 1
+    resposta=$(printf "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{\"protocolVersion\":\"2024-11-05\",\"capabilities\":{},\"clientInfo\":{\"name\":\"nomos-mcp-client\"}}}\n" | node servidor.mjs 2>/dev/null | head -1)
+    printf "%s" "$resposta" | /usr/bin/grep -q "\"protocolVersion\":\"2024-11-05\"" || { echo "lancador nao respondeu o handshake do NOMOS: $resposta"; exit 1; }
+    printf "%s" "$resposta" | /usr/bin/grep -q "nomos-browser-mcp" || { echo "serverInfo errado: $resposta"; exit 1; }'
 fi
 
 if [ "$ESTAGIO" = "guards" ] || [ "$ESTAGIO" = "all" ]; then

@@ -1,0 +1,22 @@
+{
+  "nome": "nomos-browser",
+  "comando": ["node", "servidor.mjs"],
+  "nivel_padrao": "A5",
+  "tools": {
+    "browser_observe": "A0",
+    "browser_find": "A0",
+    "browser_extract": "A0",
+    "browser_tabs": "A0",
+    "browser_screenshot": "A0",
+    "browser_navigate": "A2",
+    "browser_click": "A2",
+    "browser_type": "A2",
+    "browser_press": "A2",
+    "browser_scroll": "A2",
+    "browser_download": "A2",
+    "browser_upload": "A2",
+    "browser_task": "A5"
+  },
+  "descricao": "NOMOS Browser Runtime por MCP (stdio). Traduz cada tool em UMA chamada da API v1 do daemon local; nao abre navegador neste processo. Justificativa tool->categoria em docs/NOMOS-INTEGRATION.md.",
+  "env": ["NOMOS_BROWSER_TOKEN"]
+}
