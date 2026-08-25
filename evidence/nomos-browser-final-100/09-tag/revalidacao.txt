@@ -1,5 +1,5 @@
 TAG=v0.2.0-rc.1
-SHA_APONTADO=70fe2c6c59941bd49f74a2befded2f461e50fe81
+SHA_APONTADO=95787cbf538eb82b6d30f20bda8f4e3feda12ba2
 CLONE=/tmp/nomos-tag-v0.2.0-rc.1
 
 ══ 1. git clone --branch v0.2.0-rc.1              OK
@@ -30,28 +30,31 @@ VERSAO_NA_TAG=0.2.0-rc.1
 ══ 13. ci.sh all (regressao) → PASS
 ══ 14. suite Node: TS_PASS=735 TS_FAIL=0 ARQUIVOS_OK=35 → PASS
 ══ 15. SDK Python: 31 testes → PASS
-    15:   TRANSPORTE: DELETE /api/v1/sessions/ses_bc10eb35ceba4a80 falhou — TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 64585] · health=INALCANCAVEL (TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 64585]) · repetindo UMA vez
-    17:   TRANSPORTE: DELETE /api/v1/sessions/ses_27f377ab6d174b5d falhou — TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 64773] · health=INALCANCAVEL (TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 64773]) · repetindo UMA vez
-    19:   TRANSPORTE: POST /api/v1/browser.task falhou — TypeError: fetch failed [cause UND_ERR_SOCKET] · health=INALCANCAVEL (TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 64795]) · repetindo UMA vez
-    20:   TRANSPORTE: DELETE /api/v1/sessions/ses_0713fbbe09ef48d2 falhou — TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 64813] · health=INALCANCAVEL (TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 64813]) · repetindo UMA vez
-    21:   TRANSPORTE: DELETE /api/v1/sessions/ses_7608f80d7d1a4e39 falhou — TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 64795] · health=INALCANCAVEL (TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 64795]) · repetindo UMA vez
-    28:   TRANSPORTE: DELETE /api/v1/sessions/ses_b077d93522a940b7 falhou — TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 64883] · health=INALCANCAVEL (TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 64883]) · repetindo UMA vez
-    29:   TRANSPORTE: DELETE /api/v1/sessions/ses_30f104c6824a49e5 falhou — TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 64883] · health=INALCANCAVEL (TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 64883]) · repetindo UMA vez
-    30:   TRANSPORTE: DELETE /api/v1/sessions/ses_3ffa03faa62244b0 falhou — TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 64872] · health=INALCANCAVEL (TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 64872]) · repetindo UMA vez
-    32:   TRANSPORTE: POST /api/v1/browser.task falhou — TypeError: fetch failed [cause UND_ERR_SOCKET] · health=INALCANCAVEL (TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 64910]) · repetindo UMA vez
-    33:   TRANSPORTE: DELETE /api/v1/sessions/ses_031a7041adbc4290 falhou — TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 64918] · health=INALCANCAVEL (TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 64918]) · repetindo UMA vez
-    34:   TRANSPORTE: DELETE /api/v1/sessions/ses_c3c5d611d2e74e9d falhou — TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 64910] · health=INALCANCAVEL (TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 64910]) · repetindo UMA vez
+    15:   TRANSPORTE(daemon fora do ar): DELETE /api/v1/sessions/ses_3cd8d9af31224b6b — TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 51610] · health=INALCANCAVEL (TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 51610])
+    17:   TRANSPORTE(daemon fora do ar): DELETE /api/v1/sessions/ses_3d02049a8596499b — TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 51724] · health=INALCANCAVEL (TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 51724])
+    19:   TRANSPORTE(daemon fora do ar): POST /api/v1/browser.task — TypeError: fetch failed [cause UND_ERR_SOCKET] · health=INALCANCAVEL (TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 51739])
+    20:   TRANSPORTE(daemon fora do ar): DELETE /api/v1/sessions/ses_5abe6ab951fb405e — TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 51747] · health=INALCANCAVEL (TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 51747])
+    21:   TRANSPORTE(daemon fora do ar): DELETE /api/v1/sessions/ses_ee3c712473894d4e — TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 51739] · health=INALCANCAVEL (TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 51739])
+    28:   TRANSPORTE(daemon fora do ar): DELETE /api/v1/sessions/ses_30430237ed0d46fc — TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 51803] · health=INALCANCAVEL (TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 51803])
+    29:   TRANSPORTE(daemon fora do ar): DELETE /api/v1/sessions/ses_e6df55fc545f496d — TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 51803] · health=INALCANCAVEL (TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 51803])
+    30:   TRANSPORTE(daemon fora do ar): DELETE /api/v1/sessions/ses_009d1ea8658541da — TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 51797] · health=INALCANCAVEL (TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 51797])
+    32:   TRANSPORTE(daemon fora do ar): POST /api/v1/browser.task — TypeError: fetch failed [cause UND_ERR_SOCKET] · health=INALCANCAVEL (TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 51899])
+    33:   TRANSPORTE(daemon fora do ar): DELETE /api/v1/sessions/ses_d6efd3f41d36435d — TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 51907] · health=INALCANCAVEL (TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 51907])
+    34:   TRANSPORTE(daemon fora do ar): DELETE /api/v1/sessions/ses_8a64101dd30c4465 — TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 51899] · health=INALCANCAVEL (TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 51899])
+    115:TRANSPORTE_REPETICOES=0
+    116:TRANSPORTE_APOS_DAEMON_MORTO=11
 ══ 16. E2E na tag: 20/20 cenarios, 213 checagens → PASS
 ══ 17. residuo: daemons=0 chromium=0 servidor_mcp=0
 
 ══════════════════════ RODAPE ══════════════════════
 TAG=v0.2.0-rc.1
-SHA=70fe2c6c59941bd49f74a2befded2f461e50fe81
+SHA=95787cbf538eb82b6d30f20bda8f4e3feda12ba2
 VERSAO_NA_TAG=0.2.0-rc.1
 PASSOS_FALHOS=0
 REGRESSION_ON_TAG=PASS
 SUITE_ON_TAG=PASS (TS_PASS=735)
 PYTHON_ON_TAG=PASS (31)
 E2E_ON_TAG=PASS (20/20, 213 checagens)
-TRANSPORTE_REPETICOES_NO_E2E=11
+TRANSPORTE_REPETICOES_DAEMON_VIVO=0   (0 exigido)
+TRANSPORTE_APOS_DAEMON_MORTO=11   (ruido do proprio teste, nao reprova)
 TAG_REVALIDATED=YES

@@ -1,61 +1,61 @@
 ── FASE 19 · bateria E2E final, independente, 20 cenários ───────────────
 
-# fixture em http://127.0.0.1:64465
-# D1 em http://127.0.0.1:64466 (pid 3902) sessoes=/tmp/nomos-e2e19-wQHYrN/d1-1eRxSc/sessoes
-[PASS                          ]  1. abrir → localizar → clicar (verificado e entregue)     616ms  http://127.0.0.1:64465/app · INTOCADO · strategy=selector box={"x":8,"y":79.875,"width":64.15625,"height":21}
-[PASS                          ]  2. navegação: goto/back/forward/reload                382ms  "ok" · http://127.0.0.1:64465/pagina-a · PAGINA-A
-[PASS                          ]  3. formulário: preencher, validar de volta, cancelar     690ms  true/true · Ana Ribeiro · ana@exemplo.test
-[PASS                          ]  4. SPA: conteúdo tardio com browser.wait             2896ms  VAZIO · false TARGET_NOT_FOUND · waited_ms=1286
-[PASS                          ]  5. abas: abrir, listar, trocar preservando estado, fechar     586ms  ESTADO-DA-ABA-1 · n=2 ids=pg_e61b6d825caf4a9d,pg_fa310c063dae40b4 · pg_fa310c063dae40b4 vs pg_3583c1dd7ee64cf2
-[PASS                          ]  6. download real para dentro da raiz permitida        207ms  [] · "ok" · /tmp/nomos-e2e19-wQHYrN/download-permitido/nomos-e2e-19.txt
-[PASS                          ]  7. upload com fixture + controle negativo fora da raiz     279ms  SEM-ARQUIVO · "ok" · ARQUIVO:carta.txt:36
-[PASS                          ]  8. recuperação de erro: falha no meio, sessão segue utilizável    3453ms  false · TARGET_NOT_FOUND: alvo não resolvido após 1 estratégia(s): selector · ACTIVE
-[PASS (BLOQUEADO_POR_APROVACAO)]  9. NOMOS → Browser → NOMOS (A0 executa, A2 é barrada)    1213ms  nomos-browser tools=16 nivel_padrao=A5 · INTOCADO · A0 → A0_READ_LOCAL
-[PASS (BLOQUEADO_POR_APROVACAO)] 10. Gi → NOMOS → Browser → Gi (A0 executa, A2 é barrada)    3047ms  /Users/AI/Projects/pocket-assistant/backend/gi_nomos/browser.py · INTOCADO · rc=0 stderr=
-   TRANSPORTE: DELETE /api/v1/sessions/ses_bc10eb35ceba4a80 falhou — TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 64585] · health=INALCANCAVEL (TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 64585]) · repetindo UMA vez
-[PASS                          ] 11. visão como fallback: alvo em <canvas>, sem DOM interativo   23833ms  qwen2.5vl:3b,moondream:1.8b,qwen3.5:4b-q8_0,embeddinggemma:300m,qwen2.5-coder:7b,nomic-embed-text:latest · [] 
-   TRANSPORTE: DELETE /api/v1/sessions/ses_27f377ab6d174b5d falhou — TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 64773] · health=INALCANCAVEL (TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 64773]) · repetindo UMA vez
-[PASS                          ] 12. task longa: 14 passos, COMPLETED, checkpoint a cada passo    1786ms  "ok" · COMPLETED · 14/14
-   TRANSPORTE: POST /api/v1/browser.task falhou — TypeError: fetch failed [cause UND_ERR_SOCKET] · health=INALCANCAVEL (TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 64795]) · repetindo UMA vez
-   TRANSPORTE: DELETE /api/v1/sessions/ses_0713fbbe09ef48d2 falhou — TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 64813] · health=INALCANCAVEL (TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 64813]) · repetindo UMA vez
-   TRANSPORTE: DELETE /api/v1/sessions/ses_7608f80d7d1a4e39 falhou — TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 64795] · health=INALCANCAVEL (TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 64795]) · repetindo UMA vez
-[PASS                          ] 13. task com crash do daemon no meio + resume sem repetir passo    2090ms  signal=SIGKILL code=null · step_index=6 state_em_disco=RUNNING · RECOVERING last_error=RUNTIME_CRASH
-# D2 em http://127.0.0.1:64827 (pid 5147) — duas credenciais distintas emitidas
-[PASS                          ] 14. handoff entre dois donos com credenciais distintas     421ms  A=uE7UcL… B=hAgoO_… · "ok" · DONO-A
-[PASS                          ] 15. takeover humano congela ACT e OBSERVE; release devolve     419ms  200 · 200 control=human status=PAUSED · 409 CONTROL_HELD_BY_HUMAN
-[PASS                          ] 16. negação de política auditada: sem capability ⇒ 403 + policy.deny     382ms  403 · CAPABILITY_DENIED: capability "download" negada para browser.download (classe COMMIT) · success=false re
-[PASS                          ] 17. injeção: página hostil marcada, cru retido, instrução neutralizada     265ms  source=WEB trust=UNTRUSTED · true · alta
-   TRANSPORTE: DELETE /api/v1/sessions/ses_b077d93522a940b7 falhou — TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 64883] · health=INALCANCAVEL (TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 64883]) · repetindo UMA vez
-   TRANSPORTE: DELETE /api/v1/sessions/ses_30f104c6824a49e5 falhou — TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 64883] · health=INALCANCAVEL (TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 64883]) · repetindo UMA vez
-   TRANSPORTE: DELETE /api/v1/sessions/ses_3ffa03faa62244b0 falhou — TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 64872] · health=INALCANCAVEL (TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 64872]) · repetindo UMA vez
-[PASS                          ] 18. timeout de provider: porta morta, erro classificado, daemon vivo    5598ms  http://127.0.0.1:64872 provider=http://127.0.0.1:64871 · success=false · INTERNAL: raciocínio falhou: fetch fa
-   TRANSPORTE: POST /api/v1/browser.task falhou — TypeError: fetch failed [cause UND_ERR_SOCKET] · health=INALCANCAVEL (TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 64910]) · repetindo UMA vez
-   TRANSPORTE: DELETE /api/v1/sessions/ses_031a7041adbc4290 falhou — TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 64918] · health=INALCANCAVEL (TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 64918]) · repetindo UMA vez
-   TRANSPORTE: DELETE /api/v1/sessions/ses_c3c5d611d2e74e9d falhou — TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 64910] · health=INALCANCAVEL (TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 64910]) · repetindo UMA vez
-[PASS                          ] 19. crash recovery do daemon: SIGKILL real → sobe de novo    1551ms  pid=5479 signal=SIGKILL · state=RUNNING step_index=4 · 5479 → 5562
-[PASS                          ] 20. supervisor: install → start → health → SIGKILL → restart → stop → uninstall   11369ms  br.com.se7enpay.nomos.servico=83005;com.nomos.panel=83034;ai.sovereign.omniroute=12728;com.gijarvis.backend=51
+# fixture em http://127.0.0.1:51486
+# D1 em http://127.0.0.1:51492 (pid 34751) sessoes=/tmp/nomos-e2e19-6BKZmJ/d1-boB1ib/sessoes
+[PASS                          ]  1. abrir → localizar → clicar (verificado e entregue)     911ms  http://127.0.0.1:51486/app · INTOCADO · strategy=selector box={"x":8,"y":79.875,"width":64.15625,"height":21}
+[PASS                          ]  2. navegação: goto/back/forward/reload                488ms  "ok" · http://127.0.0.1:51486/pagina-a · PAGINA-A
+[PASS                          ]  3. formulário: preencher, validar de volta, cancelar     932ms  true/true · Ana Ribeiro · ana@exemplo.test
+[PASS                          ]  4. SPA: conteúdo tardio com browser.wait             3258ms  VAZIO · false TARGET_NOT_FOUND · waited_ms=1296
+[PASS                          ]  5. abas: abrir, listar, trocar preservando estado, fechar     689ms  ESTADO-DA-ABA-1 · n=2 ids=pg_dc0eb22bb9944055,pg_22314b5cf007407b · pg_22314b5cf007407b vs pg_f7f1caa8812f4714
+[PASS                          ]  6. download real para dentro da raiz permitida        264ms  [] · "ok" · /tmp/nomos-e2e19-6BKZmJ/download-permitido/nomos-e2e-19.txt
+[PASS                          ]  7. upload com fixture + controle negativo fora da raiz     316ms  SEM-ARQUIVO · "ok" · ARQUIVO:carta.txt:36
+[PASS                          ]  8. recuperação de erro: falha no meio, sessão segue utilizável    3508ms  false · TARGET_NOT_FOUND: alvo não resolvido após 1 estratégia(s): selector · ACTIVE
+[PASS (BLOQUEADO_POR_APROVACAO)]  9. NOMOS → Browser → NOMOS (A0 executa, A2 é barrada)     705ms  nomos-browser tools=16 nivel_padrao=A5 · INTOCADO · A0 → A0_READ_LOCAL
+[PASS (BLOQUEADO_POR_APROVACAO)] 10. Gi → NOMOS → Browser → Gi (A0 executa, A2 é barrada)    2630ms  /Users/AI/Projects/pocket-assistant/backend/gi_nomos/browser.py · INTOCADO · rc=0 stderr=
+   TRANSPORTE(daemon fora do ar): DELETE /api/v1/sessions/ses_3cd8d9af31224b6b — TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 51610] · health=INALCANCAVEL (TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 51610])
+[PASS                          ] 11. visão como fallback: alvo em <canvas>, sem DOM interativo   24204ms  qwen2.5vl:3b,moondream:1.8b,qwen3.5:4b-q8_0,embeddinggemma:300m,qwen2.5-coder:7b,nomic-embed-text:latest · [] 
+   TRANSPORTE(daemon fora do ar): DELETE /api/v1/sessions/ses_3d02049a8596499b — TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 51724] · health=INALCANCAVEL (TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 51724])
+[PASS                          ] 12. task longa: 14 passos, COMPLETED, checkpoint a cada passo    1555ms  "ok" · COMPLETED · 14/14
+   TRANSPORTE(daemon fora do ar): POST /api/v1/browser.task — TypeError: fetch failed [cause UND_ERR_SOCKET] · health=INALCANCAVEL (TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 51739])
+   TRANSPORTE(daemon fora do ar): DELETE /api/v1/sessions/ses_5abe6ab951fb405e — TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 51747] · health=INALCANCAVEL (TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 51747])
+   TRANSPORTE(daemon fora do ar): DELETE /api/v1/sessions/ses_ee3c712473894d4e — TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 51739] · health=INALCANCAVEL (TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 51739])
+[PASS                          ] 13. task com crash do daemon no meio + resume sem repetir passo    2070ms  signal=SIGKILL code=null · step_index=6 state_em_disco=RUNNING · RECOVERING last_error=RUNTIME_CRASH
+# D2 em http://127.0.0.1:51759 (pid 36212) — duas credenciais distintas emitidas
+[PASS                          ] 14. handoff entre dois donos com credenciais distintas     412ms  A=kwZO3q… B=pQRHgg… · "ok" · DONO-A
+[PASS                          ] 15. takeover humano congela ACT e OBSERVE; release devolve     371ms  200 · 200 control=human status=PAUSED · 409 CONTROL_HELD_BY_HUMAN
+[PASS                          ] 16. negação de política auditada: sem capability ⇒ 403 + policy.deny     396ms  403 · CAPABILITY_DENIED: capability "download" negada para browser.download (classe COMMIT) · success=false re
+[PASS                          ] 17. injeção: página hostil marcada, cru retido, instrução neutralizada     292ms  source=WEB trust=UNTRUSTED · true · alta
+   TRANSPORTE(daemon fora do ar): DELETE /api/v1/sessions/ses_30430237ed0d46fc — TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 51803] · health=INALCANCAVEL (TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 51803])
+   TRANSPORTE(daemon fora do ar): DELETE /api/v1/sessions/ses_e6df55fc545f496d — TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 51803] · health=INALCANCAVEL (TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 51803])
+   TRANSPORTE(daemon fora do ar): DELETE /api/v1/sessions/ses_009d1ea8658541da — TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 51797] · health=INALCANCAVEL (TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 51797])
+[PASS                          ] 18. timeout de provider: porta morta, erro classificado, daemon vivo    5546ms  http://127.0.0.1:51797 provider=http://127.0.0.1:51796 · success=false · INTERNAL: raciocínio falhou: fetch fa
+   TRANSPORTE(daemon fora do ar): POST /api/v1/browser.task — TypeError: fetch failed [cause UND_ERR_SOCKET] · health=INALCANCAVEL (TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 51899])
+   TRANSPORTE(daemon fora do ar): DELETE /api/v1/sessions/ses_d6efd3f41d36435d — TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 51907] · health=INALCANCAVEL (TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 51907])
+   TRANSPORTE(daemon fora do ar): DELETE /api/v1/sessions/ses_8a64101dd30c4465 — TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 51899] · health=INALCANCAVEL (TypeError: fetch failed [cause ECONNREFUSED -61 connect 127.0.0.1 51899])
+[PASS                          ] 19. crash recovery do daemon: SIGKILL real → sobe de novo    1542ms  pid=36556 signal=SIGKILL · state=RUNNING step_index=4 · 36556 → 36591
+[PASS                          ] 20. supervisor: install → start → health → SIGKILL → restart → stop → uninstall   11413ms  br.com.se7enpay.nomos.servico=83005;com.nomos.panel=83034;ai.sovereign.omniroute=12728;com.gijarvis.backend=51
 
 ── detalhe das falhas ──────────────────────────────────────────────────
 (nenhuma)
 
 ── evidência por cenário ───────────────────────────────────────────────
 1. abrir → localizar → clicar (verificado e entregue)
-   /tmp/nomos-e2e19-wQHYrN/d1-1eRxSc/sessoes/ses_088115d00e70487a/actions.jsonl:11 action=browser.click verified=true
+   /tmp/nomos-e2e19-6BKZmJ/d1-boB1ib/sessoes/ses_e7b73c81dbb64a50/actions.jsonl:11 action=browser.click verified=true
    DOM #saida-btn-alvo: "INTOCADO" → "CLICADO-ALVO-1"
 2. navegação: goto/back/forward/reload
    ledger do fixture: /pagina-b pedido 3× (reload comprovado fora do runtime)
 3. formulário: preencher, validar de volta, cancelar
    ledger do fixture: POST /enviar continua em 0 — cancelar não enviou
 4. SPA: conteúdo tardio com browser.wait
-   wait real=1286ms · controle negativo TIMEOUT em 1218ms
+   wait real=1296ms · controle negativo TIMEOUT em 1208ms
 5. abas: abrir, listar, trocar preservando estado, fechar
-   abas: 2 → 3 (new_tab) → 2 (close_tab); ativa após switch=pg_fa310c063dae40b4
+   abas: 2 → 3 (new_tab) → 2 (close_tab); ativa após switch=pg_22314b5cf007407b
 6. download real para dentro da raiz permitida
-   arquivo no disco: /tmp/nomos-e2e19-wQHYrN/download-permitido/nomos-e2e-19.txt (44 bytes) conteúdo=NOMOS-E2E-19-DOWNLOAD-CONTEUDO-CANONICO-7Q4Z
+   arquivo no disco: /tmp/nomos-e2e19-6BKZmJ/download-permitido/nomos-e2e-19.txt (44 bytes) conteúdo=NOMOS-E2E-19-DOWNLOAD-CONTEUDO-CANONICO-7Q4Z
 7. upload com fixture + controle negativo fora da raiz
    negado: UPLOAD_DENIED — path fora da raiz permitida (traversal): upload negado
 8. recuperação de erro: falha no meio, sessão segue utilizável
-   /tmp/nomos-e2e19-wQHYrN/d1-1eRxSc/sessoes/ses_12b4fa54f5124140/actions.jsonl:7 result=error · :9 result=ok
+   /tmp/nomos-e2e19-6BKZmJ/d1-boB1ib/sessoes/ses_f6a8d1ed344f4444/actions.jsonl:7 result=error · :9 result=ok
 9. NOMOS → Browser → NOMOS (A0 executa, A2 é barrada)
    $ /Users/AI/.local/bin/nomos approvals testar A0_READ_LOCAL "mcp:nomos-browser:browser_extract"
    A0 · ler arquivos locais · alvo=mcp:nomos-browser:browser_extract
@@ -66,44 +66,44 @@
    veredito: REQUIRE_APPROVAL — ação sensível: exige aprovação explícita
    na prática: pediria a SUA aprovação; sem aprovador presente, o gate NEGA (fail-closed).
    
-   controle: /tmp/nomos-e2e19-wQHYrN/d1-1eRxSc/sessoes/ses_d683252f81484d45/actions.jsonl sem linha browser.click; #saida-btn-alvo=INTOCADO
+   controle: /tmp/nomos-e2e19-6BKZmJ/d1-boB1ib/sessoes/ses_c6f34d5e7b584b4c/actions.jsonl sem linha browser.click; #saida-btn-alvo=INTOCADO
 10. Gi → NOMOS → Browser → Gi (A0 executa, A2 é barrada)
    veredito Gi/NOMOS: browser_extract=ALLOW browser_click=REQUIRE_APPROVAL
    motivo verbatim: o NOMOS respondeu REQUIRE_APPROVAL para A2_NET_EGRESS · mcp:nomos-browser:browser_click — a Gi não executa sem o veredito ALLOW
    falta ao dono: /Users/AI/.local/bin/nomos mcp chamar /Users/AI/Projects/nomos-browser/packaging/mcp/manifesto.json browser_click --args '{...}'   (num terminal seu; o NOMOS pedirá sua aprovação)
-   controle no navegador: #saida-btn-alvo=INTOCADO; /tmp/nomos-e2e19-wQHYrN/d1-1eRxSc/sessoes/ses_4e8898af820242d3/actions.jsonl sem browser.click
+   controle no navegador: #saida-btn-alvo=INTOCADO; /tmp/nomos-e2e19-6BKZmJ/d1-boB1ib/sessoes/ses_68d1807f3d8e4f41/actions.jsonl sem browser.click
 11. visão como fallback: alvo em <canvas>, sem DOM interativo
    clique observado pela PÁGINA: (476,171) isTrusted=true
    ERRO_PX=4.1 MARGEM_ATE_A_BORDA=49px alvo={"x":400,"y":120,"w":160,"h":100}
-   /tmp/nomos-e2e19-wQHYrN/visao-d8Esrv/sessoes/ses_bc10eb35ceba4a80/actions.jsonl:9 action=target.cascade strategy=vision
+   /tmp/nomos-e2e19-6BKZmJ/visao-eVJaWe/sessoes/ses_3cd8d9af31224b6b/actions.jsonl:9 action=target.cascade strategy=vision
 12. task longa: 14 passos, COMPLETED, checkpoint a cada passo
-   /tmp/nomos-e2e19-wQHYrN/task12-zNYneg/sessoes/ses_27f377ab6d174b5d/tasks/tsk_48484e8c317940e3.json state=COMPLETED step_index=14
-   /tmp/nomos-e2e19-wQHYrN/task12-zNYneg/sessoes/ses_27f377ab6d174b5d/actions.jsonl: 15 linhas task.checkpoint (nºs 7,11,15…)
+   /tmp/nomos-e2e19-6BKZmJ/task12-LAj7QO/sessoes/ses_3d02049a8596499b/tasks/tsk_d651c272c9a94947.json state=COMPLETED step_index=14
+   /tmp/nomos-e2e19-6BKZmJ/task12-LAj7QO/sessoes/ses_3d02049a8596499b/actions.jsonl: 15 linhas task.checkpoint (nºs 7,11,15…)
    DOM #marca=PASSO-C12-FINAL
 13. task com crash do daemon no meio + resume sem repetir passo
-   /tmp/nomos-e2e19-wQHYrN/task13-HCcfuw/sessoes/ses_7608f80d7d1a4e39/tasks/tsk_1d0b9daf41b14937.json antes do reinício: state=RUNNING step_index=6
+   /tmp/nomos-e2e19-6BKZmJ/task13-Osdc3r/sessoes/ses_ee3c712473894d4e/tasks/tsk_b533652b9e614888.json antes do reinício: state=RUNNING step_index=6
    após reinício: state=RECOVERING last_error=RUNTIME_CRASH
    ledger: /tarefa-c13-01×1 /tarefa-c13-07×1 /passo-c13-final×1
 14. handoff entre dois donos com credenciais distintas
-   /tmp/nomos-e2e19-wQHYrN/d2-4E0ULh/sessoes/ses_2f9144992a1f410a/actions.jsonl:10 action=session.handoff detail={"from_owner":"DONO-A","to_owner":"DONO-B","attached_client":"e2e-final-19","lease_holder":"DONO-B"}
-   /tmp/nomos-e2e19-wQHYrN/d2-4E0ULh/sessoes/ses_2f9144992a1f410a/actions.jsonl:9 action=lease.transferred detail={"from_holder":"DONO-A","to_holder":"DONO-B","moved":true,"reason":"handoff com to_holder","lease_id":"lease_1c732073438b4878"}
+   /tmp/nomos-e2e19-6BKZmJ/d2-0j84Dk/sessoes/ses_43d541d5521f4eaa/actions.jsonl:10 action=session.handoff detail={"from_owner":"DONO-A","to_owner":"DONO-B","attached_client":"e2e-final-19","lease_holder":"DONO-B"}
+   /tmp/nomos-e2e19-6BKZmJ/d2-0j84Dk/sessoes/ses_43d541d5521f4eaa/actions.jsonl:9 action=lease.transferred detail={"from_holder":"DONO-A","to_holder":"DONO-B","moved":true,"reason":"handoff com to_holder","lease_id":"lease_18b5ad51ddaa4951"}
 15. takeover humano congela ACT e OBSERVE; release devolve
-   /tmp/nomos-e2e19-wQHYrN/d2-4E0ULh/sessoes/ses_13844655a1594542/actions.jsonl: 3 linhas policy.deny com CONTROL_HELD_BY_HUMAN (nºs 9,10,11)
+   /tmp/nomos-e2e19-6BKZmJ/d2-0j84Dk/sessoes/ses_d1b6a700de374288/actions.jsonl: 3 linhas policy.deny com CONTROL_HELD_BY_HUMAN (nºs 9,10,11)
    DOM #saida-congelado durante o congelamento: INTOCADO → depois do release: CLICADO-CONGELADO
 16. negação de política auditada: sem capability ⇒ 403 + policy.deny
-   /tmp/nomos-e2e19-wQHYrN/d2-4E0ULh/sessoes/ses_4309c00d00fb49bf/actions.jsonl:6 action=policy.deny capability=download policy_reason=CAPABILITY_DENIED: capability "download" negada para browser.download (classe COMMIT)
+   /tmp/nomos-e2e19-6BKZmJ/d2-0j84Dk/sessoes/ses_6f35882aa2fd4967/actions.jsonl:6 action=policy.deny capability=download policy_reason=CAPABILITY_DENIED: capability "download" negada para browser.download (classe COMMIT)
 17. injeção: página hostil marcada, cru retido, instrução neutralizada
    provenance ataque: detected=true severity=alta raw=false findings=12
    provenance benigna: severity=null raw=true
-   /tmp/nomos-e2e19-wQHYrN/d2-4E0ULh/sessoes/ses_c8c87f056dc3449e/actions.jsonl sem trecho literal do payload
+   /tmp/nomos-e2e19-6BKZmJ/d2-0j84Dk/sessoes/ses_2c6ff4c858694590/actions.jsonl sem trecho literal do payload
 18. timeout de provider: porta morta, erro classificado, daemon vivo
-   porta MORTA     : code=INTERNAL gasto=25ms — raciocínio falhou: fetch failed {"task_id":"tsk_07a0bdff82514093","run_id":"run_cb0c5899c2584f92","state":"FAILED","task
-   porta PENDURADA : code=TIMEOUT gasto=4026ms — raciocínio falhou: timeout após 4000 ms {"task_id":"tsk_b83eda00ba534dda","run_id":"run_9cb36407bcad4b15","state":"FAILE
+   porta MORTA     : code=INTERNAL gasto=30ms — raciocínio falhou: fetch failed {"task_id":"tsk_7c7a9f32f6704a88","run_id":"run_11b2dd6bfe814f64","state":"FAILED","task
+   porta PENDURADA : code=TIMEOUT gasto=4031ms — raciocínio falhou: timeout após 4000 ms {"task_id":"tsk_8f22109c3a10401a","run_id":"run_f114e4fedf3b4b8c","state":"FAILE
    /health=200 · DOM pós-falha=CLICADO-ALVO-1
 19. crash recovery do daemon: SIGKILL real → sobe de novo
-   disco antes do reinício: state=RUNNING (/tmp/nomos-e2e19-wQHYrN/crash19-ttwCZn/sessoes/ses_c3c5d611d2e74e9d/tasks/tsk_30923049dfe64785.json)
+   disco antes do reinício: state=RUNNING (/tmp/nomos-e2e19-6BKZmJ/crash19-CJ0YKe/sessoes/ses_8a64101dd30c4465/tasks/tsk_25ab11d9fa1e45c5.json)
    depois do reinício: RECOVERING last_error=RUNTIME_CRASH; RUNNING=0
-   /tmp/nomos-e2e19-wQHYrN/crash19-ttwCZn/sessoes/ses_c3c5d611d2e74e9d/actions.jsonl: 1 linhas de recuperação
+   /tmp/nomos-e2e19-6BKZmJ/crash19-CJ0YKe/sessoes/ses_8a64101dd30c4465/actions.jsonl: 1 linhas de recuperação
 20. supervisor: install → start → health → SIGKILL → restart → stop → uninstall
    producao antes : br.com.se7enpay.nomos.servico=83005;com.nomos.panel=83034;ai.sovereign.omniroute=12728;com.gijarvis.backend=51446;
    producao depois: br.com.se7enpay.nomos.servico=83005;com.nomos.panel=83034;ai.sovereign.omniroute=12728;com.gijarvis.backend=51446;
@@ -112,7 +112,8 @@
 ESTADO_DO_SERVICO=DESINSTALADO
 RELATORIO=/private/tmp/nomos-tag-v0.2.0-rc.1/evidence/nomos-browser-final-loop/19-e2e/out/e2e-final.json
 
-TRANSPORTE_REPETICOES=11
+TRANSPORTE_REPETICOES=0
+TRANSPORTE_APOS_DAEMON_MORTO=11
 E2E_TOTAL=20
 E2E_PASS=20
 E2E_FAIL=0

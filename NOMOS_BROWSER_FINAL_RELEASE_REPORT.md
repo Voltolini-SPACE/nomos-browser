@@ -1,181 +1,265 @@
-# NOMOS_BROWSER_FINAL_RELEASE_REPORT
+# NOMOS Browser — Relatório final de fechamento
 
 ```
-DATE=2026-08-25
-REPO=/Users/AI/Projects/nomos-browser
-BRANCH=main
-HEAD_INICIAL=6314050   (baseline declarado pela missao de closeout)
-HEAD_FINAL=40bfa5aa6c9238e7b66b30b768338653b29aaa8b
-VERSAO=0.1.0           (bump para 0.2.0-rc.1 preparado, NAO aplicado)
-TAG=nenhuma            (a FASE 10 proibe criar tag antes dos gates anteriores)
-REMOTES=nenhum         -> PUBLICATION_BLOCKED=NO_REMOTE
+PRODUCT_FINALIZED=YES
+VERSAO=0.2.0-rc.1
+TAG=v0.2.0-rc.1  ->  95787cbf538eb82b6d30f20bda8f4e3feda12ba2
+REMOTES=[]        PUBLICATION_BLOCKED=NO_REMOTE  (não bloqueia; não criei remoto)
+BASELINE_HEAD=6314050   ->   HEAD_FINAL=95787cb
 ```
 
-## VEREDITO
+Gerado em 2026-08-25. Substitui a versão anterior, que fechava com
+`PRODUCT_FINALIZED=NO` e o bloqueio externo da reassinatura do manifesto.
+A anterior está preservada em `evidence/nomos-browser-final-100/00-relatorio-anterior.md`.
+
+---
+
+## 1. O bloqueio externo caiu — e o que ele revelou
+
+O dono registrou o manifesto MCP. A impressão `317f1589…` entrou no catálogo, e
+com ela abriu-se um ramo de código que **nunca havia executado**: o do manifesto
+confiável. Dois defeitos moravam ali.
+
+Vale registrar o padrão, porque é o achado mais transferível desta missão:
+**os dois defeitos estavam no caminho FELIZ**. Enquanto o manifesto esteve
+experimental, tudo saía verde — porque o ramo do sucesso não rodava. Eles
+apareceram na primeira hora do primeiro uso real.
+
+### P2 · `scripts/nomos-register.sh` morria ao dizer "já registrado"
 
 ```
-PRODUCT_FINALIZED=NO
-BLOCKER=o manifesto MCP precisa ser reassinado pelo dono. A correcao de uma
-        ELEVACAO DE PRIVILEGIO (P0) mudou o SHA-256 do manifesto, que E a
-        confianca registrada em ~/.nomos/mcp_catalogo.json. O NOMOS voltou a
-        trata-lo como experimental -- fail-closed, comportamento correto -- e
-        recusa `conectar` e `chamar` ate a reassinatura.
-COMANDO_QUE_DESTRAVA=/Users/AI/.local/bin/nomos mcp confiar \
-                     /Users/AI/Projects/nomos-browser/packaging/mcp/manifesto.json
-IMPRESSAO_A_REGISTRAR=317f15893e9ebd83afa17d11f66dd896c83342858ad723e0f4ed7afd32e27207
-IMPRESSAO_NO_CATALOGO=d267002feb6f9e4a...  (a de antes da correcao)
+prova-nomos-real.sh: line 150: CURTA…: unbound variable
 ```
 
-Este `NO` nao e um produto quebrado. E o oposto: o registro que o dono fez
-**funcionou**, e foi ele que expos, na primeira hora de uso real, um furo que
-nenhum teste sintetico tinha pego. Corrigir o furo custou a assinatura. Manter a
-assinatura teria custado a seguranca.
+`$CURTA…` — o `…` (U+2026) é multibyte, o bash não encerra o nome da variável
+ali, e sob `set -u` o script aborta. A mesma linha existia no produto
+(`scripts/nomos-register.sh:109`) e no instrumento. Corrigidas as duas.
 
-## O QUE O CLI REAL ENCONTROU
+Guarda novo: `scripts/verificar-shell-expansao.ts`, estático, com autoteste
+próprio (controle negativo injeta a linha ruim e exige `rc=1`; controle positivo
+exige que `${VAR}…` **não** seja acusada). No `ci.sh`, estágio `security`.
 
-A missao exigiu: *"Nao vale cliente reimplementado como prova final."* Foi essa
-exigencia que achou os dois defeitos.
+### P1 · O barge-in da Gi sumia exatamente ao entrar em produção
 
-### 1. Elevacao de privilegio pela fronteira MCP (P0) — CORRIGIDO
+`gi_nomos.browser.executar` tem duas portas. A do manifesto experimental honrava
+`cancelar`. A do manifesto **registrado** usava `subprocess.run(...)`, que
+bloqueia até o fim e ignora o evento. Quer dizer: a Gi continuaria navegando
+depois de o dono mandar parar — e só em produção.
 
-`browser_tabs` estava declarada `A0_READ_LOCAL` e despachava **quatro** rotas,
-entre elas `browser.new_tab`, que aceita `url` e sai para a rede. O manifesto
-classifica por **ferramenta**, nunca por argumento — o rotulo "ler arquivos
-locais" valia para o pior que a ferramenta sabia fazer.
+Corrigido com `Popen` + `start_new_session` + conferência a cada 0,2 s.
+O `start_new_session` não é detalhe: `nomos mcp chamar` gera `node servidor.mjs`,
+e matar só o pai deixaria o neto segurando a sessão do runtime.
 
-Executado contra o NOMOS real, headless, sem aprovacao
-(`evidence/nomos-browser-final-closeout/01-mcp/03-exploit-tabs.txt`):
+**Teste de mutação executado**: com o `subprocess.run` de volta, 3 dos 4 casos
+novos falham — e o que passa é exatamente o controle negativo (sem `cancelar`,
+o comportamento não pode mudar). Com a correção, 4/4.
 
-```
-A0 · ler arquivos locais · alvo=mcp:nomos-browser:browser_tabs
-veredito: ALLOW — permitido pela politica
-route=browser.new_tab http=200
-{ "page_id": "pg_55c911...", "url": "http://127.0.0.1:8899/segredo",
-  "title": "Alvo /segredo", "active": true }
-```
+---
 
-Correcao: **uma ferramenta, uma rota, uma classe de risco.**
+## 2. Os doze gates
 
-| ferramenta | rota | nivel |
-|---|---|---|
-| `browser_tabs` | `browser.tabs` (so listar) | `A0_READ_LOCAL` |
-| `browser_tab_open` | `browser.new_tab` | `A2_NET_EGRESS` |
-| `browser_tab_switch` | `browser.switch_tab` | `A1_WRITE_LOCAL` |
-| `browser_tab_close` | `browser.close_tab` | `A1_WRITE_LOCAL` |
-
-O exploit morre no argumento:
-`browser_tabs: argumento(s) desconhecido(s): action, url. Aceitos: session_id`
-
-**Guarda contra reincidencia** — vale mais que a correcao:
-`scripts/verificar-risco-mcp.ts` classifica as 23 rotas do runtime em leitura,
-mutacao e egresso, extrai de `tools.ts` o que cada ferramenta alcanca, e reprova
-o manifesto quando uma `A0` puder mutar ou sair para a rede. Roda na CI.
-Controle negativo: rebaixar `browser_tab_open` para `A0` produz
-`MCP_RISK_COHERENT=NO` com `rc=1`; restaurar devolve o hash byte a byte.
-
-### 2. Sessao nao sobrevivia ao modelo one-shot (P1) — CORRIGIDO
-
-`nomos mcp chamar` sobe o servidor, chama e encerra. Duas chamadas seguidas
-produziam duas sessoes (`SESSOES_VIVAS=2`), e `browser_extract` depois de abrir
-uma aba devolvia `TARGET_NOT_FOUND` — sessao nova, `about:blank`. Pelo caminho
-canonico o produto era **inutilizavel para trabalho de mais de um passo**, e
-vazava Chromium por chamada. O cliente reimplementado nao pegou isso porque
-mantinha um processo vivo.
-
-Agora a sessao vive em `<runtime_dir>/mcp-session.json`, com escrita atomica e
-trava contra corrida. Provado: `session_id` identico na primeira e na ultima
-chamada de processos diferentes (`ses_47884e156ee9486b`).
-
-## MATRIZ DOS GATES
-
-| Gate | Estado | Numero medido | Evidencia |
+| Gate | Veredito | Medida | Evidência |
 |---|---|---|---|
-| `ENTRY_STATE_VALID` | **YES** | 10 commits da missao anterior conferidos | `00-baseline/baseline.txt` |
-| `MCP_OWNER_TRUST` | **FAIL** | catalogo tem `d267002f…`, manifesto e `317f1589…` | `00-baseline/mcp-catalogo.txt` |
-| `NOMOS_DISCOVERY` | **PASS** | `nomos mcp catalogo` lista o servidor | `02-integracao/prova.log` |
-| `NOMOS_HANDSHAKE` · `TOOLS_LIST` | **FAIL** | recusa `NOMOS-E002` (experimental) | idem |
-| `NOMOS_SESSION_DURAVEL` | **FAIL** | bloqueado pelo mesmo motivo | idem |
-| `NOMOS_NO_PRIVILEGE_ESCALATION` | **PASS** | exploit recusado no argumento | idem |
-| `NOMOS_AUDIT` · `NOMOS_SEM_ORFAO` | **PASS** | 0 sessao e 0 Chromium residual | idem |
-| `NOMOS_BROWSER_INTEGRATION` | **FAIL** | motivo: `BLOQUEADO_MANIFESTO_EXPERIMENTAL` | idem |
-| `GI_BROWSER_DISCOVERY` | **FAIL** | `registrado_no_nomos=False` | `08-gi/` |
-| `GI_BROWSER_ACTION` | **BLOQUEADO_POR_APROVACAO** | A2 para no gate, e a aba nao se move | idem |
-| `GI_BROWSER_RESULT` · `VISION` | **PASS** | extracao e captura reais pela Gi | idem |
-| `GI_BROWSER_INTEGRATION` | **PASS (16/17)** | so a descoberta reprova | idem |
-| `CONTROL_PLANE_INVARIANTS` | **PASS** | **6/6**, cada um com controle positivo e negativo | `05-antibypass/anti-bypass.json` |
-| `REGRESSION` | **PASS** | `ci.sh all` = `CI_PASS=YES` | `07-regressao/regressao.log` |
-| suite Node | **PASS** | **735/735** em 35 arquivos, 0 MORTO | `07-regressao/suite/resumo.tsv` |
-| suite Python | **PASS** | **31/31** | `07-regressao/regressao.log` |
-| `BROWSER_E2E_SUITE` | **PASS** | **20/20**, 223 checagens | `19-e2e/out/e2e-final.json` |
-| `SECURITY_SUITE` | **PASS** | 53 vetores, `OPEN_SECURITY_P1=0` | `11-security/` |
-| `TASK_ENGINE` | **PASS** | 8/8 flags | `09-task/e2e-task.ts` |
-| `AUDIT_COMPLETE` | **PASS** | 0 campos faltando | `06-audit/` (script original) |
-| `CLEAN_ROOM_FINAL` | **PASS** | 18 passos, `ZERO_MANUAL_PATCHES=YES` | `08-cleanroom/clean-room.log` |
-| `INSTALLATION_REPRODUCIBLE` | **YES** | a partir de `git clone`, sem copiar arquivo | idem |
-| `REBOOT_SAFETY` | **SIMULATED** | `launchctl kickstart -k`; reboot real nao autorizado | `docs/LIMITATIONS.md` |
-| `LIMITATION_DOCUMENTED` | **YES** | — | idem |
-| `PROCESS_RESIDUAL` | **0** | daemons, Chromium e orfaos zerados | `07-regressao/regressao.log` |
-| `OPEN_P0` | **0** | o P0 do closeout foi corrigido neste HEAD | — |
-| `OPEN_P1` | **0** | idem | — |
-| `PUBLICATION_BLOCKED` | **NO_REMOTE** | `git remote -v` vazio; nao inventei repositorio | — |
+| `MCP_OWNER_TRUST` | **PASS** | `317f1589…` recomputada pela biblioteca do próprio NOMOS | `01-mcp-trust/04-impressao.txt` |
+| `NOMOS_DISCOVERY` | **PASS** | catálogo lista `✓ nomos-browser` | `01-mcp-trust/01-catalogo.txt` |
+| `NOMOS_HANDSHAKE` | **PASS** | `conectado a 'nomos-browser' [✓ confiável]` | `01-mcp-trust/08-conectar.txt` |
+| `TOOLS_LIST` | **PASS** | 16 tools; as quatro de aba separadas (A0/A2/A1/A1) | `01-mcp-trust/08-conectar.txt` |
+| `NOMOS_BROWSER_INTEGRATION` | **PASS** | 11/11 gates pelo caminho canônico | `02-integracao/prova-canonica.txt` |
+| `GI_BROWSER_INTEGRATION` | **PASS** | 18/18 casos, `registrado_no_nomos=True` | `03-gi/e2e-gi.txt` |
+| `CONTROL_PLANE_INVARIANTS` | **PASS** | 6/6 invariantes | `04-antibypass/anti-bypass.txt` |
+| `REGRESSAO_TOTAL` | **PASS** | ver §3 | `05-regressao/` |
+| `PROCESS_RESIDUAL` | **0** | nove categorias, todas zeradas | `06-residuo/residuo-final.txt` |
+| `CLEAN_ROOM_FINAL` | **PASS** | 18 passos, 0 falhas, `MCP_CLEAN_ROOM=PASS` | `07-cleanroom/clean-room.txt` |
+| `VERSION_COHERENT` | **YES** | `0.2.0-rc.1` em 13 declarantes | `08-versao/01-guarda-versao.txt` |
+| `TAG_REVALIDATED` | **YES** | tudo reexecutado do conteúdo da tag | `09-tag/revalidacao.txt` |
 
-## COMMITS DESTE CLOSEOUT
+Todos em `evidence/nomos-browser-final-100/`.
+
+---
+
+## 3. Números, medidos a partir do conteúdo da tag
 
 ```
-40bfa5a docs: T11, limites do registro e clean room final
-1e6baf7 test(e2e): supervisor separa 'nosso servico ja de pe' de 'daemon estranho no lock'
-aae1900 docs(evidence): FASE 3 (Gi ativada) e FASE 4 (anti-bypass)
-82c347c test(anti-bypass): seis invariantes, cada um com controle positivo e negativo
-0ebfe30 fix(mcp): elevacao de privilegio pelo manifesto e sessao one-shot
+ci.sh all ................ CI_PASS=YES        (9 estágios)
+suite Node ............... TS_PASS=735  TS_FAIL=0  ARQUIVOS_OK=35
+SDK Python ............... 31/31
+suite da Gi .............. 138/138
+E2E ...................... 20/20 cenários · 213 checagens
+adversarial .............. 53 vetores · OPEN_SECURITY_P1=0
+plano de controle ........ 6/6
+integração NOMOS ......... 11/11
+integração Gi ............ 18/18
+clean room ............... 18 passos · 0 falhas
+resíduo de processo ...... 0
+TRANSPORTE_REPETICOES .... 0  (com o daemon vivo — ver §6)
 ```
 
-## FORA DO REPOSITORIO — o que toquei no `pocket-assistant`
+**Correção de um número do relatório anterior.** Ele dizia *223 checagens* no
+E2E. Reabri o `e2e-final.json` **commitado em `1e6baf7`** e contei: eram **213**
+já naquele run. Não houve regressão de cobertura — o número estava errado no
+relatório. O certo é 213.
 
-A FASE 3 autorizou aplicar a configuracao ja preparada e reiniciar o backend.
-`pocket-assistant` **nao e repositorio git**; os backups estao em
-`evidence/nomos-browser-final-closeout/`.
+---
 
-- `backend/gi_nomos/device_voice_gateway.py` — duas linhas de ativacao em
-  `build_dispatcher()` e o anexo de `TOOLS_REALTIME`. Quatro capabilities novas:
-  `navegador_ler`, `navegador_ver`, `navegador_abas`, `navegador_abrir`.
-- `backend/test_gi_voice_tools.py` — o guarda `test_dispatcher_tem_oito_tools`
-  virou `test_dispatcher_tem_o_conjunto_exato_de_tools`, com as 12 atuais. Segue
-  sendo **igualdade exata**: guarda contra crescimento acidental de capability.
-- `com.gijarvis.backend` reiniciado (PID 29108 -> 51446), no ar.
-- **NAO reiniciei o gateway de voz** (`gi_nomos.device_voice_gateway`, PID
-  43891): ele roda **orfao**, `PPID=1`, fora do launchd, e nenhum plist o
-  referencia. Sem supervisor, reinicia-lo e derrubar o assistente do dono sem
-  garantia de volta. As tools novas so chegam a voz depois que ele o reiniciar.
+## 4. O teto que existe, medido e não contornado
 
-## O QUE ESTA MISSAO ERROU NO PROPRIO INSTRUMENTO
+```
+EXECUCAO_CANONICA_A1_MAIS=BLOQUEADO_SEM_APROVADOR_NAO_TTY
+```
 
-Seis medicoes minhas estavam erradas. Em **todas**, o produto estava certo.
+Pelo caminho canônico `nomos mcp chamar`, **só ferramentas `A0` executam sem o
+dono presente**. Não é suposição — vem de três fontes independentes, gravadas:
 
-1. o guarda de risco escreve o veredito de falha em `stderr`; eu lia so `stdout`,
-   e o controle negativo parecia mudo;
-2. nao existe rota HTTP de emissao de token (por desenho); o token restrito nasce
-   do `AuthManager`, e o segredo mora em `.secret`, nao `.token`;
-3. `lease.transfer` exige `to`, nao `to_holder` — com o nome errado a rota
-   devolvia 400 e eu media a **ausencia** da transferencia;
-4. procurar a URL do runtime no fonte da Gi era falso positivo: o modulo LE
-   `NOMOS_BROWSER_URL` para REPASSAR ao subprocesso do conector;
-5. o token de teste precisava do escopo `NAVIGATE` e do lease da sessao A — sem
-   isso o controle POSITIVO media falta de escopo, nao a allowlist;
-6. o cenario 20 do E2E reprovou porque um daemon **meu**, iniciado a mao para o
-   trabalho de MCP, segurava o lock. O `service.sh start` devolveu
-   `rc=9 ... instancia unica` — o guarda funcionando. O instrumento e que
-   confundia "nosso servico ja de pe" com "intruso no lock"; agora ele le o lock
-   e diz o nome do dono dele.
+1. `nomos mcp chamar --help` → só `-h` e `--args`;
+2. `cli.py` declara `--panel` em 17 subcomandos, e `chamar` não é um deles;
+3. `_approver_for()` cai em `interactive_approver`, que devolve `False` sem TTY,
+   e `gate()` sem aprovador é fail-closed.
 
-## PROXIMA ACAO
+As **onze** ferramentas `A1+` foram tentadas pelo caminho canônico e **todas**
+foram negadas. Esse é o gate `NOMOS_FAIL_CLOSED_A1_MAIS`, e ele é **PASS**: o
+teto é real e uniforme. O que falta não é o produto funcionar — é alguém
+digitar `APROVO`. Não digitei, e não há como digitar sem forjar consentimento.
 
-1. **Dono:** `nomos mcp confiar packaging/mcp/manifesto.json`
-   (impressao `317f1589…`).
-2. **Eu:** reexecutar `02-integracao/prova-nomos-real.sh` e `08-gi/e2e-gi.py`.
-   Com o registro, os oito gates de integracao fecham pelo caminho canonico.
-3. **Eu:** `ci.sh all` + E2E 20 + clean room sobre o HEAD final.
-4. **Eu:** bump `0.1.0 -> 0.2.0-rc.1`, commit de release, tag anotada
-   `v0.2.0-rc.1`, CI sobre a tag e clean room a partir da tag.
-5. **Dono, quando quiser:** reiniciar o gateway de voz; escolher licenca
-   (o `LICENSE` esta no estado legal padrao, com titular em placeholder
-   explicito); congelar a marca; autorizar uma janela de reboot real.
+É por isso que a versão é `rc.1` e não `0.2.0`.
+
+Para o dono fechar isso no terminal dele:
+
+```sh
+cd /Users/AI/Projects/nomos-browser
+NOMOS_BROWSER_ALLOW_INTERNAL=true node packages/api/src/daemon.ts &
+nomos mcp chamar packaging/mcp/manifesto.json browser_navigate \
+  --args '{"url":"http://127.0.0.1:8902/segredo"}'
+# o NOMOS pergunta; digite APROVO
+```
+
+---
+
+## 5. Achados registrados que **não** corrigi, e por quê
+
+### A impressão antiga continua confiável
+
+O catálogo confia por impressão e `confiar` só **acrescenta**. Depois da
+correção da elevação de privilégio, `nomos-browser` aparece **duas vezes**:
+
+```
+✓ nomos-browser  [317f15893e9ebd83…]   ← 16 tools, corrigido
+✓ nomos-browser  [d267002feb6f9e4a…]   ← 13 tools, COM a elevação de privilégio
+```
+
+Que `d267002f…` é o manifesto vulnerável não é dedução: recomputei a impressão
+de **cada versão do arquivo no histórico** — `78491cc` dá exatamente esse hash,
+com 13 tools (`01-mcp-trust/05-origem-hash-antigo.txt`). Quem apresentar aquele
+arquivo, que segue no histórico do git, obtém confiança para ele.
+
+Não revoguei. `nomos mcp revogar` é bloqueio **duro** — o próprio NOMOS avisa
+que não confia de novo "nem que reapareça idêntico", e desfazer exige editar a
+lista de revogações à mão. É decisão do dono:
+
+```sh
+git show 78491cc:packaging/mcp/manifesto.json > /tmp/manifesto-antigo.json
+nomos mcp revogar /tmp/manifesto-antigo.json
+```
+
+### Gateway de voz
+
+```
+VOICE_GATEWAY_NEW_TOOLS_PENDING_RESTART=OBSERVADO_REINICIO_NAO_MEU
+VOICE_GATEWAY_SUPERVISION_REQUIRED=YES
+```
+
+`gi_nomos.device_voice_gateway` (PID 35643, `PPID=1`) foi observado **reiniciado
+às 12:33:04**, dentro da janela desta missão. **Não fui eu** — a instrução era
+explícita e a cumpri. O arquivo `device_voice_gateway.py` também foi modificado
+às 12:26, e também não por mim (nesta sessão toquei apenas `gi_nomos/browser.py`
+e acrescentei um arquivo de teste). Conferi, só lendo, que a integração do
+navegador continua no lugar (`from .browser import TOOLS_REALTIME`, linhas
+124–125 e 507) e que `test_gi_voice_tools.py` segue 37/37.
+
+Se as ferramentas novas estão de fato vivas no caminho de voz, **não verifiquei**
+— e não vou afirmar por inferência. Nenhum plist referencia esse processo: ele
+continua sem supervisor, e um reinício continua sendo manual e sem rede.
+
+---
+
+## 6. Erros de instrumento desta missão
+
+Ficam no registro. Nenhum foi apagado nem reescrito.
+
+| # | Erro | Como apareceu | Correção |
+|---|---|---|---|
+| 1 | `$CURTA…` no `prova-nomos-real.sh` | matou a prova no ramo que só ficou verde agora | `${CURTA}…` + guarda estático com autoteste |
+| 2 | Sem `trap` no alvo HTTP da prova | a morte do item 1 deixou `:8901` presa; o run seguinte caiu com `EADDRINUSE` | `trap ... EXIT INT TERM` |
+| 3 | `approvals testar A2` | categoria inexistente ⇒ `DENY` por engano meu, não do NOMOS | `A2_NET_EGRESS` |
+| 4 | Padrão de erro estreito demais | o server dizia `"target.selector" deve ser string` e o grep não pegava | padrão ampliado |
+| 5 | `len(tools) == 13` no `e2e-gi.py` | 13 era a contagem do manifesto **vulnerável** | 16, mais as asserções de `A1` |
+| 6 | `TypeError: fetch failed` sem causa | reprovou a **primeira** tag e não deu para diagnosticar | causa + sonda de `/health` + repetição visível |
+| 7 | Contador de repetições sem classe | saiu `TRANSPORTE_REPETICOES=11` num run verde | separado em "daemon vivo" (0 exigido) e "daemon já derrubado" (ruído do teste) |
+
+Sobre o item 6, uma admissão que não dá para maquiar: **a causa daquela falha
+continua desconhecida.** Levantei a hipótese do `keepAliveTimeout` (o daemon não
+define nenhum; o default do Node é 5 s) e a **refutei** com sonda dirigida — 30
+pares de requisições com pausas varridas em 3,9/4,0/4,1/4,9/5,0/5,1 s, nas duas
+janelas suspeitas: **0 falhas** (`10-keepalive/`). Por isso **não** mexi no
+daemon: mudar `keepAliveTimeout` sem prova seria a forma educada de esconder que
+não sei a causa. O que fiz foi garantir que a próxima ocorrência seja
+diagnosticável e impossível de confundir com ruído.
+
+Sobre o item 7: a separação importa porque as onze repetições eram **todas**
+contra daemons que a própria bateria havia derrubado (limpeza depois do SIGKILL
+dos cenários 13 e 19, portas que o cenário 18 fecha de propósito) — nenhuma
+dizia coisa alguma sobre o produto. Somadas num número só, diziam pior que nada:
+escondiam o único número que importa. A revalidação da tag agora **exige**
+`TRANSPORTE_REPETICOES=0`.
+
+A tag foi cortada três vezes. `4f6a432` e `70fe2c6` foram **descartadas** — a
+primeira reprovou na própria revalidação, a segunda saiu verde com onze
+repetições que eu não estava disposto a chamar de ruído sem olhar. Uma tag que
+não sobrevive à própria revalidação não descreve nada que se publique. Nenhuma
+delas saiu desta máquina.
+
+---
+
+## 7. Guardas novos
+
+| Guarda | O que impede | Autoteste |
+|---|---|---|
+| `shell:expansao-nao-colada-em-nao-ascii` | `$VAR…` matando script sob `set -u` | injeta a linha ruim e exige `rc=1`; e exige que a forma correta não seja acusada |
+| `versao:coerente-em-todo-o-produto` | a versão em 13 lugares sem nada obrigá-los a concordar | deriva um declarante num clone temporário e exige `rc=1` |
+
+Sobre o segundo: `tests/mcp.test.ts` assertava `pkg.version === "0.1.0"` — um
+literal. Isso era armadilha, não guarda: o teste que deveria pegar a deriva era
+justamente o que precisava ser editado a cada bump, e editar um teste para ele
+voltar a passar é como o defeito entraria. Agora assevera **coerência**.
+
+---
+
+## 8. Máquina do dono
+
+Serviços de produção com os **mesmos PIDs** do início ao fim:
+
+```
+br.com.se7enpay.nomos.servico = 83005
+com.nomos.panel               = 83034
+ai.sovereign.omniroute        = 12728
+com.gijarvis.backend          = 51446
+ai.sovereign.ollama           = 1003
+```
+
+`com.gi.nomos.gateway` (`gi-whatsapp-epistemos-01/gateway/gateway.py`) é serviço
+legítimo do dono, com plist e `KeepAlive`, ativo desde antes desta sessão. O
+launchd o reiniciou por conta própria (86909 → 78103); não o toquei. Não é
+daemon estranho — e não é o gateway de **voz**, que é outro processo.
+
+Consentimento nunca foi forjado: todo comando do NOMOS rodou com `stdin` em
+`/dev/null`, e nenhum prompt de aprovação foi respondido no lugar do dono.
+
+---
+
+## 9. O que falta para `0.2.0` final
+
+1. **O dono**: uma execução `A1+` pelo caminho canônico, com `APROVO` digitado
+   no terminal dele. Comando na §4.
+2. **O dono**: decidir sobre `d267002f…` (§5). Comando lá.
+3. **O dono**: se quiser publicar, criar o remoto — `PUBLICATION_BLOCKED=NO_REMOTE`
+   é escolha registrada, não impedimento. Não criei remoto por conta própria.
+4. **Aberto**: a causa do item 6 da §6. O instrumento agora a captura se voltar.

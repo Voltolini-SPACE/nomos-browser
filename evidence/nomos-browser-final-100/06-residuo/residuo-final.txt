@@ -1,0 +1,56 @@
+=== RESIDUO FINAL ===
+daemons=0
+chromium=0
+servidor_mcp=0
+lock=AUSENTE
+mcp_session=AUSENTE
+launchagent=0
+plist=AUSENTE
+porta_7777=0
+alvos=0
+ollama={"models":[]}
+
+=== PRODUCAO ===
+83005	-9	br.com.se7enpay.nomos.servico
+-	1	com.se7enpay.command-center.mom-canonical-check
+12728	0	ai.sovereign.omniroute
+83034	-9	com.nomos.panel
+1032	0	com.se7enpay.command-center
+1048	0	com.se7enpay.resumo
+51446	-15	com.gijarvis.backend
+-	0	com.se7enpay.crmsync
+-	0	com.se7enpay.tpv.mom.canonical
+1003	0	ai.sovereign.ollama
+78103	-15	com.gi.nomos.gateway
+
+=== GIT ===
+HEAD=95787cb
+TAG=v0.2.0-rc.1  ->  95787cb
+REMOTES=[]
+WORKTREE=3 linhas
+ M evidence/nomos-browser-final-100/09-tag/e2e-na-tag.txt
+ M evidence/nomos-browser-final-100/09-tag/revalidacao.txt
+?? evidence/nomos-browser-final-100/06-residuo/residuo-final.txt
+=== gateway de VOZ da Gi (device_voice_gateway) — orfao, nao reiniciado ===
+35643 /opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python -m gi_nomos.device_voice_gateway 8765
+=== com.gi.nomos.gateway e OUTRO processo (whatsapp), supervisionado por launchd ===
+  PID  PPID STARTED                      COMMAND
+78103     1 Tue Aug 25 12:08:16 2026     /opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python /Users/AI/Projects/gi-whatsapp-epistemos-01/gateway/gateway.py
+  <key>KeepAlive</key><true/>
+  <key>ThrottleInterval</key><integer>10</integer>
+  <key>ProcessType</key><string>Background</string>
+35643     1 Tue Aug 25 12:33:04 2026    
+=== mtime do device_voice_gateway.py ===
+-rw-r--r--@ 1 AI  staff  51050 Aug 25 12:26 /Users/AI/Projects/pocket-assistant/backend/gi_nomos/device_voice_gateway.py
+=== algum plist referencia device_voice_gateway? ===
+NENHUM plist o referencia (segue sem supervisor)
+=== hora local agora ===
+2026-08-25 12:35:18 -03
+2026-08-25T15:35:18Z
+=== a integracao do navegador continua no gateway de voz? (so leitura) ===
+124:from .browser import TOOLS_REALTIME as _TOOLS_NAVEGADOR
+125:TOOLS = TOOLS + _TOOLS_NAVEGADOR
+507:    from .browser import registrar as registrar_navegador
+=== teste do conjunto exato de tools ===
+.....................................                                    [100%]
+37 passed in 0.84s
