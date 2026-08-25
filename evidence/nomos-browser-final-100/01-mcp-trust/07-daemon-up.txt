@@ -1,0 +1,14 @@
+=== INSTALL+START via supervisor (caminho canonico) ===
+INSTALL=OK label=ai.nomos.browser plist=/Users/AI/Library/LaunchAgents/ai.nomos.browser.plist log=/Users/AI/Library/Logs/nomos-browser
+START=OK label=ai.nomos.browser
+RC_START=0
+LABEL=ai.nomos.browser
+CARREGADA=SIM
+PLIST_NOSSO=SIM
+ESTADO=rodando
+PID=85059
+PORTA_7777=ocupada
+PLIST=/Users/AI/Library/LaunchAgents/ai.nomos.browser.plist
+LOGS=/Users/AI/Library/Logs/nomos-browser
+=== HEALTH ===
+HTTP=200

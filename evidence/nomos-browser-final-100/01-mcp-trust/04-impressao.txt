@@ -1,0 +1,9 @@
+=== IMPRESSAO PELO CAMINHO CANONICO (mc.carregar_manifesto -> cat.impressao) ===
+ALVO_RESOLVIDO= packaging/mcp/manifesto.json
+MANIFESTO_NORMALIZADO_CHAVES= ['comando', 'nivel_padrao', 'nome', 'tools']
+IMPRESSAO= 317f15893e9ebd83afa17d11f66dd896c83342858ad723e0f4ed7afd32e27207
+ESPERADO = 317f15893e9ebd83afa17d11f66dd896c83342858ad723e0f4ed7afd32e27207
+CONFERE= YES
+STATUS= confiavel
+N_TOOLS= 16
+NIVEL_PADRAO= A5

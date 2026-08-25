@@ -1,0 +1,136 @@
+
+[1m══ 0. preparo — daemon, credencial, alvo HTTP e linha de base ══════════════════════[0m
+  · runtime vivo em http://127.0.0.1:7777
+  · credencial presente: /Users/AI/.nomos-browser/control-token
+  · alvo HTTP: http://127.0.0.1:8901/segredo (canário CANARIO-CLOSEOUT2-86134)
+  · SESSOES_VIVAS_ANTES=0  CHROMIUM_ANTES=0
+  · HASH_ATUAL_DO_MANIFESTO=317f15893e9ebd83afa17d11f66dd896c83342858ad723e0f4ed7afd32e27207
+
+[1m══ 1. discovery — nomos mcp catalogo ══════════════════════[0m
+    servers MCP confiáveis (3) · 0 revogado(s):
+    
+      ✓ calendario-ics  [6ea7c63d83e06926…]  ['python3', 'servidor.py']
+      ✓ nomos-browser  [d267002feb6f9e4a…]  ['node', 'servidor.mjs']
+      ✓ nomos-browser  [317f15893e9ebd83…]  ['node', 'servidor.mjs']
+  · DISCOVERY: o catálogo do dono lista o conector
+
+[1m══ 2. confiança do dono — o hash registrado é o do manifesto ATUAL? ══════════════════════[0m
+  · TRUST: registrado com a impressão ATUAL (317f15893e9ebd83…)
+
+[1m══ 3. conexão — handshake + tools/list com os níveis do manifesto ══════════════════════[0m
+    conectado a 'nomos-browser' [✓ confiável] (server: nomos-browser-mcp) — 16 tool(s):
+    
+      [A2] browser_navigate — Navega a sessão para uma URL e devolve a página resultante (PageInfo).
+      [A0] browser_observe — Observa a página atual: elementos, título, URL e (opcional) árvore de 
+      [A0] browser_find — Resolve um alvo sem agir sobre ele. Devolve ResolvedTarget com a estra
+      [A2] browser_click — Clica no alvo resolvido e verifica o efeito. Devolve o alvo resolvido 
+      [A2] browser_type — Digita em um campo. Use 'text' para valor comum ou 'credential_ref' pa
+      [A2] browser_press — Pressiona uma tecla ('key') ou uma sequência ('keys'), ex.: Enter, Tab
+      [A2] browser_scroll — Rola a página ou um contêiner. Informe dx/dy em pixels e/ou um target 
+      [A0] browser_extract — Extrai conteúdo da página inteira ou de um alvo. 'format' é repassado 
+      [A0] browser_screenshot — Captura screenshot. scope=viewport|full|element|region. Devolve a refe
+      [A0] browser_tabs — Lista as abas da sessão (PageInfo[]). SOMENTE leitura: não abre, não f
+      [A2] browser_tab_open — Abre uma aba nova, opcionalmente já em uma URL. EGRESSO: com 'url' a a
+      [A1] browser_tab_switch — Foca uma aba já aberta. Muta estado da sessão: a partir daqui toda fer
+      [A1] browser_tab_close — Fecha uma aba aberta. Muta estado da sessão e descarta o que estava ca
+      [A2] browser_download — Baixa um arquivo a partir de um alvo clicável ou de uma URL direta. Aç
+      [A2] browser_upload — Envia um arquivo para um campo de upload. Ação COMMIT: exige a capabil
+      [A5] browser_task — Entrega um objetivo em linguagem natural ao executor de tarefas do run
+
+[1m══ 4. sessão durável — a página é aberta numa chamada e lida na SEGUINTE ══════════════════════[0m
+--- chamada A (canônica): browser_tab_open url=http://127.0.0.1:8901/segredo ---
+    [NOMOS-E002] NEGADO (fail-closed): aprovação exige terminal interativo.
+    [NOMOS-E002] tool 'browser_tab_open' é nível A2 — exige sua aprovação num terminal interativo; nada foi executado.
+--- chamada B (canônica), PROCESSO SEPARADO: browser_extract #fato ---
+    NOMOS_BROWSER_ERROR code=TARGET_NOT_FOUND
+    route=browser.extract session_id=ses_f3ab51252d8c4e30 http=404 action_id=act_mt8qfgpt_i state=IDLE duration_ms=17
+    message: alvo não resolvido após 1 estratégia(s): selector
+    detail: {
+      "descriptor": {
+        "selector": "#fato"
+      },
+      "attempted": [
+        "selector"
+      ],
+      "trace": [
+        {
+          "strategy": "selector",
+          "outcome": "miss",
+          "probe": "locator(#fato)",
+          "candidates": 0,
+          "reason": "nenhum candidato",
+          "duration_ms": 15
+        }
+      ]
+    }
+
+[1m══ 5. erro válido — tool inexistente, argumento inválido, alvo inexistente ══════════════════════[0m
+--- tool inexistente ---
+    [NOMOS-E002] NEGADO (fail-closed): aprovação exige terminal interativo.
+    [NOMOS-E002] tool 'browser_inexistente' é nível A5 — exige sua aprovação num terminal interativo; nada foi executado.
+--- argumento inválido (url ausente) ---
+    [NOMOS-E002] NEGADO (fail-closed): aprovação exige terminal interativo.
+    [NOMOS-E002] tool 'browser_navigate' é nível A2 — exige sua aprovação num terminal interativo; nada foi executado.
+--- alvo inexistente ---
+    NOMOS_BROWSER_ERROR code=TARGET_NOT_FOUND
+    route=browser.extract session_id=ses_f3ab51252d8c4e30 http=404 action_id=act_mt8qfh5n_n state=ACTIVE duration_ms=5
+    message: alvo não resolvido após 1 estratégia(s): selector
+
+[1m══ 6. capability enforcement — browser_download sem a capability ══════════════════════[0m
+    [NOMOS-E002] NEGADO (fail-closed): aprovação exige terminal interativo.
+    [NOMOS-E002] tool 'browser_download' é nível A2 — exige sua aprovação num terminal interativo; nada foi executado.
+
+[1m══ 7. elevação de privilégio — o exploit de 01-mcp/03 não é mais expressável ══════════════════════[0m
+--- (a) veredito do NOMOS para cada ferramenta de aba (não depende de confiança) ---
+    A0 · ler arquivos locais · alvo=mcp:nomos-browser:browser_tabs
+    veredito: ALLOW — permitido pela política
+    A2 · sair para a rede · alvo=mcp:nomos-browser:browser_tab_open
+    veredito: REQUIRE_APPROVAL — ação sensível: exige aprovação explícita
+    na prática: pediria a SUA aprovação; sem aprovador presente, o gate NEGA (fail-closed).
+--- (b) o exploit literal: browser_tabs com action=new + url ---
+    tool falhou no server: browser_tabs: argumento(s) desconhecido(s): action, url. Aceitos: session_id
+    via=lancador-direto (NAO-CANONICO):
+      RPC_ERROR code=-32602 message=browser_tabs: argumento(s) desconhecido(s): action, url. Aceitos: session_id
+--- (c) confirmação PELO NAVEGADOR: a aba do exploit NÃO existe ---
+    ABAS_ANTES=1 ABAS_DEPOIS=1 ocorrencias_da_url_do_exploit=0
+--- (d) browser_tab_open pelo caminho canônico: exige o dono ---
+    [NOMOS-E002] NEGADO (fail-closed): aprovação exige terminal interativo.
+    [NOMOS-E002] tool 'browser_tab_open' é nível A2 — exige sua aprovação num terminal interativo; nada foi executado.
+
+[1m══ 8. audit — as chamadas aparecem em sessions/<id>/actions.jsonl ══════════════════════[0m
+  · sessão auditada: ses_f3ab51252d8c4e30
+    TOTAL_LINHAS=20
+    LINHAS_COM_actor+capability+policy_decision=8
+    {"action": "session.attach", "actor": "mcp:nomos-browser-mcp", "owner": "mcp:nomos-browser-mcp", "capability": null, "policy_decision": "not_applicable", "result": "ok"}
+    {"action": "task.resume", "actor": "mcp:nomos-browser-mcp", "owner": "mcp:nomos-browser-mcp", "capability": null, "policy_decision": "not_applicable", "result": "ok"}
+    {"action": "policy.allow", "actor": "daemon-root", "owner": "mcp:nomos-browser-mcp", "capability": "read", "policy_decision": "allow", "result": "ok"}
+    {"action": "browser.tabs", "actor": "daemon-root", "owner": "mcp:nomos-browser-mcp", "capability": "read", "policy_decision": "allow", "result": "ok"}
+    ACOES=browser.extract,browser.tabs,lease.acquired,policy.allow,session.attach,session.created,task.resume,task.started
+
+[1m══ 9. prazo e interrupção — comportamento observável (ver LIMITAÇÃO no topo) ══════════════════════[0m
+--- (a) prazo curto contra um alvo que nunca responde ---
+    NOMOS_BROWSER_ERROR code=POLICY_BLOCKED
+    route=browser.goto session_id=ses_f3ab51252d8c4e30 http=403 action_id=act_mt8qfil2_12 state=ACTIVE duration_ms=4
+    message: host interno bloqueado sem allow_internal: 127.0.0.1
+    decorrido_ms=445
+--- (b) SIGTERM no cliente no meio da chamada ---
+    cliente_morto=sim  runtime_health=200  sessoes_agora=1
+
+[1m══ 10. encerramento — sem órfão ══════════════════════[0m
+    MCP_SESSION_CLOSED session_id=ses_f3ab51252d8c4e30 http=200 arquivo_apagado=true
+    SESSOES_VIVAS_ANTES=0  SESSOES_VIVAS_DEPOIS=0
+    CHROMIUM_ANTES=0  CHROMIUM_DEPOIS=0
+
+[1m══ RODAPÉ ══════════════════════[0m
+MCP_OWNER_TRUST=PASS
+NOMOS_DISCOVERY=PASS
+NOMOS_HANDSHAKE=PASS
+NOMOS_TOOLS_LIST=PASS
+NOMOS_SESSION_DURAVEL=FAIL
+NOMOS_EXTRACT=FAIL
+NOMOS_ERRO_VALIDO=FAIL
+NOMOS_CAPABILITY_ENFORCEMENT=FAIL
+NOMOS_NO_PRIVILEGE_ESCALATION=PASS
+NOMOS_AUDIT=PASS
+NOMOS_SEM_ORFAO=PASS
+NOMOS_BROWSER_INTEGRATION=FAIL

@@ -1,0 +1,50 @@
+=== --panel eh global? ===
+2330:        # instalar: gate A5 SEMPRE interativo (por isso não existe --panel
+3074:    us.add_argument("--panel", action="store_true",
+3108:    at.add_argument("--panel", action="store_true")
+3132:    rc_.add_argument("--panel", action="store_true")
+3141:    rex.add_argument("--panel", action="store_true",
+3154:    rob.add_argument("--panel", action="store_true",
+3171:    aq.add_argument("--panel", action="store_true")
+3200:    orq.add_argument("--panel", action="store_true",
+3260:        sc.add_argument("--panel", action="store_true",
+3400:            mv.add_argument("--panel", action="store_true",
+3416:    entp.add_argument("--panel", action="store_true",
+3507:    s_i.add_argument("--panel", action="store_true")
+3515:            sp.add_argument("--panel", action="store_true")
+3580:    rt.add_argument("--panel", action="store_true",
+3588:    rn.add_argument("--panel", action="store_true",
+3595:    si.add_argument("--panel", action="store_true")
+3606:    ta.add_argument("--panel", action="store_true")
+
+=== nomos --help (flags globais) ===
+usage: nomos [-h] [--version] <comando> ...
+
+NOMOS — seu agente pessoal, 100% local: instala, configura, governa e executa
+(local por lei)
+
+positional arguments:
+  <comando>
+    start        modo simples: onboarding + chat
+    cerebro      o cérebro leve do NOMOS (baixar/status)
+    doutor       check-up: o que está pronto e o próximo passo
+    agentes      agentes locais especializados (governados)
+    conversas    histórico de conversas (local, cifrável)
+    backup       seu NOMOS inteiro num arquivo cifrado
+    atualizar    checa se há versão nova (opt-in; nunca atualiza sozinho)
+    painel       painel local no navegador (ler é livre; decidir aprovações
+                 usa token de uso único)
+    rotinas      rotinas locais: briefing, check-up e mais
+    arquivo      ler e resumir um arquivo, tudo local
+    tema         personalizar as cores do NOMOS
+    local        cadeado de localidade: mantém tudo na sua máquina
+    orquestrar   runtime governado: intenção → plano → grafo → execução, com o
+                 gate A0–A6 em cada passo
+    scheduler    agendador governado: lista jobs e roda o ticker em foreground
+                 (não instala serviço)
+    servico      runtime persistente governado: o mesmo ticker de sempre,
+                 supervisionado pelo launchd
+    missao       missões que FAZEM: plano → sua aprovação → evidência
+    mcp          servidor MCP local (tools somente leitura)
+    entrada      lê o que chegou por um conector confiado
+                 (telegram|email|calendario) — só leitura, governado (A3/A0)

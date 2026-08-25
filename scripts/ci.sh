@@ -296,6 +296,14 @@ if roda security; then
   # um `if` novo no `build` sem reclassificar a tool reprova aqui.
   checar "mcp:risco-por-tool-coerente" node scripts/verificar-risco-mcp.ts
 
+  # FASE 100 — `$VAR…` não é `${VAR}…`. O `…` é multibyte: o bash não encerra o
+  # nome ali, tenta expandir `VAR\xe2\x80\xa6`, e sob `set -u` o script MORRE.
+  # Isso derrubou `scripts/nomos-register.sh` no ramo "já registrado como
+  # confiável" — o caminho FELIZ, que só passou a executar no dia em que o dono
+  # registrou o manifesto. Guarda estático, com autoteste próprio.
+  checar "shell:expansao-nao-colada-em-nao-ascii" node scripts/verificar-shell-expansao.ts
+  checar "shell:guarda-de-expansao-nao-e-cego" node scripts/verificar-shell-expansao.ts --autoteste
+
   # O runtime não pode nascer aberto para a rede.
   #
   # Verificação de COMPORTAMENTO, não de texto: a primeira versão fazia grep por

@@ -1,0 +1,30 @@
+=== POLICY DO DONO (estado atual, so leitura) ===
+{
+  "version": 1,
+  "mode": "read_only_default",
+  "fail_closed": true,
+  "rules": {
+    "A0_READ_LOCAL": "ALLOW",
+    "A1_WRITE_LOCAL": "REQUIRE_APPROVAL",
+    "A2_NET_EGRESS": "REQUIRE_APPROVAL",
+    "A3_CRED_USE": "REQUIRE_APPROVAL",
+    "A3_CONNECTOR_USE": "REQUIRE_APPROVAL",
+    "A4_DEVICE_MIC": "REQUIRE_APPROVAL",
+    "A4_DEVICE_CAM": "REQUIRE_APPROVAL",
+    "A4_DEVICE_SCREEN": "REQUIRE_APPROVAL",
+    "A5_CODE_EXEC": "REQUIRE_APPROVAL",
+    "A5_SKILL_INSTALL": "REQUIRE_APPROVAL",
+    "A6_DESTRUCTIVE": "DENY"
+  }
+}
+=== nomos approvals --help ===
+usage: nomos approvals [-h] {serve,list,sugerir,testar} ...
+
+positional arguments:
+  {serve,list,sugerir,testar}
+    sugerir             minera a trilha e PROPÕE política (nunca aplica)
+    testar              dry-run do veredito da política (nada entra na fila,
+                        nada executa)
+
+options:
+  -h, --help            show this help message and exit

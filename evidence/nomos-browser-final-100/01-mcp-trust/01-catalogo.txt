@@ -1,0 +1,15 @@
+=== DATA ===
+2026-08-25T13:54:44Z
+=== GIT ===
+d59f7d35cea6cf4681ce02bf4ffbe2e07cffc95f
+?? evidence/nomos-browser-final-100/
+STATUS_LINHAS=1
+=== NOMOS BIN ===
+lrwxr-xr-x@ 1 AI  staff  43 Aug 22 16:19 /Users/AI/.local/bin/nomos -> /Users/AI/.local/share/nomos/venv/bin/nomos
+=== CATALOGO ===
+servers MCP confiáveis (3) · 0 revogado(s):
+
+  ✓ calendario-ics  [6ea7c63d83e06926…]  ['python3', 'servidor.py']
+  ✓ nomos-browser  [d267002feb6f9e4a…]  ['node', 'servidor.mjs']
+  ✓ nomos-browser  [317f15893e9ebd83…]  ['node', 'servidor.mjs']
+RC_CATALOGO=0

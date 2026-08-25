@@ -1,0 +1,14 @@
+=== AUTOTESTE (controle negativo + positivo) ===
+AUTOTESTE=OK (pega a ruim, não acusa a boa)
+RC=0
+=== VARREDURA REAL ===
+SHELL_EXPANSION_SAFE=YES (15 scripts .sh varridos)
+RC=0
+=== CONTROLE NEGATIVO NO REPO REAL (reintroduz o defeito e exige rc=1) ===
+SHELL_EXPANSION_SAFE=NO
+  - scripts/nomos-register.sh:109: expansão colada em não-ASCII — use ${VAR}
+      ok "JÁ REGISTRADO como confiável (impressão $CURTA…) — nada a fazer"
+RC_COM_DEFEITO=1
+=== RESTAURADO ===
+SHELL_EXPANSION_SAFE=YES (15 scripts .sh varridos)
+RC=0

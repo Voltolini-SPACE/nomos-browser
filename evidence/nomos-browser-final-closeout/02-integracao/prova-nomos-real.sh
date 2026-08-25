@@ -109,6 +109,10 @@ http.createServer((req, res) => {
 }).listen($PORTA_ALVO, "127.0.0.1");
 EOF
 node /tmp/alvo-closeout2.mjs & ALVO_PID=$!
+# Instrumento: o alvo NÃO pode sobreviver a uma saída anormal. Sem este trap,
+# um abort no meio deixa :8901 ocupada e o próximo run morre com EADDRINUSE —
+# foi exatamente o que aconteceu quando o defeito de expansão matou o script.
+trap 'kill "$ALVO_PID" 2>/dev/null' EXIT INT TERM
 sleep 1
 if ! /usr/bin/curl -s -m 5 "$ALVO" | /usr/bin/grep -q "$CANARIO"; then
   echo "ABORTADO: alvo HTTP não subiu em $ALVO"; kill "$ALVO_PID" 2>/dev/null; exit 2
@@ -147,7 +151,7 @@ titulo "2. confiança do dono — o hash registrado é o do manifesto ATUAL?"
 CURTA="$(printf '%s' "$HASH_ATUAL" | cut -c1-16)"
 if printf '%s' "$CATALOGO" | /usr/bin/grep -q "$CURTA"; then
   G_MCP_OWNER_TRUST=PASS
-  nota "TRUST: registrado com a impressão ATUAL ($CURTA…)"
+  nota "TRUST: registrado com a impressão ATUAL (${CURTA}…)"
   EXPERIMENTAL=0
 else
   EXPERIMENTAL=1

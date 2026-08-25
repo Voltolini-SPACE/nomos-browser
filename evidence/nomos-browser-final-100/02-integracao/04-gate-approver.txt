@@ -1,0 +1,64 @@
+=== gate() ===
+        }[effect]
+        return Decision(effect, cat, target, reason)
+
+
+Approver = Callable[[Decision], bool]
+
+
+def gate(decision: Decision, approver: Approver | None) -> bool:
+    """Gate de aprovação obrigatório. Retorna True somente se a ação pode prosseguir.
+
+    - ALLOW  => True
+    - DENY   => False
+    - REQUIRE_APPROVAL => True apenas se um aprovador existir E confirmar.
+      Sem aprovador (ex.: contexto não interativo) => False (fail-closed).
+    """
+    if decision.effect is Effect.ALLOW:
+        return True
+    if decision.effect is Effect.DENY:
+        return False
+    if approver is None:
+        return False
+    try:
+        return bool(approver(decision))
+    except Exception:
+        return False  # aprovador com erro nunca autoriza
+
+=== interactive_approver no cli.py ===
+def interactive_approver(decision: Decision) -> bool:
+    if not (sys.stdin.isatty() and sys.stdout.isatty()):
+        from nomos.simple.erros import fmt
+        print(fmt("E002", "NEGADO (fail-closed): aprovação exige terminal interativo."),
+              file=sys.stderr)
+        return False
+    print("--- APROVAÇÃO NECESSÁRIA ---")
+    print(f"categoria: {decision.category}")
+    print(f"alvo:      {decision.target}")
+    print(f"motivo:    {decision.reason}")
+    resp = input('Digite exatamente "APROVO" para autorizar: ')
+    return resp.strip() == "APROVO"
+
+
+def _passphrase(confirm: bool = False) -> str:
+    env = os.environ.get("NOMOS_PASSPHRASE")
+    if env:
+        print("aviso: passphrase lida de NOMOS_PASSPHRASE (uso restrito a automação).",
+              file=sys.stderr)
+        return env
+    p1 = getpass.getpass("passphrase do cofre: ")
+    if confirm:
+        p2 = getpass.getpass("confirme a passphrase: ")
+        if p1 != p2:
+            from nomos.kernel.vault import VaultError
+            raise VaultError("passphrases não conferem")
+    return p1
+
+
+# ------------------------- comandos -------------------------
+
+def cmd_init(ctx, args) -> int:
+    ctx["audit"].append("plataforma.init", nomos_version=__version__)
+    print(f"NOMOS {__version__} inicializado em {ctx['home']}")
+    print("próximo passo: nomos agent create --name <NomeDoSeuAgente>")
+    return EXIT_OK

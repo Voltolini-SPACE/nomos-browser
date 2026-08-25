@@ -1,0 +1,3 @@
+=== ORIGEM DA IMPRESSAO ANTIGA d267002f… (sem inferencia: recomputada de cada versao no historico) ===
+commit=0ebfe30 fix(mcp): elevacao de privilegio pelo manifesto e sessao que nao sobrevivia ao one-shot impressao=317f15893e9ebd83afa17d11f66dd896c83342858ad723e0f4ed7afd32e27207 16
+commit=78491cc feat: integracao canonica com o NOMOS e binding da Gi impressao=d267002feb6f9e4a8d24331fa75eb504629515469e9f07b2deb94edd803e0ffe 13

@@ -106,7 +106,7 @@ else
   CURTA="$(printf '%s' "$IMPRESSAO" | cut -c1-16)"
   if printf '%s' "$CATALOGO" | /usr/bin/grep -q "$CURTA"; then
     JA_CONFIAVEL=1
-    ok "JÁ REGISTRADO como confiável (impressão $CURTA…) — nada a fazer"
+    ok "JÁ REGISTRADO como confiável (impressão ${CURTA}…) — nada a fazer"
   else
     aviso "ainda EXPERIMENTAL — o dono precisa registrar (passo 5)"
   fi

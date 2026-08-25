@@ -1,0 +1,2 @@
+=== HASH CANONICO RECOMPUTADO PELO PROPRIO NOMOS ===
+SIMBOLOS= ['ARQUIVO', 'CatalogoErro', 'Path', 'annotations', 'assinar_manifesto', 'buscar_conectores', 'chmod_privado', 'conectores_exemplo', 'confiar', 'diagnostico_conectores', 'hashlib', 'impressao', 'json', 'listar', 'nivel_exibicao', 'resolver_conector', 'revogar', 'status', 'verificar_assinatura']

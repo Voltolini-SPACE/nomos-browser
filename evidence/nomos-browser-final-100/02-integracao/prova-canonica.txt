@@ -1,0 +1,170 @@
+
+[1m══ 0. preparo — daemon, credencial, alvo HTTP e linha de base ══════════════════════[0m
+  · runtime vivo em http://127.0.0.1:7777
+  · credencial presente: /Users/AI/.nomos-browser/control-token
+  · alvo HTTP: http://127.0.0.1:8902/segredo (canário CANARIO-LOOP100-89722)
+  · daemon com allow_internal_urls=true (opt-in DO TESTE, não default do produto)
+  · SESSOES_VIVAS_ANTES=1  CHROMIUM_ANTES=0
+  · IMPRESSAO_CANONICA_DO_MANIFESTO=317f15893e9ebd83afa17d11f66dd896c83342858ad723e0f4ed7afd32e27207
+
+[1m══ 1. discovery — nomos mcp catalogo ══════════════════════[0m
+    servers MCP confiáveis (3) · 0 revogado(s):
+    
+      ✓ calendario-ics  [6ea7c63d83e06926…]  ['python3', 'servidor.py']
+      ✓ nomos-browser  [d267002feb6f9e4a…]  ['node', 'servidor.mjs']
+      ✓ nomos-browser  [317f15893e9ebd83…]  ['node', 'servidor.mjs']
+  · DISCOVERY: o catálogo do dono lista o conector
+
+[1m══ 2. confiança do dono — o hash registrado é o do manifesto ATUAL? ══════════════════════[0m
+  · TRUST: registrado com a impressão ATUAL (317f15893e9ebd83…)
+  · ATENÇÃO: 2 impressões de 'nomos-browser' confiáveis ao mesmo tempo.
+  ·          A antiga (d267002feb6f9e4a…) é o manifesto de 13 tools do commit
+  ·          78491cc — o que tinha a ELEVAÇÃO DE PRIVILÉGIO (browser_tabs A0
+  ·          despachando browser.new_tab). Quem apresentar aquele arquivo
+  ·          continua confiável. Só o dono revoga:
+  ·            git show 78491cc:packaging/mcp/manifesto.json > /tmp/antigo.json
+  ·            /Users/AI/.local/bin/nomos mcp revogar /tmp/antigo.json
+  ·          NÃO revoguei: 'revogar' é bloqueio duro e irreversível pelo CLI.
+
+[1m══ 3. conexão — handshake + tools/list com os níveis do manifesto ══════════════════════[0m
+    conectado a 'nomos-browser' [✓ confiável] (server: nomos-browser-mcp) — 16 tool(s):
+    
+      [A2] browser_navigate — Navega a sessão para uma URL e devolve a página resultante (PageInfo).
+      [A0] browser_observe — Observa a página atual: elementos, título, URL e (opcional) árvore de 
+      [A0] browser_find — Resolve um alvo sem agir sobre ele. Devolve ResolvedTarget com a estra
+      [A2] browser_click — Clica no alvo resolvido e verifica o efeito. Devolve o alvo resolvido 
+      [A2] browser_type — Digita em um campo. Use 'text' para valor comum ou 'credential_ref' pa
+      [A2] browser_press — Pressiona uma tecla ('key') ou uma sequência ('keys'), ex.: Enter, Tab
+      [A2] browser_scroll — Rola a página ou um contêiner. Informe dx/dy em pixels e/ou um target 
+      [A0] browser_extract — Extrai conteúdo da página inteira ou de um alvo. 'format' é repassado 
+      [A0] browser_screenshot — Captura screenshot. scope=viewport|full|element|region. Devolve a refe
+      [A0] browser_tabs — Lista as abas da sessão (PageInfo[]). SOMENTE leitura: não abre, não f
+      [A2] browser_tab_open — Abre uma aba nova, opcionalmente já em uma URL. EGRESSO: com 'url' a a
+      [A1] browser_tab_switch — Foca uma aba já aberta. Muta estado da sessão: a partir daqui toda fer
+      [A1] browser_tab_close — Fecha uma aba aberta. Muta estado da sessão e descarta o que estava ca
+      [A2] browser_download — Baixa um arquivo a partir de um alvo clicável ou de uma URL direta. Aç
+      [A2] browser_upload — Envia um arquivo para um campo de upload. Ação COMMIT: exige a capabil
+      [A5] browser_task — Entrega um objetivo em linguagem natural ao executor de tarefas do run
+  · TOOLS_LIST: 16 tools, as quatro de aba separadas e com níveis distintos
+
+[1m══ 4. sessão durável — A0 em DOIS processos one-shot, mesmo session_id ══════════════════════[0m
+--- chamada A (canônica, A0): browser_tabs ---
+    route=browser.tabs session_id=ses_d70ac8191af14efe http=200 action_id=act_mt8qs5rm_d state=IDLE duration_ms=1
+    [
+      {
+        "page_id": "pg_333ed181d6d542c1",
+--- chamada B (canônica, A0), PROCESSO SEPARADO: browser_observe ---
+    route=browser.observe session_id=ses_d70ac8191af14efe http=200 action_id=act_mt8qs5zh_i state=ACTIVE duration_ms=12
+    {
+      "url": "about:blank",
+      "title": "",
+    SESSAO_A=ses_d70ac8191af14efe  SESSAO_B=ses_d70ac8191af14efe
+  · session_id ESTÁVEL entre dois processos one-shot: ses_d70ac8191af14efe
+  · registro persistido:
+      {
+        "session_id": "ses_d70ac8191af14efe",
+        "runtime_url": "http://127.0.0.1:7777",
+        "criada_em": "2026-08-25T14:10:11.116Z",
+        "owner": "mcp:nomos-browser-mcp"
+      }
+
+[1m══ 5. extract — a LEITURA é canônica; a navegação do preparo, não ══════════════════════[0m
+  · linha de base: o canário NÃO está na página antes do preparo (bom)
+--- setup=lancador (NAO-CANONICO): browser_navigate url=http://127.0.0.1:8902/segredo ---
+    razão: navegar é A2 (egresso) e o NOMOS nega sem aprovador TTY.
+    route=browser.goto session_id=ses_d70ac8191af14efe http=200 action_id=act_mt8qs6e7_s state=ACTIVE duration_ms=24
+    {
+      "page_id": "pg_333ed181d6d542c1",
+    SESSAO_DO_SETUP=ses_d70ac8191af14efe  (tem de ser a MESMA de A/B: ses_d70ac8191af14efe)
+--- leitura CANÔNICA (A0): nomos mcp chamar browser_extract #fato ---
+    route=browser.extract session_id=ses_d70ac8191af14efe http=200 action_id=act_mt8qs6lj_x state=ACTIVE duration_ms=30
+    {
+      "content": "CANARIO-LOOP100-89722",
+      "scope": "element",
+      "format": "text",
+      "target": {
+        "strategy": "selector",
+        "attempted": [
+  · EXTRACT: o caminho canônico leu o canário DESTA execução (CANARIO-LOOP100-89722)
+
+[1m══ 6. erro válido — três formas de errar, todas pelo caminho canônico ══════════════════════[0m
+--- (a) tool inexistente ---
+    [NOMOS-E002] NEGADO (fail-closed): aprovação exige terminal interativo.
+    [NOMOS-E002] tool 'browser_inexistente' é nível A5 — exige sua aprovação num terminal interativo; nada foi executado.
+--- (b) argumento inválido em tool A0 ---
+    tool falhou no server: browser_extract: "target.selector" deve ser string
+--- (c) alvo inexistente ---
+    NOMOS_BROWSER_ERROR code=TARGET_NOT_FOUND
+    route=browser.extract session_id=ses_d70ac8191af14efe http=404 action_id=act_mt8qs71s_12 state=ACTIVE duration_ms=3
+    message: alvo não resolvido após 1 estratégia(s): selector
+    (a)=1 (b)=1 (c)=1
+
+[1m══ 7. fail-closed A1+ — o NOMOS nega TUDO acima de A0 sem aprovador ══════════════════════[0m
+    NEGADA  browser_tab_open      
+    NEGADA  browser_tab_switch    
+    NEGADA  browser_tab_close     
+    NEGADA  browser_navigate      
+    NEGADA  browser_click         
+    NEGADA  browser_type          
+    NEGADA  browser_press         
+    NEGADA  browser_scroll        
+    NEGADA  browser_download      
+    NEGADA  browser_upload        
+    NEGADA  browser_task          
+    NEGADAS=11 de 11
+
+[1m══ 8. elevação de privilégio — o exploit de 01-mcp/03 não é expressável ══════════════════════[0m
+--- (a) veredito da POLÍTICA do dono por ferramenta (dry-run, nada executa) ---
+    A0 · ler arquivos locais · alvo=mcp:nomos-browser:browser_tabs
+    veredito: ALLOW — permitido pela política
+    A2 · sair para a rede · alvo=mcp:nomos-browser:browser_tab_open
+    veredito: REQUIRE_APPROVAL — ação sensível: exige aprovação explícita
+    na prática: pediria a SUA aprovação; sem aprovador presente, o gate NEGA (fail-closed).
+--- (b) o exploit literal: browser_tabs (A0) com action=new + url ---
+    tool falhou no server: browser_tabs: argumento(s) desconhecido(s): action, url. Aceitos: session_id
+    ABAS_ANTES=1  ABAS_DEPOIS=1
+  · a tool A0 NÃO abriu aba: o argumento não escolhe mais a rota
+--- (c) guarda estático de coerência de risco ---
+    MCP_RISK_COHERENT=YES (16 tools, 23 rotas classificadas)
+
+[1m══ 9. audit — as chamadas canônicas aparecem em sessions/<id>/actions.jsonl ══════════════════════[0m
+  · sessão auditada: ses_d70ac8191af14efe
+    TOTAL_LINHAS=40
+    LINHAS_COM_actor+capability+policy_decision=16
+    {"action": "session.attach", "actor": "mcp:nomos-browser-mcp", "owner": "mcp:nomos-browser-mcp", "capability": null, "policy_decision": "not_applicable", "result": "ok"}
+    {"action": "task.resume", "actor": "mcp:nomos-browser-mcp", "owner": "mcp:nomos-browser-mcp", "capability": null, "policy_decision": "not_applicable", "result": "ok"}
+    {"action": "policy.allow", "actor": "daemon-root", "owner": "mcp:nomos-browser-mcp", "capability": "read", "policy_decision": "allow", "result": "ok"}
+    {"action": "browser.tabs", "actor": "daemon-root", "owner": "mcp:nomos-browser-mcp", "capability": "read", "policy_decision": "allow", "result": "ok"}
+    ACOES=browser.extract,browser.goto,browser.observe,browser.tabs,lease.acquired,policy.allow,session.attach,session.created,task.resume,task.started
+
+[1m══ 10. encerramento — sem órfão ══════════════════════[0m
+    MCP_SESSION_CLOSED session_id=ses_d70ac8191af14efe http=200 arquivo_apagado=true
+    SESSOES_VIVAS_ANTES=1  SESSOES_VIVAS_DEPOIS=1
+    CHROMIUM_ANTES=0  CHROMIUM_DEPOIS=0
+
+[1m══ RODAPÉ ══════════════════════[0m
+IMPRESSAO_EM_USO=317f15893e9ebd83afa17d11f66dd896c83342858ad723e0f4ed7afd32e27207
+MCP_OWNER_TRUST=PASS
+NOMOS_DISCOVERY=PASS
+NOMOS_HANDSHAKE=PASS
+NOMOS_TOOLS_LIST=PASS
+NOMOS_SESSION_DURAVEL=PASS
+NOMOS_EXTRACT=PASS
+NOMOS_ERRO_VALIDO=PASS
+NOMOS_FAIL_CLOSED_A1_MAIS=PASS
+NOMOS_NO_PRIVILEGE_ESCALATION=PASS
+NOMOS_AUDIT=PASS
+NOMOS_SEM_ORFAO=PASS
+NOMOS_BROWSER_INTEGRATION=PASS
+
+── O QUE ESTA PROVA NÃO FECHA, E POR QUÊ ────────────────────────────────
+EXECUCAO_CANONICA_A1_MAIS=BLOQUEADO_SEM_APROVADOR_NAO_TTY
+  'nomos mcp chamar' não tem --panel e 'interactive_approver' exige TTY.
+  Onze tools A1+ foram tentadas pelo caminho canônico e TODAS negadas —
+  esse é o gate NOMOS_FAIL_CLOSED_A1_MAIS acima, e ele é PASS: o teto é
+  real e uniforme. O que falta é EXECUTAR uma delas com o dono presente.
+  Quem fecha isso é o dono, no terminal dele:
+    cd /Users/AI/Projects/nomos-browser
+    /Users/AI/.local/bin/nomos mcp chamar /Users/AI/Projects/nomos-browser/packaging/mcp/manifesto.json browser_navigate --args '{"url":"http://127.0.0.1:8902/segredo"}'
+    (o NOMOS pergunta; digite APROVO)
+  Sem TTY do dono, forçar isso seria forjar consentimento. Não forcei.

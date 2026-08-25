@@ -1,0 +1,30 @@
+=== nomos mcp chamar --help ===
+usage: nomos mcp chamar [-h] [--args ARGS_JSON] manifesto tool
+
+positional arguments:
+  manifesto
+  tool
+
+options:
+  -h, --help        show this help message and exit
+  --args ARGS_JSON
+
+=== nomos mcp --help ===
+usage: nomos mcp [-h]
+                 {servir,tools,exemplos,doutor,buscar,assinatura,assinar,conectar,catalogo,confiar,revogar,chamar} ...
+
+positional arguments:
+  {servir,tools,exemplos,doutor,buscar,assinatura,assinar,conectar,catalogo,confiar,revogar,chamar}
+    exemplos            lista os conectores que acompanham o NOMOS (Telegram,
+                        WhatsApp…) e como ligar cada um
+    doutor              check-up dos conectores: confiança, credenciais no
+                        ambiente (só presença) e interpretador — tudo só-
+                        leitura
+    buscar              acha um conector embarcado por nome ou descrição (ex.:
+                        nomos mcp buscar agenda)
+    assinatura          verifica a assinatura opcional de autor de um
+                        manifesto (camada acima do SHA-256)
+    assinar             (autor) assina um manifesto com sua chave ed25519 PEM
+
+options:
+  -h, --help            show this help message and exit

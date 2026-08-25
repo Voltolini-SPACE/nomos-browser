@@ -1,0 +1,28 @@
+=== MEMORIA ===
+Mach Virtual Memory Statistics: (page size of 16384 bytes)
+Pages free:                                3673.
+Pages active:                            184722.
+Pages inactive:                          179489.
+Pages speculative:                         3956.
+=== SERVICOS LEGITIMOS (baseline) ===
+83005	-9	br.com.se7enpay.nomos.servico
+12728	0	ai.sovereign.omniroute
+83034	-9	com.nomos.panel
+51446	-15	com.gijarvis.backend
+1003	0	ai.sovereign.ollama
+=== DAEMON NOMOS BROWSER ===
+LABEL=ai.nomos.browser
+CARREGADA=NAO
+PLIST_NOSSO=NAO
+ESTADO=parado
+PID=-
+PORTA_7777=livre
+PLIST=/Users/AI/Library/LaunchAgents/ai.nomos.browser.plist
+LOGS=/Users/AI/Library/Logs/nomos-browser
+RC_STATUS=0
+=== LOCK ===
+total 16
+-rw-------@ 1 AI  staff   44 Aug 25 10:28 control-token
+-rw-------@ 1 AI  staff  165 Aug 25 10:04 mcp-session.json
+=== PORTA 7777 ===
+sem listener em 7777

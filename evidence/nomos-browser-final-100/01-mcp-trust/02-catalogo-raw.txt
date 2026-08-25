@@ -1,0 +1,28 @@
+=== CATALOGO RAW ===
+TIPO_RAIZ= dict
+{
+  "confiaveis": {
+    "6ea7c63d83e06926f21b4d2ee360d97f8e2a7c87f9888871716944f95311d3b1": {
+      "nome": "calendario-ics",
+      "comando": [
+        "python3",
+        "servidor.py"
+      ]
+    },
+    "d267002feb6f9e4a8d24331fa75eb504629515469e9f07b2deb94edd803e0ffe": {
+      "nome": "nomos-browser",
+      "comando": [
+        "node",
+        "servidor.mjs"
+      ]
+    },
+    "317f15893e9ebd83afa17d11f66dd896c83342858ad723e0f4ed7afd32e27207": {
+      "nome": "nomos-browser",
+      "comando": [
+        "node",
+        "servidor.mjs"
+      ]
+    }
+  },
+  "revogadas": []
+}

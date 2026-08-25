@@ -1,0 +1,20 @@
+=== NOMOS MCP CONECTAR (canonico, stdin=/dev/null: nenhum prompt pode ser respondido por mim) ===
+conectado a 'nomos-browser' [✓ confiável] (server: nomos-browser-mcp) — 16 tool(s):
+
+  [A2] browser_navigate — Navega a sessão para uma URL e devolve a página resultante (PageInfo).
+  [A0] browser_observe — Observa a página atual: elementos, título, URL e (opcional) árvore de 
+  [A0] browser_find — Resolve um alvo sem agir sobre ele. Devolve ResolvedTarget com a estra
+  [A2] browser_click — Clica no alvo resolvido e verifica o efeito. Devolve o alvo resolvido 
+  [A2] browser_type — Digita em um campo. Use 'text' para valor comum ou 'credential_ref' pa
+  [A2] browser_press — Pressiona uma tecla ('key') ou uma sequência ('keys'), ex.: Enter, Tab
+  [A2] browser_scroll — Rola a página ou um contêiner. Informe dx/dy em pixels e/ou um target 
+  [A0] browser_extract — Extrai conteúdo da página inteira ou de um alvo. 'format' é repassado 
+  [A0] browser_screenshot — Captura screenshot. scope=viewport|full|element|region. Devolve a refe
+  [A0] browser_tabs — Lista as abas da sessão (PageInfo[]). SOMENTE leitura: não abre, não f
+  [A2] browser_tab_open — Abre uma aba nova, opcionalmente já em uma URL. EGRESSO: com 'url' a a
+  [A1] browser_tab_switch — Foca uma aba já aberta. Muta estado da sessão: a partir daqui toda fer
+  [A1] browser_tab_close — Fecha uma aba aberta. Muta estado da sessão e descarta o que estava ca
+  [A2] browser_download — Baixa um arquivo a partir de um alvo clicável ou de uma URL direta. Aç
+  [A2] browser_upload — Envia um arquivo para um campo de upload. Ação COMMIT: exige a capabil
+  [A5] browser_task — Entrega um objetivo em linguagem natural ao executor de tarefas do run
+RC_CONECTAR=0
