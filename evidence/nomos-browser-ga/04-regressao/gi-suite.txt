@@ -1,0 +1,15 @@
+........................................................................ [ 49%]
+........................................................................ [ 99%]
+.                                                                        [100%]
+=============================== warnings summary ===============================
+test_gi_gateway_auth.py:42
+  /Users/AI/Projects/pocket-assistant/backend/test_gi_gateway_auth.py:42: PytestUnknownMarkWarning: Unknown pytest.mark.timeout - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.timeout(60)
+
+test_gi_gateway_auth.py:72
+  /Users/AI/Projects/pocket-assistant/backend/test_gi_gateway_auth.py:72: PytestUnknownMarkWarning: Unknown pytest.mark.timeout - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.timeout(60)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+145 passed, 2 warnings in 21.22s
+GI_RC=0
