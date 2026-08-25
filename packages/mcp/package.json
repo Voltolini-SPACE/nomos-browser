@@ -1,6 +1,6 @@
 {
   "name": "@nomos/browser-mcp",
-  "version": "0.3.0-rc.1",
+  "version": "0.3.0-rc.2",
   "license": "SEE LICENSE IN LICENSE",
   "description": "Adaptador MCP do NOMOS Browser Runtime — traduz tools/call em POST da API v1. Sem lógica de navegador.",
   "type": "module",

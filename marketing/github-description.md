@@ -66,9 +66,9 @@ intermediário ou versionar cor no repositório. Então:
 
 ## Primeiro release
 
-Título: `v0.3.0-rc.1 — Live Agent Console e modos de autonomia`
+Título: `v0.3.0-rc.2 — Live Agent Console e modos de autonomia`
 
-Corpo: as notas de release derivam do `CHANGELOG.md`, seção `[0.3.0-rc.1]`.
+Corpo: as notas de release derivam do `CHANGELOG.md`, seção `[0.3.0-rc.2]`.
 Marcar como **pre-release** — é um RC, e chamá-lo de estável antes da promoção
 seria o tipo de coisa que este projeto passou a missão inteira evitando.
 
@@ -78,6 +78,6 @@ seria o tipo de coisa que este projeto passou a missão inteira evitando.
 > e os tokens de identidade visual, são governados à parte e não são versionados
 > aqui.
 >
-> `0.3.0-rc.1` é **release candidate**. As limitações estão no README, não
+> `0.3.0-rc.2` é **release candidate**. As limitações estão no README, não
 > escondidas: nenhum p99 é reportado, não há rota HTTP para emitir token com
 > escopo, e só macOS/Apple Silicon foi medido.

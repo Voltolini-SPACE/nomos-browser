@@ -111,7 +111,7 @@ seu agente  ·  MCP · REST · WebSocket · SDK · CLI
 
 ## Status
 
-> **0.3.0-rc.1 · release candidate.** Código aberto sob MIT.
+> **0.3.0-rc.2 · release candidate.** Código aberto sob MIT.
 >
 > Validado em macOS com Apple Silicon. Outras plataformas ainda não foram
 > medidas, e por isso não são anunciadas.
@@ -137,5 +137,5 @@ saídas honestas:
    `/browser/`.
 
 Recomendada: **(1)**, com texto
-`Navegador governado: NOMOS Browser 0.3.0-rc.1, com console e modos de autonomia`
+`Navegador governado: NOMOS Browser 0.3.0-rc.2, com console e modos de autonomia`
 e link. Mantém o rótulo honesto e resolve a contradição.

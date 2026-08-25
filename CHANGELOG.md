@@ -3,7 +3,7 @@
 Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento pretendido: [SemVer](https://semver.org/lang/pt-BR/).
 
-**Versão corrente: `0.3.0-rc.1`.** A primeira marcação foi `v0.2.0-rc.1`; antes dela
+**Versão corrente: `0.3.0-rc.2`.** A primeira marcação foi `v0.2.0-rc.1`; antes dela
 o repositório não tinha tag alguma e `package.json` declarava `0.1.0` desde o
 início — e este arquivo dizia isso, porque anunciar uma versão que nunca foi
 marcada seria o tipo de mentira que o resto desta documentação existe para
@@ -25,6 +25,30 @@ Keep a Changelog.
 
 Legenda usada nos itens:
 **⚠ INCOMPATÍVEL** = muda comportamento observável de quem já usa a API.
+
+---
+
+## [0.3.0-rc.2] — 2026-08-25
+
+Mesma base de código do `rc.1`. O que muda é o **estado legal** e a publicação.
+
+### Licença
+- **MIT**, titular **Voltolini-SPACE**, decididos pelo dono. O `rc.1` foi
+  marcado quando o `LICENSE` ainda dizia *todos os direitos reservados* com
+  titular placeholder, e uma tag publicada não se move: por isso existe um
+  `rc.2` em vez de um `rc.1` corrigido.
+- `LICENSE` contém **apenas** o texto MIT canônico. Notas sobre marca, histórico
+  legal e dependências foram para [`NOTICE.md`](NOTICE.md), porque qualquer
+  adição dentro do `LICENSE` faz o GitHub classificar o projeto como *"Other"* —
+  foi o que aconteceu na primeira publicação.
+- `license` e `author` passaram a ser declarados em `package.json` e em cada
+  workspace.
+- `CONTRIBUTING.md` criado.
+
+### Publicação
+- Repositório publicado: `github.com/Voltolini-SPACE/nomos-browser`. Antes desta
+  versão não havia remoto algum, e 22 commits além da `v0.2.0` existiam apenas
+  numa máquina.
 
 ---
 
