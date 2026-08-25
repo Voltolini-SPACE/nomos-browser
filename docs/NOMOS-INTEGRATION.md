@@ -1,5 +1,16 @@
 # NOMOS ↔ NOMOS Browser — integração por MCP
 
+> **Caminhos nesta página.** `$REPO` é a raiz deste repositório e `$GI` a raiz do
+> projeto da Gi. Eles aparecem como variáveis em vez de caminhos absolutos porque
+> um caminho absoluto embutido diz o nome de usuário de quem escreveu e não
+> funciona para mais ninguém:
+>
+> ```bash
+> REPO="$(git rev-parse --show-toplevel)"
+> GI="${GI:-$(dirname "$REPO")/pocket-assistant}"
+> ```
+
+
 Como o NOMOS opera este navegador, quem decide o quê, e o que ainda depende do
 dono. Tudo aqui é verificável: cada afirmação tem um comando ao lado.
 
@@ -135,11 +146,11 @@ export NOMOS_BROWSER_URL=http://127.0.0.1:7777
 export NOMOS_BROWSER_TOKEN_FILE=$HOME/.nomos-browser/control-token
 
 # 3. inspecionar (num TERMINAL; pede "ACEITO O RISCO" enquanto experimental)
-nomos mcp conectar /Users/AI/Projects/nomos-browser/packaging/mcp/manifesto.json
+nomos mcp conectar $REPO/packaging/mcp/manifesto.json
 
 # 4. registrar — escolha UMA porta
-nomos mcp confiar /Users/AI/Projects/nomos-browser/packaging/mcp/manifesto.json
-nomos mcp confiar /Users/AI/Projects/nomos-browser/packaging/mcp/manifesto.json --panel
+nomos mcp confiar $REPO/packaging/mcp/manifesto.json
+nomos mcp confiar $REPO/packaging/mcp/manifesto.json --panel
 ```
 
 Impressão digital atual (SHA-256 do manifesto canônico):
@@ -261,16 +272,16 @@ bash scripts/nomos-register.sh
 #    → NOMOS_MCP_REGISTRADO=NAO  impressao=317f1589…  (BLOQUEADO_POR_APROVACAO)
 
 # 2. inspecionar o conector antes de confiar (TERMINAL; pede "ACEITO O RISCO")
-/Users/AI/.local/bin/nomos mcp conectar /Users/AI/Projects/nomos-browser/packaging/mcp/manifesto.json
+"$(command -v nomos)" mcp conectar $REPO/packaging/mcp/manifesto.json
 
 # 3. RE-REGISTRAR — escolha UMA porta; as duas pedem o dono
-/Users/AI/.local/bin/nomos mcp confiar /Users/AI/Projects/nomos-browser/packaging/mcp/manifesto.json
+"$(command -v nomos)" mcp confiar $REPO/packaging/mcp/manifesto.json
 #    (terminal interativo; pede a palavra CONFIO)
-/Users/AI/.local/bin/nomos mcp confiar /Users/AI/Projects/nomos-browser/packaging/mcp/manifesto.json --panel
+"$(command -v nomos)" mcp confiar $REPO/packaging/mcp/manifesto.json --panel
 #    (fila do painel do dono em http://127.0.0.1:8795, single-use, com TTL)
 
 # 4. conferir que o catálogo passou a mostrar a impressão NOVA
-/Users/AI/.local/bin/nomos mcp catalogo
+"$(command -v nomos)" mcp catalogo
 #    → ✓ nomos-browser  [317f15893e9ebd83…]
 
 # 5. reexecutar a prova de integração ponta a ponta

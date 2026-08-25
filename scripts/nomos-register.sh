@@ -20,7 +20,7 @@ set -uo pipefail
 
 RAIZ="$(cd "$(dirname "$0")/.." && pwd)"
 MANIFESTO="${1:-$RAIZ/packaging/mcp/manifesto.json}"
-NOMOS_BIN="${NOMOS_BIN:-/Users/AI/.local/bin/nomos}"
+NOMOS_BIN="${NOMOS_BIN:-${HOME}/.local/bin/nomos}"
 RUNTIME_URL="${NOMOS_BROWSER_URL:-http://127.0.0.1:7777}"
 TOKEN_FILE="${NOMOS_BROWSER_TOKEN_FILE:-$HOME/.nomos-browser/control-token}"
 FALHAS=0

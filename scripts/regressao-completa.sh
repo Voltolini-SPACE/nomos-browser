@@ -14,7 +14,11 @@ RAIZ="$(cd "$(dirname "$0")/.." && pwd)"
 SAIDA="${1:-${RAIZ}/evidence/nomos-live-agent/11-regressao}"
 mkdir -p "$SAIDA"
 
-GI="/Users/AI/Projects/pocket-assistant"
+# Caminho da Gi. Configuravel por ambiente: um caminho absoluto embutido diz o
+# nome de usuario de quem escreveu e quebra para todo mundo mais. O default
+# assume o layout de projetos irmaos, e a etapa sai NAO_EXECUTADA quando nao
+# encontra — nunca PASS por omissao.
+GI="${NOMOS_GI_ROOT:-$(cd "$RAIZ/.." 2>/dev/null && pwd)/pocket-assistant}"
 
 etapas_ok=0
 etapas_ruins=0
@@ -135,6 +139,23 @@ if (cd "$RAIZ" \
 else
   registrar "guardas-estaticas" "FALHOU" "ver 06-guardas.txt"
 fi
+
+echo
+echo "════ 6b. segredos no que virará público ════"
+if (cd "$RAIZ" && bash scripts/verificar-segredos-publicos.sh) > "$SAIDA/06b-segredos-publicos.txt" 2>&1; then
+  registrar "segredos-publicos" "PASS" "PUBLIC_REPO_SECRET_LEAK=0"
+else
+  registrar "segredos-publicos" "FALHOU" "ver 06b-segredos-publicos.txt"
+fi
+
+echo
+echo "════ 6c. demos reproduzíveis ════"
+if (cd "$RAIZ" && node demos/rodar-demos.mjs) > "$SAIDA/06c-demos.txt" 2>&1; then
+  registrar "demos" "PASS" "$(/usr/bin/grep -c '^  \[OK\]' "$SAIDA/06c-demos.txt" || true) passos OK em 6 demos"
+else
+  registrar "demos" "FALHOU" "ver 06c-demos.txt"
+fi
+"${RAIZ}/scripts/limpar-orfaos.sh" > /dev/null 2>&1 || true
 
 echo
 echo "════ 7. tipos ════"

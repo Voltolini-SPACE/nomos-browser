@@ -1,6 +1,17 @@
 # Gi ↔ NOMOS Browser
 
-A Gi é o assistente de voz local (`/Users/AI/Projects/pocket-assistant`, backend
+> **Caminhos nesta página.** `$REPO` é a raiz deste repositório e `$GI` a raiz do
+> projeto da Gi. Eles aparecem como variáveis em vez de caminhos absolutos porque
+> um caminho absoluto embutido diz o nome de usuário de quem escreveu e não
+> funciona para mais ninguém:
+>
+> ```bash
+> REPO="$(git rev-parse --show-toplevel)"
+> GI="${GI:-$(dirname "$REPO")/pocket-assistant}"
+> ```
+
+
+A Gi é o assistente de voz local (`$GI`, backend
 FastAPI em `:8321`). Este documento descreve como ela ganha um navegador **sem
 ganhar autoridade** — e qual é o passo, exato, que só o dono pode dar.
 
@@ -123,7 +134,7 @@ classificação, mesmo veredito. Registrando, a execução passa a sair pelo
 `nomos mcp chamar`, e a auditoria do NOMOS passa a ter a linha também:
 
 ```bash
-nomos mcp confiar /Users/AI/Projects/nomos-browser/packaging/mcp/manifesto.json --panel
+nomos mcp confiar $REPO/packaging/mcp/manifesto.json --panel
 ```
 
 `browser.py` detecta a mudança sozinho (`registrado()` consulta o catálogo a
@@ -157,14 +168,14 @@ URL teria mudado.
 Diagnóstico rápido, só-leitura:
 
 ```bash
-cd /Users/AI/Projects/pocket-assistant/backend && python3 -c \
+cd $GI/backend && python3 -c \
   "from gi_nomos import browser as B; import json; print(json.dumps(B.diagnostico(), indent=2))"
 ```
 
 Regressão da Gi (nada quebrou):
 
 ```bash
-cd /Users/AI/Projects/pocket-assistant/backend && \
+cd $GI/backend && \
   pytest -q test_gi_nomos.py test_gi_nomos_transport.py test_gi_audio_relay.py
 #   42 passed
 ```
