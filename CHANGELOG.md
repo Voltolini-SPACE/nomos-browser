@@ -3,19 +3,19 @@
 Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento pretendido: [SemVer](https://semver.org/lang/pt-BR/).
 
-**Primeira versão marcada: `0.2.0-rc.1`.** Até ela o repositório não tinha tag
-alguma e `package.json` declarava `0.1.0` desde o início — e este arquivo dizia
-isso, porque anunciar uma versão que nunca foi marcada seria o tipo de mentira
-que o resto desta documentação existe para evitar. A tag anotada
-`v0.2.0-rc.1` aponta para o commit de release, e a revalidação foi feita a
-partir do CONTEÚDO DA TAG, não da árvore de trabalho. O procedimento está em
-[docs/RELEASE.md](docs/RELEASE.md).
+**Versão corrente: `0.2.0`.** A primeira marcação foi `v0.2.0-rc.1`; antes dela
+o repositório não tinha tag alguma e `package.json` declarava `0.1.0` desde o
+início — e este arquivo dizia isso, porque anunciar uma versão que nunca foi
+marcada seria o tipo de mentira que o resto desta documentação existe para
+evitar. Cada tag foi revalidada a partir do CONTEÚDO DELA, nunca da árvore de
+trabalho. O procedimento está em [docs/RELEASE.md](docs/RELEASE.md).
 
-`rc.1` e não `0.2.0`: o produto fecha todos os portões que ele mesmo declara,
-mas há um limite medido e registrado — pelo caminho canônico `nomos mcp chamar`
-só ferramentas `A0` executam sem o dono num terminal, porque o CLI do NOMOS não
-oferece `--panel` nesse subcomando. Isso está em
-[docs/LIMITATIONS.md](docs/LIMITATIONS.md).
+O que separou o `rc.1` do `0.2.0` foi **uma pessoa digitando `APROVO`**. Enquanto
+nenhuma ferramenta acima de `A0` tinha sido executada pelo caminho canônico com
+aprovação humana real, o produto não podia se dizer pronto: a metade do gate que
+importa — a que autoriza — nunca tinha rodado. Rodou. Está em
+[docs/LIMITATIONS.md](docs/LIMITATIONS.md) o que continua valendo sobre
+automação headless.
 
 Desvio deliberado do formato: dentro de cada versão as mudanças estão
 agrupadas **por commit**, e não só por categoria. As mensagens de commit deste
@@ -25,6 +25,43 @@ Keep a Changelog.
 
 Legenda usada nos itens:
 **⚠ INCOMPATÍVEL** = muda comportamento observável de quem já usa a API.
+
+---
+
+## [0.2.0] — 2026-08-25
+
+### `ae856aa` · `5384ae3` — O gate humano A1, e o cancelamento que mentia (2026-08-25)
+
+#### Corrigido — integração com a Gi (auditabilidade)
+- **Cancelamento que chegava tarde era reportado como `CANCELADO`.** O laço
+  derrubava o processo sem perguntar se ele ainda estava vivo. Se o `nomos` já
+  tinha terminado — e ele termina com o `node servidor.mjs` neto ainda segurando
+  os pipes, que é exatamente quando `poll()` deixa de ser `None` — a Gi dizia
+  "cancelei" com a aba já trocada na tela do dono. Agora existe
+  `browser.cancel.too_late` e a resposta admite `cancelamento_tardio=True`.
+- **`communicate()` sem prazo no caminho tardio** era um pendura: o neto segura
+  os pipes e a espera não terminava. Prazo de 5 s, e se não fecharem, derruba o
+  grupo e usa o que já veio.
+
+#### Adicionado — trilha do barge-in
+- Quatro eventos que não são sinônimos: `requested` (pediram para parar),
+  `accepted` (dá para parar), `terminated` (o que sobrou — com
+  `grupo_ainda_vivo` medido por `killpg(gid, 0)`, que não envia sinal, só
+  pergunta) e `too_late`. Sumidouro opcional: auditoria que derruba a ação que
+  deveria registrar é pior que auditoria nenhuma.
+
+#### Segurança — o manifesto legado saiu do chaveiro
+- `d267002f…` (13 tools, com a elevação de privilégio) foi **revogado** pelo
+  caminho canônico. A medição feita antes é o achado: com ele ainda confiável, o
+  exploit histórico era barrado pelo **servidor**, por validação de argumento —
+  **não** pela camada de manifesto, que teria deixado passar. A defesa era de uma
+  camada só, e um `git checkout` do `servidor.mjs` daquele commit devolveria a
+  outra metade.
+
+#### Corrigido — instrumento
+- O arranjo do gate canalizava a saída do `nomos` por `| tee`, e um pipe faz o
+  stdout deixar de ser TTY: o dono chegou ao gate e **o instrumento** fechou a
+  porta na cara dele. `script -q` no lugar.
 
 ---
 

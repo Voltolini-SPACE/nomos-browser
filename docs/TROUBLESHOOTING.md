@@ -20,7 +20,7 @@ resposta.
 npm error code EUSAGE
 npm error `npm ci` can only install packages when your package.json and
 npm error package-lock.json ... are in sync.
-npm error Missing: @nomos/browser@0.2.0-rc.1 from lock file
+npm error Missing: @nomos/browser@0.2.0 from lock file
 ```
 
 **Causa** — `package-lock.json` fora de sincronia com os workspaces. Foi um

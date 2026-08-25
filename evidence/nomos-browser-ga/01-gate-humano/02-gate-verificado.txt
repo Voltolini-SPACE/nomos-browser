@@ -1,0 +1,21 @@
+sessao ............................. ses_55b99f88eb7c4e5d
+linhas na trilha do runtime ........ 65
+eventos MCP na janela .............. 20
+
+negativas de browser_tab_switch (A1) ....... 5
+execucoes de browser_tab_switch (A1) ....... 2
+negativas de nivel A2+ ............. 3  (browser_navigate, browser_tab_open, browser_task)
+EXECUCOES de nivel A2+ ............. 0   <- tem de ser 0
+
+rota browser.switch_tab na trilha do runtime .... 2
+outras mutacoes de navegador ....... 1  (browser.new_tab)
+dono das trocas .................... mcp:nomos-browser-mcp
+
+A1_WITHOUT_APPROVAL=DENIED
+A1_INVALID_APPROVAL=DENIED
+A1_WITH_REAL_APROVO=PASS
+APPROVAL_AUDITED=YES
+SCOPE_EXACT=EXATO
+SILENT_ELEVATION=NO
+PRIVILEGE_BYPASS=NO
+HUMAN_A1_GATE=PASS

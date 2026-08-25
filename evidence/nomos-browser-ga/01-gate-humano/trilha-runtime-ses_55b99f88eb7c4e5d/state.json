@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "session_id": "ses_55b99f88eb7c4e5d",
+  "owner": "mcp:nomos-browser-mcp",
+  "profile": "default",
+  "url": "about:blank",
+  "page_ids": [
+    "pg_5dee1a220e654a5e"
+  ],
+  "context_id": "ctx_e517d388d26b4a53",
+  "capabilities": {
+    "navigate": true,
+    "read": true,
+    "click": true,
+    "type": true,
+    "download": false,
+    "upload": false,
+    "send": false,
+    "purchase": false,
+    "payment": false,
+    "delete": false
+  },
+  "cdp_endpoint": null,
+  "browser_pid": 83490,
+  "browser_id": "ctx_e517d388d26b4a53",
+  "criado_em": "2026-08-25T16:31:06.533Z",
+  "ultima_atividade": "2026-08-25T16:31:06.533Z",
+  "status": "IDLE",
+  "ephemeral": false,
+  "in_flight_action": null
+}

@@ -199,7 +199,7 @@ Divergência aberta e não reconciliada: o corpo do `BRANDBOOK_NOMOS.md` afirma
 
 `LICENSE` declara "todos os direitos reservados" — que é o estado legal padrão na
 ausência de escolha, não uma decisão nova. Escolher MIT/Apache-2.0/AGPL é ato do
-dono. `package.json` continua `"private": true`: a tag `v0.2.0-rc.1` marca uma
+dono. `package.json` continua `"private": true`: a tag `v0.2.0` marca uma
 versão do CÓDIGO, não uma publicação em registro nenhum. Ver `LICENSE`,
 `CHANGELOG.md` e `docs/RELEASE.md`.
 
@@ -220,25 +220,37 @@ até lá a integração fica parada. Planeje mudanças de manifesto em lote.
 
 `descricao` e `env` ficam fora do hash e podem mudar livremente.
 
-**A impressão ANTIGA não sai sozinha.** O catálogo é um mapa
-`impressão → {nome, comando}`, e `confiar` só ACRESCENTA. Depois da correção da
-elevação de privilégio, o catálogo do dono passou a listar `nomos-browser`
-**duas vezes**: `317f1589…` (o manifesto de 16 ferramentas, corrigido) e
-`d267002f…` (o de 13, com `browser_tabs` `A0` despachando `browser.new_tab`).
-Quem apresentar o arquivo antigo — que continua no histórico do git — obtém
-confiança para o manifesto vulnerável. Recomputado versão a versão em
-`evidence/nomos-browser-final-100/01-mcp-trust/05-origem-hash-antigo.txt`.
+**A impressão ANTIGA não sai sozinha — e a defesa era de uma camada só.** O
+catálogo é um mapa `impressão → {nome, comando}`, e `confiar` só ACRESCENTA.
+Depois da correção da elevação de privilégio, o catálogo passou a listar
+`nomos-browser` **duas vezes**: `317f1589…` (16 ferramentas, corrigido) e
+`d267002f…` (13, com `browser_tabs` `A0` despachando `browser.new_tab`).
 
-Quem tira é o dono, e só ele:
+Antes de revogar, isso foi MEDIDO em vez de suposto. Com o manifesto antigo
+ainda confiável e posto ao lado do `servidor.mjs` — o cenário de ataque de
+verdade — o exploit histórico foi barrado pelo **SERVIDOR**, por validação de
+argumento do código atual. **Não** pela camada de manifesto, que deu `A0` e
+veredito `ALLOW`. Ou seja: quem segurava era o código, não a política, e um
+`git checkout` do `servidor.mjs` daquele commit devolveria a metade que falta.
+Verbatim em `evidence/nomos-browser-ga/03-legado/02-medir-e-revogar.txt`.
+
+Por isso foi revogado, mesmo com o exploit já barrado hoje:
 
 ```sh
 git show 78491cc:packaging/mcp/manifesto.json > /tmp/manifesto-antigo.json
 nomos mcp revogar /tmp/manifesto-antigo.json
 ```
 
-Revogar é bloqueio **duro**: o próprio NOMOS avisa que não confia de novo "nem
-que reapareça idêntico", e desfazer exige editar a lista de revogações à mão.
-Por isso não foi feito aqui.
+O catálogo foi de 3 confiáveis para 2, com 1 revogada, e a linha `mcp.revogado`
+entrou na trilha encadeada por hash do NOMOS. Revogar é bloqueio **duro** — o
+próprio NOMOS avisa que não confia de novo "nem que reapareça idêntico", e
+desfazer exige editar a lista de revogações à mão.
+
+**A lição que fica, e ela é do mecanismo, não deste caso:** confiança por
+registro nunca expira sozinha. Toda correção que muda a classificação de uma
+ferramenta deixa a impressão anterior válida até alguém revogá-la à mão. Quem
+mantém um catálogo precisa tratar revogação como parte do procedimento de
+correção, não como faxina posterior.
 
 ## O que roda sem o dono, e o que não roda
 

@@ -564,7 +564,7 @@ class TestManagementAndWait(RuntimeTestCase):
         health = {
             "runtime": "ok", "browser": "ok", "workers": {"active": 0, "max": 4},
             "sessions": {"total": 1, "active": 1, "idle": 0, "paused": 0},
-            "version": "0.2.0-rc.1", "contract": "1", "uptime_s": 12,
+            "version": "0.2.0", "contract": "1", "uptime_s": 12,
         }
         self.runtime.on("GET", "/health", health)
         self.runtime.on("GET", "/api/v1/sessions", [session_info()])

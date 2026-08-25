@@ -1,9 +1,9 @@
 # Release
 
-Como se faz uma versão deste produto. **A primeira é `0.2.0-rc.1`**, marcada
-pela tag anotada `v0.2.0-rc.1`; antes dela o repositório não tinha tag alguma e
-`package.json` dizia `0.1.0` desde o começo. Este documento descreve o
-procedimento — que foi o seguido para produzir essa versão.
+Como se faz uma versão deste produto. A corrente é **`0.2.0`**, marcada pela tag
+anotada `v0.2.0`; a primeira marcação foi `v0.2.0-rc.1`, e antes dela o
+repositório não tinha tag alguma. Este documento descreve o procedimento — que
+foi o seguido para produzir as duas.
 
 O princípio é um só: **a versão que sai é a que a tag descreve, provada a partir
 da tag** — não a partir da sua árvore de trabalho. Toda etapa abaixo existe para

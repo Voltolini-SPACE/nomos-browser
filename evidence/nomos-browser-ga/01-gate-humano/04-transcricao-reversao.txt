@@ -1,0 +1,13 @@
+--- APROVAÇÃO NECESSÁRIA ---
+categoria: A1_WRITE_LOCAL
+alvo:      mcp:nomos-browser:browser_tab_switch
+motivo:    ação sensível: exige aprovação explícita
+Digite exatamente "APROVO" para autorizar: ap  APROVO
+route=browser.switch_tab session_id=ses_55b99f88eb7c4e5d http=200 action_id=act_mt8vtqi4_1q state=ACTIVE duration_ms=1
+{
+  "page_id": "pg_29724f44f87c425e",
+  "url": "about:blank",
+  "title": "",
+  "active": true,
+  "opened_at": "2026-08-25T16:31:06.845Z"
+}
