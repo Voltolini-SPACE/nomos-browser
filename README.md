@@ -107,8 +107,15 @@ bash packaging/release/install.sh
 O instalador verifica o Node (≥ 22.18 — único requisito), instala o app em
 `~/.nomos-browser/app` com o Chromium do Playwright, **detecta o Ollama** e
 grava a configuração, instala a CLI `nomos-browser` e um LaunchAgent que inicia
-no login. Ao final o navegador abre sozinho: ícone **NOMOS** → painel →
-runtime `http://127.0.0.1:7777` → token (**Cmd+V** — já está no clipboard).
+no login. Ao final o navegador abre sozinho, e abrir a Gi é **um clique**:
+
+> **Clique no ícone NOMOS** (quebra-cabeça → **NOMOS**; fixe na barra se quiser).
+> O painel abre ao lado da página **já conectado** — o campo de mensagem
+> focado, é só conversar com a Gi. Sem colar token, sem terminal, sem formulário.
+
+O painel conecta sozinho porque o runtime injeta um handshake de mesma origem
+dentro da própria extensão que ele carregou (0600, não exposto à web). O caminho
+manual (runtime remoto + token) continua existindo para uso avançado.
 
 ```bash
 nomos-browser start|stop|restart|status|logs|uninstall

@@ -26,7 +26,7 @@
  *
  * Encerrar: Ctrl-C aqui derruba o daemon junto.
  */
-import { spawn, execFileSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import { readFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -104,24 +104,18 @@ if (token !== null) {
     console.error(`[nomos] ERRO ao abrir a sessão do dono: HTTP ${r.status} ${corpo?.error?.message ?? ""}`);
   }
 
-  // 4. token na área de transferência (macOS) — colar continua sendo o ato.
-  if (process.platform === "darwin" && process.env["NOMOS_BROWSER_NO_CLIPBOARD"] !== "1") {
-    try {
-      execFileSync("pbcopy", { input: token });
-      console.error("[nomos] token de controle copiado para a área de transferência (Cmd+V no painel).");
-    } catch {
-      console.error(`[nomos] token em: ${tokenPath}`);
-    }
-  } else {
-    console.error(`[nomos] token em: ${tokenPath}`);
-  }
+  // 4. Nada de colar token. O daemon injeta um handshake de mesma origem
+  //    (local-runtime.json) DENTRO da extensão que ele mesmo carregou, e o
+  //    painel conecta sozinho ao abrir (ver daemon.ts / sidepanel.js). O token
+  //    fica só no arquivo 0600, como fallback do caminho avançado/remoto.
+  console.error(`[nomos] token de controle (fallback avançado) em: ${tokenPath}`);
 }
 
 console.error(
   "\n┌─ NOMOS Browser pronto ─────────────────────────────────\n" +
-  "│ 1. Na janela do Chromium que abriu, clique no ícone NOMOS\n" +
-  "│    (quebra-cabeça → NOMOS, fixe se quiser) — o painel abre ao lado.\n" +
-  `│ 2. Conecte: runtime ${BASE} + token (Cmd+V).\n` +
-  "│ 3. Converse com a Gi. Ctrl-C aqui encerra tudo.\n" +
+  "│ Na janela do Chromium que abriu, clique no ícone NOMOS\n" +
+  "│ (quebra-cabeça → NOMOS; fixe na barra se quiser). O painel\n" +
+  "│ abre ao lado JÁ conectado — é só conversar com a Gi.\n" +
+  `│ (Avançado) runtime em ${BASE}. Ctrl-C aqui encerra tudo.\n` +
   "└────────────────────────────────────────────────────────",
 );

@@ -9,7 +9,7 @@
  * Os ícones também nascem aqui: PNG sólido na cor da marca, gerado por código
  * (zlib do Node) — nenhum binário versionado, nenhuma cor fora do cofre.
  */
-import { readFileSync, writeFileSync, mkdirSync, copyFileSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, copyFileSync, rmSync } from "node:fs";
 import { deflateSync } from "node:zlib";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -116,6 +116,11 @@ export function buildExtension(): ExtensionBuild {
 
   const dist = path.join(HERE, "dist");
   mkdirSync(path.join(dist, "icons"), { recursive: true });
+  // `local-runtime.json` é o handshake de auto-conexão que o DAEMON grava em
+  // tempo de execução (ver daemon.ts) — nunca um artefato de build. Remove
+  // qualquer resíduo de uma execução anterior para que todo build nasça
+  // pristino: um handshake velho apontaria o painel para um runtime morto.
+  rmSync(path.join(dist, "local-runtime.json"), { force: true });
   writeFileSync(path.join(dist, "sidepanel.html"), html);
   copyFileSync(path.join(HERE, "src", "sidepanel.js"), path.join(dist, "sidepanel.js"));
   copyFileSync(path.join(HERE, "src", "background.js"), path.join(dist, "background.js"));
