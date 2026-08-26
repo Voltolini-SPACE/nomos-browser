@@ -3,7 +3,7 @@
 Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento pretendido: [SemVer](https://semver.org/lang/pt-BR/).
 
-**Versão corrente: `0.4.1`.** A primeira marcação foi `v0.2.0-rc.1`; antes dela
+**Versão corrente: `0.5.0`.** A primeira marcação foi `v0.2.0-rc.1`; antes dela
 o repositório não tinha tag alguma e `package.json` declarava `0.1.0` desde o
 início — e este arquivo dizia isso, porque anunciar uma versão que nunca foi
 marcada seria o tipo de mentira que o resto desta documentação existe para
@@ -27,6 +27,33 @@ Legenda usada nos itens:
 **⚠ INCOMPATÍVEL** = muda comportamento observável de quem já usa a API.
 
 ---
+
+## [0.5.0] — 2026-08-26
+
+Feedback de uso real do dono na 0.4.1: a Gi conectava, mas a **resposta não
+aparecia**, não dava para saber se ela **travou ou trabalhava**, e faltava um
+modo em que ela **age sem pedir permissão**. Esta versão fecha os três.
+
+- **A Gi RESPONDE — `browser.ask`** (`e8defe3`). Perguntar não é agir: nova rota
+  de leitura (`POST /sessions/:id/ask`, escopo OBSERVE, sem aprovação) responde à
+  mensagem usando o contexto da aba. Se a mensagem for um pedido de AÇÃO, o
+  modelo devolve `ACAO: <objetivo>` e o painel abre uma task. Antes, um pedido de
+  informação virava passos de navegador sem resposta, porque o plano só tinha
+  ações e o sucesso não guardava texto nenhum.
+- **Controle total — `POST /sessions/:id/full-control`**. O dono desliga a
+  governança NA SESSÃO e o runtime **auto-aprova** o que a matriz mandaria
+  perguntar (inclusive `browser.task`, A5). Não mexe na matriz de autonomia — que
+  por topologia só acrescenta fricção; é um interruptor à parte, **auditado** (a
+  proposta ainda é registrada e emitida), com **banner vermelho** no painel.
+  `/live` reporta `controle_total`. **Segurança**: escopo ADMIN; contra-prova no
+  teste — com o modo desligado, a mesma ação em ASK trava esperando aprovação.
+- **Painel**: o chat roteia por `/ask`; bolha "pensando…"; o progresso deixa de
+  mostrar `s1/s2/s3` (id de passo) como se fosse conversa; lease reaquirido é
+  rotulado como **recuperação**, não erro; botão "Controle total" + banner.
+- **Modelo de CONVERSA por padrão**: o instalador passa a preferir `qwen3.5`
+  (e grava `ai_think=false`) em vez de um modelo de código. A Gi conversa melhor.
+- Testes: `tests/full-control-and-ask.test.ts` (auto-aprova + contra-prova +
+  ask responde/roteia); E2E real em Chromium (resposta no painel + banner).
 
 ## [0.4.1] — 2026-08-26
 
