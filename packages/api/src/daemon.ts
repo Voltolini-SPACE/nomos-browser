@@ -1527,16 +1527,43 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
         if (pergunta === "") throw new ApiError("INVALID_REQUEST", "question vazia");
         if (ai === null) throw new ApiError("INVALID_REQUEST", "runtime sem provedor de IA (ai_provider) — a Gi não responde sem ele");
         const contexto = typeof body.page_context === "string" ? body.page_context.slice(0, 4000) : "";
-        const system =
-          "Você é a Gi, assistente do NOMOS Browser. Responda em português, curto e direto, " +
-          "à mensagem do usuário sobre a página que ele vê. Se a mensagem for um PEDIDO DE AÇÃO no " +
-          "navegador (abrir, navegar, clicar, digitar, baixar, preencher), NÃO responda com texto: " +
-          "responda EXATAMENTE com uma linha no formato `ACAO: <objetivo em uma frase>`. Caso contrário, apenas responda.";
+        // answer_only: a ação JÁ foi feita (o painel chama isto depois de uma
+        // task) — aqui o modelo SÓ responde, com base na página onde a Gi parou.
+        // Sem isso, um pedido como "vá aos preços e me diga o mais barato"
+        // voltaria a ser classificado como ação e nunca entregaria a resposta.
+        const answerOnly = body.answer_only === true || body.answer_only === "true";
+        // ATERRAMENTO (anti-alucinação): responder SÓ com o que está na página. É
+        // a regra que impede a Gi de inventar um "plano grátis" que a página não
+        // tem. Vale nos dois modos.
+        const aterramento =
+          " Baseie-se ESTRITAMENTE na página fornecida. Se a informação pedida NÃO estiver na página, " +
+          "diga claramente que não encontrou na página — NUNCA invente preços, números, nomes ou fatos.";
+        const system = answerOnly
+          ? "Você é a Gi, assistente do NOMOS Browser. A navegação/ação no navegador JÁ foi feita. " +
+            "Com base na PÁGINA ATUAL, responda em português, curto e direto, à pergunta do usuário. " +
+            "SEMPRE responda com texto; NÃO proponha ações." + aterramento
+          : "Você é a Gi, assistente do NOMOS Browser. Responda em português, curto e direto, " +
+            "à mensagem do usuário. REGRA DE ROTEAMENTO: se para atender o usuário for preciso NAVEGAR " +
+            "para outra página, IR a outro lugar, ou AGIR (abrir, navegar, clicar, digitar, baixar, " +
+            "preencher, pesquisar) ANTES de responder, isso é uma AÇÃO: responda EXATAMENTE com uma linha " +
+            "`ACAO: <objetivo em uma frase>`. Só responda diretamente com texto quando a resposta JÁ " +
+            "estiver na página atual." + aterramento;
         const prompt = (contexto !== "" ? "Página atual:\n" + contexto + "\n\n" : "") + "Mensagem do usuário: " + pergunta;
         const r = await ai.request({ prompt, system });
         const texto = (r.text ?? "").trim();
-        const m = /^ACAO:\s*(.+)$/is.exec(texto);
-        if (m !== null) return { session_id: sid, act: m[1]!.trim(), answer: null };
+        if (!answerOnly) {
+          // O modelo escreve tanto "ACAO:" quanto "AÇÃO:" (acentuado) — aceitar
+          // os dois, senão o marcador de ação vaza como texto de resposta.
+          const m = /^\s*A[ÇC][ÃA]O\s*:\s*(.+)$/is.exec(texto);
+          if (m !== null) return { session_id: sid, act: m[1]!.trim(), answer: null };
+          // Rede de segurança determinística: quando o pedido COMEÇA com um verbo
+          // de navegação/ação, a intenção é inequívoca. O 4B às vezes hesita e
+          // responde texto; aqui a intenção do usuário vence a hesitação do
+          // modelo, e a task é aberta com o pedido original.
+          if (/^\s*(v[áa]\b|vai\b|v[áa] para|ir para|entr[ae]|abr[ae]|acess|naveg|pesquis|procur|clic|busq|localiz|encontr[ae])/i.test(pergunta)) {
+            return { session_id: sid, act: pergunta, answer: null };
+          }
+        }
         return { session_id: sid, act: null, answer: texto !== "" ? texto : "Não consegui formular uma resposta agora." };
       }
       case "autonomy.default.get": {

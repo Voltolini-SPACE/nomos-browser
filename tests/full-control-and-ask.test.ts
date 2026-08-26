@@ -18,6 +18,7 @@ import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { startDaemon } from "../packages/api/src/daemon.ts";
+import { descreverPasso } from "../packages/core/src/taskengine.ts";
 
 const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const PAGE = `<!doctype html><title>Relatório de Vendas SE7EN PAY</title><body><a id="e" href="#e">Entrar</a></body>`;
@@ -87,6 +88,36 @@ test("CONTROLE TOTAL liga, /live reporta, e a navegação em ASK passa sem trava
   assert.ok(Date.now() - t0 < 15000, "demorou como se tivesse esperado humano");
   await call(`/api/v1/sessions/${sid}/full-control`, { on: false });
   assert.equal((await get(`/api/v1/sessions/${sid}/live`)).controle_total, false);
+});
+
+test("PROGRESSO HUMANO: descreverPasso dá frase legível, nunca 's1', e não vaza `value`", () => {
+  // Com intent do planejador → usa o intent + ordem.
+  assert.equal(
+    descreverPasso({ id: "s2", intent: "Clicar no botão Entrar", action: "browser.click" } as never, 1, 5),
+    "Clicar no botão Entrar (2 de 5)",
+  );
+  // Sem intent → verbo humano + alvo.
+  assert.equal(
+    descreverPasso({ id: "s1", intent: "", action: "browser.click", target: { text: "Entrar" } } as never, 0, 3),
+    'Clicando em "Entrar" (1 de 3)',
+  );
+  // NUNCA usa `value` (texto digitado pode ser segredo).
+  const d = descreverPasso({ id: "s1", intent: "", action: "browser.type", target: { label: "Senha" }, value: "hunter2" } as never, 0, 1);
+  assert.ok(!d.includes("hunter2"), "descrição vazou o texto digitado");
+  assert.ok(!/^s\d+$/.test(d), "descrição virou id técnico");
+});
+
+test("ATERRAMENTO: answer_only responde o que está na página e RECUSA o que não está", async (t) => {
+  const skip = await SEM_OLLAMA();
+  if (skip !== false) { t.skip(skip); return; }
+  const sid = await novaSessao();
+  const ctx = '"Preços SE7EN PAY" — trecho: Plano Básico R$ 29 por mês. Plano Pro R$ 99 por mês.';
+  const barato = await call(`/api/v1/sessions/${sid}/ask`, { question: "Qual plano é mais barato?", page_context: ctx, answer_only: true });
+  assert.match(String(barato.body.answer || ""), /b[áa]sico/i, "não respondeu com o plano da página");
+  assert.match(String(barato.body.answer || ""), /29/, "não trouxe o valor da página");
+  // A página NÃO tem telefone: a Gi tem de recusar, não inventar.
+  const tel = await call(`/api/v1/sessions/${sid}/ask`, { question: "Qual é o telefone de contato?", page_context: ctx, answer_only: true });
+  assert.doesNotMatch(String(tel.body.answer || ""), /\d{4,}/, "inventou um número que a página não tem");
 });
 
 test("browser.ask: pergunta vira RESPOSTA; pedido de ação vira ACAO:", async (t) => {
