@@ -22,6 +22,14 @@ const args = process.argv.slice(2);
 const CORRIGIR = args.includes("--corrigir");
 const iSite = args.indexOf("--site");
 const SITE = iSite >= 0 ? args[iSite + 1] : null;
+// A pagina do produto nao e o unico lugar publico que fala numeros do produto.
+// O HUB do site tambem tem um cartao do NOMOS Browser, com contagem de testes —
+// e ele ficou para tras quando a /browser/ foi corrigida de 792 para 797. O
+// verificador nao viu porque nunca tinha sido ensinado a olhar para la. Um
+// verificador de alegacoes que so conhece uma pagina da uma sensacao de cobertura
+// que ele nao tem.
+const iHub = args.indexOf("--hub");
+const HUB = iHub >= 0 ? args[iHub + 1] : null;
 // A medicao que vale e a da SALA LIMPA, feita a partir do remoto publicado, e
 // nao a da minha working tree. `--resumo` deixa a origem do numero explicita em
 // vez de deixa-la implicita no diretorio onde eu por acaso rodei.
@@ -161,6 +169,19 @@ if (SITE !== null && existsSync(SITE)) {
     medido: medidas.comandos_cli,
     ok: mc === null ? null : (porExtenso[mc[1]] ?? NaN) === medidas.comandos_cli,
     obs: notas.comandos_cli ?? "",
+  });
+}
+
+if (HUB !== null && existsSync(HUB)) {
+  const t = readFileSync(HUB, "utf8");
+  const m = /<span class="contador" data-alvo="(\d+)"><\/span>?\s*testes automatizados e (\d+) casos ponta a ponta/.exec(t)
+        ?? /data-alvo="(\d+)">0<\/span> testes automatizados e (\d+) casos ponta a ponta/.exec(t);
+  alegacoes.push({
+    arquivo: HUB, rotulo: "hub · passes da suite",
+    declarado: m === null ? null : Number(m[1]),
+    medido: medidas.suite_pass,
+    ok: m === null || medidas.suite_pass === null ? null : Number(m[1]) === medidas.suite_pass,
+    obs: m === null ? "cartao do NOMOS Browser nao encontrado no hub — o texto mudou de forma" : "",
   });
 }
 
