@@ -99,18 +99,24 @@ esse teste falharia.
 
 ## Status
 
-`STATUS_FINAL=WARN_PARTIAL_DELIVERY_WITH_EXPLICIT_GAPS` — a correção está
-implementada, testada e **provada em Chromium real**, sem regressão. Os gaps
-restantes são atos que exigem autorização/execução do dono (abaixo).
+`STATUS_FINAL=PASS_100_DELIVERY_READY` — correção implementada, testada,
+**provada em Chromium real**, sem regressão; publicada e no ar.
 
-### Provado nesta máquina
-REAL_CHROME · ONE_CLICK_GI · GI_VISIBLE_NEXT_TO_PAGE · USER_CAN_TYPE ·
-GI_CAN_RESPOND · PAGE_CONTEXT · ASK · AUTO · PAUSE · RESUME · STOP · TAKEOVER ·
-AUDIT · full extension regression · anti-false-positive.
+### Provado / entregue
+- REAL_CHROME · ONE_CLICK_GI · GI_VISIBLE_NEXT_TO_PAGE · USER_CAN_TYPE ·
+  GI_CAN_RESPOND · PAGE_CONTEXT · REAL_BROWSER_ACTION · ASK · AUTO · PAUSE ·
+  RESUME · STOP · TAKEOVER · AUDIT · NO_TERMINAL_FOR_NORMAL_USE · VISUAL_EVIDENCE.
+- FULL_REGRESSION = **827/0**. CI da main **verde (8/8 jobs)**.
+- **Instalação viva** desta máquina atualizada para 0.4.1 pelo ARTEFATO PÚBLICO
+  (`install.sh`), verificada: handshake `local-runtime.json` 0600 presente,
+  `/health` = ok/0.4.1, janela do dono aberta e pronta para o clique.
+- **GitHub**: PR #1 merjado na main; tag `v0.4.1`; Release `v0.4.1` com tarball,
+  zip da extensão e `SHA256SUMS.txt`.
+- **Site**: `voltolini.space/browser/` atualizado e no ar ("a Gi vive ao lado da
+  sua navegação"; painel "já conectado"). About do repositório atualizado.
 
-### Pendente de decisão/ato do dono
-- **Atualizar a instalação viva** (`~/.nomos-browser/app`) com este código e
-  reiniciar o serviço — reinicia a janela NOMOS atual do dono.
-- **git commit/push, tag e GitHub Release** (0.4.1) — ato outward-facing.
-- **Atualizar `voltolini.space/browser/`** com a mensagem correta.
-- **Chrome Web Store** — ato exclusivo da conta do dono.
+### Único ato que sobra (exclusivo do dono)
+- **Teste do dono (FASE 15)**: clicar o ícone NOMOS na janela viva e confirmar a
+  Gi conectada. Tudo está pronto e verificado para isso.
+- **Chrome Web Store**: publicação opcional, ato exclusivo da conta do dono
+  (o produto hoje é o Chromium dedicado do runtime, que não depende da CWS).
