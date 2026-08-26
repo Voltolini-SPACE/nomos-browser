@@ -1,6 +1,6 @@
 {
   "name": "nomos-browser",
-  "version": "0.3.2",
+  "version": "0.4.0",
   "license": "MIT",
   "author": "Voltolini-SPACE",
   "private": true,
@@ -15,6 +15,8 @@
     "spike": "node spike/fase1_spike.ts",
     "test:arquivo": "node --test",
     "daemon": "node packages/api/src/daemon.ts",
+    "build": "node packages/extension/build.ts",
+    "package": "bash scripts/empacotar-release.sh",
     "test": "bash scripts/run-suite.sh",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "typecheck:strict": "tsc --noEmit -p tsconfig.strict.json"

@@ -1,0 +1,96 @@
+#!/usr/bin/env bash
+# CLI de produção do NOMOS Browser (macOS).
+# Opera EXCLUSIVAMENTE via launchd (label próprio) e arquivos próprios —
+# nunca mata processo que não criou, nunca toca Ollama global.
+set -uo pipefail
+
+LABEL="space.voltolini.nomos-browser"
+APP="$HOME/.nomos-browser/app"
+PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
+LOGS="$HOME/.nomos-browser/logs"
+TOKEN_FILE="$HOME/.nomos-browser/control-token"
+PORT="${NOMOS_BROWSER_PORT:-7777}"
+UIDN="$(id -u)"
+
+vivo() {
+  [ -f "$TOKEN_FILE" ] || return 1
+  curl -s -o /dev/null -w "%{http_code}" --max-time 3 \
+    -H "authorization: Bearer $(cat "$TOKEN_FILE")" \
+    "http://127.0.0.1:$PORT/health" 2>/dev/null | grep -q 200
+}
+
+case "${1:-help}" in
+  start)
+    if [ ! -f "$PLIST" ]; then
+      echo "NOMOS Browser não está instalado (falta $PLIST)."
+      echo "Rode o install.sh do release. (nomos-browser help)"; exit 1
+    fi
+    # bootstrap se não carregado; kickstart se já carregado (recupera daemon morto)
+    if launchctl print "gui/$UIDN/$LABEL" >/dev/null 2>&1; then
+      launchctl kickstart -k "gui/$UIDN/$LABEL"
+    else
+      launchctl bootstrap "gui/$UIDN" "$PLIST"
+    fi
+    for _ in $(seq 1 40); do vivo && break; sleep 1; done
+    if vivo; then
+      echo "NOMOS Browser: rodando em http://127.0.0.1:$PORT"
+      echo "Token copiado para a área de transferência — Cmd+V no painel."
+    else
+      echo "NOMOS Browser NÃO respondeu ao /health em 40 s."
+      echo "Veja: nomos-browser logs"; exit 1
+    fi
+    ;;
+  stop)
+    if launchctl print "gui/$UIDN/$LABEL" >/dev/null 2>&1; then
+      launchctl bootout "gui/$UIDN/$LABEL" && echo "NOMOS Browser: parado."
+    else
+      echo "NOMOS Browser já não estava carregado no launchd."
+    fi
+    ;;
+  restart)
+    "$0" stop; sleep 2; "$0" start
+    ;;
+  status)
+    echo "instalação : $([ -d "$APP" ] && echo "$APP" || echo AUSENTE)"
+    echo "launchagent: $([ -f "$PLIST" ] && echo instalado || echo AUSENTE)"
+    if launchctl print "gui/$UIDN/$LABEL" >/dev/null 2>&1; then
+      echo "launchd    : carregado"
+    else
+      echo "launchd    : não carregado"
+    fi
+    if vivo; then
+      echo "runtime    : VIVO em http://127.0.0.1:$PORT (health 200)"
+    else
+      echo "runtime    : sem resposta autenticada no /health (parado, subindo, ou token rotacionado)"
+    fi
+    ;;
+  logs)
+    tail -n "${2:-60}" "$LOGS/servico.err.log" 2>/dev/null || echo "sem logs em $LOGS"
+    ;;
+  uninstall)
+    "$0" stop >/dev/null 2>&1
+    rm -f "$PLIST" && echo "LaunchAgent removido."
+    rm -rf "$APP" && echo "Aplicação removida de $APP."
+    SELF="$(command -v nomos-browser || true)"
+    if [ "${2:-}" = "--purge" ]; then
+      rm -rf "$HOME/.nomos-browser" && echo "Dados (token, perfis, config, logs) REMOVIDOS."
+    else
+      echo "Dados preservados em ~/.nomos-browser (token, perfis do navegador, config)."
+      echo "Para remover tudo: nomos-browser uninstall --purge"
+    fi
+    [ -n "$SELF" ] && rm -f "$SELF" && echo "CLI removida ($SELF)."
+    echo "Ollama e outros produtos NOMOS não foram tocados."
+    ;;
+  help|*)
+    cat <<EOF
+NOMOS Browser — nomos-browser <comando>
+  start      inicia (ou recupera) o serviço e abre o navegador
+  stop       para o serviço (daemon + navegador juntos)
+  restart    para e inicia
+  status     instalação, launchd e health do runtime
+  logs [n]   últimas n linhas do log do serviço (padrão 60)
+  uninstall  remove app+LaunchAgent+CLI; dados preservados (--purge remove tudo)
+Developer Mode (no repositório): node packages/extension/launch.ts
+EOF
+    ;;
+esac

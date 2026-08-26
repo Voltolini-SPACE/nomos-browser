@@ -19,3 +19,4 @@ spike/evidence/
 # do dono os tinha localmente. O defeito apareceu quando a clean room passou a
 # copiar EXATAMENTE o que um commit levaria — e o teste reprovou lá, como devia.
 !evidence/**/*.log
+dist-release/

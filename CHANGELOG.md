@@ -3,7 +3,7 @@
 Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento pretendido: [SemVer](https://semver.org/lang/pt-BR/).
 
-**Versão corrente: `0.3.2`.** A primeira marcação foi `v0.2.0-rc.1`; antes dela
+**Versão corrente: `0.4.0`.** A primeira marcação foi `v0.2.0-rc.1`; antes dela
 o repositório não tinha tag alguma e `package.json` declarava `0.1.0` desde o
 início — e este arquivo dizia isso, porque anunciar uma versão que nunca foi
 marcada seria o tipo de mentira que o resto desta documentação existe para
@@ -27,6 +27,35 @@ Legenda usada nos itens:
 **⚠ INCOMPATÍVEL** = muda comportamento observável de quem já usa a API.
 
 ---
+
+## [0.4.0] — 2026-08-26
+
+A versão do agente embutido: o NOMOS Browser vira uma experiência que se abre
+e se usa, não um runtime que se opera.
+
+- **Side panel NOMOS (extensão MV3)** dentro do Chromium do runtime: chat com a
+  Gi, faixa AGORA, ASK/AUTO, aprovação amarrada à ação, abas do agente com
+  posse declarada, Audit/Replay somente leitura, Pausar/Assumir/Parar. A
+  extensão é cliente da API v1 com token — nenhuma autoridade própria; sem
+  content scripts, sem host permission fora do loopback (fixado por teste).
+- **Spotlight**: o runtime destaca o alvo NA página (moldura + "● NOMOS
+  controlando") antes de clique/digitação; `pointer-events:none` medido — não
+  interfere na prova de entrega.
+- **Distribuição pública**: release com `install.sh` (app em
+  `~/.nomos-browser/app`, Chromium do Playwright, detecção de Ollama, config
+  persistente), CLI `nomos-browser start/stop/status/logs/uninstall` e
+  LaunchAgent (inicia no login). Developer Mode continua:
+  `node packages/extension/launch.ts`.
+- **Defeitos que só o uso real mostrou, corrigidos**: parada de emergência
+  falhava com sessão em RECOVERING; pausa do operador matava a task (agora
+  segura em PAUSED com checkpoint e o Retomar retoma); lease expirado por
+  ociosidade derrubava painel e passos de plano (readquire só com o volante no
+  chão); token rotacionado aparecia como "runtime inalcançável"; o contrato do
+  plano nunca tinha sido DITO ao modelo (URL em `value`, `nth` para alvo
+  ambíguo, scroll em pixels).
+- Evidência de uso real (ASK/AUTO/pause/takeover/audit em site real, Ollama
+  real) em `evidence/real-production-test/`; E2E e adversariais da extensão na
+  suíte.
 
 ## [0.3.2] — 2026-08-26
 

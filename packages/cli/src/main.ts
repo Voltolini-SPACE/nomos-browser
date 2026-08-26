@@ -44,7 +44,7 @@ import { verifyReplay } from "../../observability/src/replay-verify.ts";
 import { readControlToken } from "../../api/src/auth.ts";
 
 export const CLI_NAME = "nomos-web";
-export const CLI_VERSION = "0.3.2";
+export const CLI_VERSION = "0.4.0";
 export const DEFAULT_RUNTIME = "127.0.0.1:7777";
 export const DEFAULT_TIMEOUT_MS = 30_000;
 
