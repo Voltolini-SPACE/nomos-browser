@@ -8,7 +8,7 @@ Infraestrutura de navegação governada para agentes de IA. O navegador vira um
 recurso da plataforma, não um brinquedo acoplado a um modelo — e o dono vê,
 autoriza e interrompe o que o agente faz.
 
-`0.3.0-rc.2` · MIT · Node ≥ 22.6 · Chromium via Playwright · sem passo de build
+`0.3.0-rc.2` · MIT · Node ≥ 22.18 · Chromium via Playwright · sem passo de build
 
 </div>
 

@@ -14,7 +14,7 @@ caduca: no dia em que o produto mudar, esta bateria falha.
 
 Última execução: **6 demos, 0 falhas** (`DEMOS_REPRODUZIVEIS=PASS`).
 
-**Requisitos comuns:** Node ≥ 22.6, `npx playwright install chromium`, portas
+**Requisitos comuns:** Node ≥ 22.18, `npx playwright install chromium`, portas
 `7801` e `8991` livres. A bateria sobe o próprio runtime e a própria página de
 teste; não depende de rede externa.
 

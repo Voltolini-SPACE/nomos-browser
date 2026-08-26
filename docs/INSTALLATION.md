@@ -14,7 +14,7 @@ Estado verificado em `2026-08-25`, HEAD `78491cc`, em macOS 26.3.1 arm64.
 
 | Item | Exigência | Por quê |
 |---|---|---|
-| Node | **≥ 22.6** (`package.json` → `engines`) | O produto executa `.ts` **nativamente**; não há passo de build. Abaixo de 22.6 não existe `--experimental-strip-types` utilizável. Medido nesta máquina com `v26.0.0`. |
+| Node | **≥ 22.18** (`package.json` → `engines`) | O produto executa `.ts` **nativamente**; não há passo de build. O executor chama `node --test <arquivo>.ts` sem `--experimental-strip-types`, então o piso é a versão em que o stripping já vem ligado: 22.18. Medido em `v22.23.1` e `v26.0.0`. |
 | npm | ≥ 10 | `npm ci` com workspaces (`packages/*`). |
 | Python | ≥ 3.11 | **Apenas** para o SDK Python (`sdk-python/`). O runtime não precisa. |
 | Sistema | macOS ou Linux | O serviço supervisionado (`scripts/service.sh`) é **launchd**, ou seja, **só macOS**. Em Linux o runtime roda, a supervisão não. |

@@ -1,6 +1,6 @@
 # Quick start — do zero ao primeiro browser task
 
-Tempo: alguns minutos. Requisitos: Node ≥ 22.6, macOS ou Linux.
+Tempo: alguns minutos. Requisitos: Node ≥ 22.18, macOS ou Linux.
 
 ## 1. Instalar
 

@@ -6,15 +6,16 @@
   "private": true,
   "type": "module",
   "engines": {
-    "node": ">=22.6.0"
+    "node": ">=22.18.0"
   },
   "workspaces": [
     "packages/*"
   ],
   "scripts": {
     "spike": "node spike/fase1_spike.ts",
+    "test:arquivo": "node --test",
     "daemon": "node packages/api/src/daemon.ts",
-    "test": "node --test --experimental-strip-types tests/",
+    "test": "bash scripts/run-suite.sh",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "typecheck:strict": "tsc --noEmit -p tsconfig.strict.json"
   },

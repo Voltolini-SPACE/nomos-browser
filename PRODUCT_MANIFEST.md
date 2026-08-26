@@ -167,7 +167,7 @@ completa. Sessão que nunca existiu é `404`, não um replay vazio de `200`.
 
 | requisito | valor |
 |---|---|
-| Node.js | ≥ 22.6.0 (validado em 26.x) |
+| Node.js | ≥ 22.18.0 (medido em 22.23.1 e 26.0.0) |
 | Dependências de runtime | `playwright`, `ws` |
 | Navegador | Chromium (via `npx playwright install chromium`) |
 | Sistema | validado em macOS (Apple Silicon) |
