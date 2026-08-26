@@ -5,7 +5,7 @@ objetos=1810
 
 -- 1. formatos de credencial em QUALQUER blob do historico
   ACHADO padrao: AKIA[0-9A-Z]{16}
-      38374f64b1ff1175fc21faa110bfc523249136ee:vazamento.txt:1:AKIA0123456789ABCDEF
+      38374f64b1ff1175fc21faa110bfc523249136ee:vazamento.txt:1:AKIA<16-CARACTERES-REDIGIDO>
 
 -- 2. arquivos que nunca deveriam ter entrado, em qualquer commit
   nenhum arquivo proibido em nenhum commit
@@ -14,3 +14,24 @@ objetos=1810
   ok: o padrao casa com um segredo plantado
 
 HISTORICO_PUBLICO_LIMPO=NAO
+
+─────────────────────────────────────────────────────────────────────────────
+NOTA DE REDACAO (adicionada depois, e a razao importa)
+
+O literal do canario foi REDIGIDO deste arquivo. Ele era sintetico — corpo
+`0123456789ABCDEF`, sequencial, nao concede acesso a nada — e existia so para
+provar que a varredura de historico enxerga um segredo plantado.
+
+O problema nao era o canario ser um segredo. Era ele estar, em formato de chave
+AWS, dentro de um repositorio PUBLICO. Quem varre este repositorio de fora — o
+secret scanning do GitHub, um pesquisador, o proprio scanner deste projeto — nao
+tem como distinguir o meu canario de uma credencial viva. E de fato nao teve: a
+varredura acusou `PUBLIC_REPO_SECRET_LEAK=1` apontando para este arquivo.
+
+Escrever a saida de um scanner de segredos, com o segredo casado dentro, para um
+arquivo versionado e publicado, foi erro meu.
+
+O que NAO foi feito, e por que: o literal continua no historico, no commit
+f801629. Removê-lo exigiria reescrever historico ja publicado — mover o que
+outras pessoas podem ter clonado — e esse custo nao se justifica por uma string
+que nao e credencial. Fica declarado aqui e no relatorio, em vez de silenciado.
