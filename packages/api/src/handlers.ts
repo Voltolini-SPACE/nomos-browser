@@ -57,6 +57,7 @@ import {
 } from "../../core/src/contract.ts";
 import { SessionManager, isSessionError, toActionError as sessionToActionError } from "../../core/src/session.ts";
 import { InputError, PointerEngine, type Point } from "../../core/src/pointer.ts";
+import { spotlight } from "../../core/src/spotlight.ts";
 import { KeyboardEngine } from "../../core/src/keyboard.ts";
 import {
   PerceptionEngine,
@@ -313,6 +314,27 @@ async function acionavel(
   const r = await garantirAcionavel(page, alvoDe(resolved), pointer, cfgAcionabilidade(svc, rolar));
   if (r.detalhe.box_depois !== null) resolved.box = r.detalhe.box_depois;
   return r;
+}
+
+/**
+ * FASE 10 (missão EMBEDDED_AGENT_UX) — destaque do alvo NA página antes do
+ * gesto, com o selo "● NOMOS controlando". Best-effort por contrato: qualquer
+ * falha aqui é silenciosa e a ação segue. O dwell só é aguardado quando o
+ * desenho de fato aconteceu — página que recusou desenho não ganha atraso.
+ * Roda DEPOIS de `acionavel()` (o overlay tem pointer-events:none e não afeta
+ * `elementFromPoint`, mas a ordem elimina até a dúvida).
+ */
+async function destacarAlvo(svc: RuntimeServices, page: Page, resolved: ResolvedTarget, rotulo: string): Promise<void> {
+  if (!svc.config.spotlight) return;
+  const dwell = svc.config.spotlight_dwell_ms;
+  const desenhou = await spotlight(page, resolved.box, {
+    dwell_ms: dwell,
+    label: rotulo,
+    color: svc.config.spotlight_color,
+  });
+  if (desenhou && dwell > 0) {
+    await new Promise((r) => setTimeout(r, dwell));
+  }
 }
 
 /** Entrega comprovada? `null` quando a checagem está desligada por configuração. */
@@ -1410,6 +1432,7 @@ const handleClick: ActionHandler = async (svc, req) => {
   // (2)–(5) rolar, assentar, remedir, conferir acionabilidade. Recusa aqui é
   // TARGET_NOT_ACTIONABLE e nunca chega a despachar gesto nenhum.
   const acao = await acionavel(svc, page, resolved, pointer);
+  await destacarAlvo(svc, page, resolved, "clicar");
   const checar = svc.config.click_delivery_check;
   let leitura: LeituraDeEntrega = SEM_ENTREGA;
 
@@ -1488,6 +1511,7 @@ const handleType: ActionHandler = async (svc, req) => {
   const run = async (): Promise<Record<string, unknown>> => {
     const acao = await acionavel(svc, page, resolved, pointer);
     capturado.acao = acao;
+    await destacarAlvo(svc, page, resolved, "digitar");
     if (credential_ref !== null) {
       const vault = svc.vaultFor(info.profile);
       const loc = resolved.handle as Locator | undefined;

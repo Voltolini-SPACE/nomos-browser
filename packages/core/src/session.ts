@@ -115,7 +115,12 @@ export const ALLOWED_TRANSITIONS: Readonly<Record<SessionState, readonly Session
   ACTIVE: ["IDLE", "PAUSED", "RECOVERING", "FAILED", "CLOSED"],
   IDLE: ["ACTIVE", "PAUSED", "RECOVERING", "FAILED", "CLOSED"],
   PAUSED: ["ACTIVE", "IDLE", "RECOVERING", "FAILED", "CLOSED"],
-  RECOVERING: ["ACTIVE", "IDLE", "FAILED", "CLOSED"],
+  // PAUSED entra aqui pela missão EMBEDDED_AGENT_UX: takeover (e a parada de
+  // emergência, que congela via takeover) precisam funcionar TAMBÉM enquanto a
+  // reobservação está pendente. O E2E do painel achou o buraco: release deixava
+  // a sessão em RECOVERING e o botão PARAR falhava com "transição inválida" —
+  // um freio que depende do estado do agente não é um freio.
+  RECOVERING: ["ACTIVE", "IDLE", "PAUSED", "FAILED", "CLOSED"],
   FAILED: ["RECOVERING", "CLOSED"],
   CLOSED: [],
 } as Record<SessionState, readonly SessionState[]>);
@@ -163,6 +168,12 @@ export interface SessionManagerOptions {
    * DPR 2 de verdade (tests/click-entrega.test.ts), em vez de assumida.
    */
   device_scale_factor?: number;
+  /**
+   * Missão EMBEDDED_AGENT_UX: extensão descompactada carregada no Chromium do
+   * runtime (`--load-extension`). A extensão é UI — cliente da API v1 com
+   * token, como o console. Ela NÃO ganha autoridade por morar dentro da janela.
+   */
+  extension_dir?: string | null;
   onEvent?: (event: RuntimeEvent) => void;
   /** Quantas sessões CLOSED ficam consultáveis antes da poda. */
   max_closed_retained?: number;
@@ -264,6 +275,7 @@ export class SessionManager {
   #headless: boolean;
   #viewport: { width: number; height: number };
   #deviceScaleFactor: number;
+  #extensionDir: string | null;
   #onEvent: ((event: RuntimeEvent) => void) | null;
   #hookErrors: unknown[] = [];
   #maxClosedRetained: number;
@@ -281,6 +293,7 @@ export class SessionManager {
     this.#headless = opts.headless ?? false;
     this.#viewport = opts.viewport ?? { width: 1280, height: 800 };
     this.#deviceScaleFactor = opts.device_scale_factor ?? 1;
+    this.#extensionDir = opts.extension_dir ?? null;
     this.#onEvent = opts.onEvent ?? null;
     this.#maxClosedRetained = opts.max_closed_retained ?? 200;
 
@@ -475,10 +488,22 @@ export class SessionManager {
 
     let context: BrowserContext;
     try {
+      // Flags de extensão só quando o dono configurou extension_dir. O par
+      // `--disable-extensions-except` + `--load-extension` é o documentado pelo
+      // Playwright; Chrome/Edge de marca removeram esse side-loading — por isso
+      // este caminho vale para o Chromium do runtime, não para o Chrome do dono.
+      const args: string[] = [];
+      if (this.#extensionDir !== null) {
+        args.push(
+          `--disable-extensions-except=${this.#extensionDir}`,
+          `--load-extension=${this.#extensionDir}`,
+        );
+      }
       context = await chromium.launchPersistentContext(user_data_dir, {
         headless,
         viewport: this.#viewport,
         deviceScaleFactor: this.#deviceScaleFactor,
+        ...(args.length > 0 ? { args } : {}),
       });
     } catch (e) {
       if (ephemeral) await rm(user_data_dir, { recursive: true, force: true }).catch(() => undefined);

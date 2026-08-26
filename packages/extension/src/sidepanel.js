@@ -1,0 +1,507 @@
+/**
+ * Painel lateral do NOMOS — cliente da API v1, exatamente como a NOMOS Web.
+ *
+ * TRÊS REGRAS, herdadas do console e não renegociáveis aqui:
+ *
+ *  1. O painel NUNCA fala com o Chromium. Toda intenção vira chamada ao
+ *     runtime (browser.task, browser.*), que aplica política, autonomia,
+ *     aprovação e auditoria. O LLM não tem atalho por dentro da extensão.
+ *  2. A UI LÊ, NÃO DEDUZ. Estado, modo de autonomia, fila de aprovação e
+ *     controle vêm de `/live` e dos eventos. Sem estado comprovado, o painel
+ *     mostra DESCONHECIDA e trata como PERGUNTAR (fail-safe).
+ *  3. O feed mostra o que o agente FEZ (eventos operacionais). Raciocínio
+ *     privado do modelo não aparece — transparência não é voyeurismo.
+ */
+"use strict";
+
+const $ = (id) => document.getElementById(id);
+
+const S = {
+  base: null,
+  token: null,
+  sessionId: null,
+  ws: null,
+  backoff: 1000,
+  controle: "agent",
+  pausado: false,
+  modo: null,
+  pendente: null,
+  decidindo: false,
+  contextoPagina: null,
+  timers: [],
+};
+
+function auth(h) {
+  const o = Object.assign({}, h || {});
+  if (S.token !== null) o.authorization = "Bearer " + S.token;
+  return o;
+}
+
+async function gestao(rota, metodo, corpo) {
+  const r = await fetch(S.base + rota, {
+    method: metodo || "GET",
+    headers: auth(corpo ? { "content-type": "application/json" } : {}),
+    body: corpo ? JSON.stringify(corpo) : undefined,
+  });
+  if (!r.ok) {
+    const e = new Error(rota + " → HTTP " + r.status);
+    e.status = r.status;
+    throw e;
+  }
+  return r.json();
+}
+
+async function acao(tool, corpo) {
+  const r = await fetch(S.base + "/api/v1/" + tool, {
+    method: "POST",
+    headers: auth({ "content-type": "application/json" }),
+    body: JSON.stringify(Object.assign({ session_id: S.sessionId }, corpo || {})),
+  });
+  const env = await r.json().catch(() => null);
+  if (env === null) throw new Error("resposta não-JSON do runtime");
+  if (env.success === false) {
+    const cod = (env.error && env.error.code) || "INTERNAL";
+    const e = new Error((env.error && env.error.message) || cod);
+    e.code = cod;
+    throw e;
+  }
+  return env.result;
+}
+
+// ── chat ──────────────────────────────────────────────────────────────
+function bolha(cls, html, texto) {
+  const d = document.createElement("div");
+  d.className = "msg " + cls;
+  if (html !== null) d.innerHTML = html;
+  if (texto !== undefined) d.appendChild(document.createTextNode(texto));
+  const m = $("mensagens");
+  m.appendChild(d);
+  m.scrollTop = m.scrollHeight;
+  while (m.childElementCount > 200) m.firstElementChild.remove();
+  return d;
+}
+const gi = (t, erro) => bolha("gi" + (erro ? " erro" : ""), "<b>Gi</b> · ", t);
+const sistema = (t) => bolha("sistema", null, t);
+
+// ── feed operacional ──────────────────────────────────────────────────
+const ROTULO = {
+  "action.proposed": "Pedindo autorização",
+  "action.approved": "Autorizado",
+  "action.denied": "Negado",
+  "action.started": "Executando",
+  "action.completed": "Concluído",
+  "action.failed": "Falhou",
+  "autonomy.changed": "Autonomia alterada",
+  "cancel.too_late": "Tarde demais — a ação já havia terminado",
+  "owner.changed": "Controle transferido",
+  "agent.paused": "Agente pausado",
+  "agent.resumed": "Agente retomado",
+  "emergency_stop": "PARADA DE EMERGÊNCIA",
+  "page.loaded": "Página carregada",
+  "task.started": "Task iniciada",
+  "task.progress": "Progresso",
+  "task.completed": "Task concluída",
+  "task.failed": "Task falhou",
+};
+
+function feed(nome, texto, erro) {
+  const d = document.createElement("div");
+  d.className = "ev" + (erro ? " erro" : "");
+  const hora = new Date().toLocaleTimeString("pt-BR", { hour12: false });
+  const b = document.createElement("b");
+  b.textContent = ROTULO[nome] || nome;
+  d.appendChild(b);
+  d.appendChild(document.createTextNode(" " + hora + (texto ? " · " + texto : "")));
+  const f = $("feed");
+  f.prepend(d);
+  while (f.childElementCount > 80) f.lastElementChild.remove();
+}
+
+// ── conexão ───────────────────────────────────────────────────────────
+async function conectar(base, token) {
+  S.base = base.replace(/\/$/, "");
+  S.token = token || null;
+  const h = await gestao("/health"); // 401 aqui = token errado; catch do chamador
+  $("vivo").dataset.live = h.runtime === "ok" ? "1" : "0";
+  $("conexao").hidden = true;
+  $("chat").hidden = false;
+  await sessoes();
+  conectarEventos();
+  pararTimers();
+  S.timers.push(setInterval(saude, 5000));
+  S.timers.push(setInterval(sessoes, 4000));
+  S.timers.push(setInterval(estadoVivo, 800));
+  S.timers.push(setInterval(abas, 5000));
+  await estadoVivo();
+  await abas();
+  sistema("Conectado ao runtime " + S.base);
+}
+
+function pararTimers() {
+  for (const t of S.timers) clearInterval(t);
+  S.timers = [];
+}
+
+async function saude() {
+  try {
+    const h = await gestao("/health");
+    $("vivo").dataset.live = h.runtime === "ok" ? "1" : "0";
+  } catch {
+    $("vivo").dataset.live = "0";
+    $("hSessao").textContent = "runtime inalcançável";
+  }
+}
+
+async function sessoes() {
+  let lista = [];
+  try {
+    lista = await gestao("/api/v1/sessions");
+  } catch {
+    return;
+  }
+  if (lista.length === 0) {
+    if (S.sessionId !== null) sistema("A sessão terminou.");
+    S.sessionId = null;
+    $("hSessao").textContent = "sem sessão ativa";
+    return;
+  }
+  if (S.sessionId === null || !lista.some((s) => s.session_id === S.sessionId)) {
+    const viva = lista.find((s) => s.status === "ACTIVE" || s.status === "IDLE") || lista[0];
+    S.sessionId = viva.session_id;
+    sistema("Sessão " + S.sessionId.slice(-6) + " · perfil " + viva.profile);
+  }
+  const s = lista.find((x) => x.session_id === S.sessionId);
+  $("hSessao").textContent =
+    "sessão " + S.sessionId.slice(-6) + " · " + (s ? s.status : "?");
+}
+
+// ── estado vivo (a tela LÊ) ───────────────────────────────────────────
+const NOME_DO_ESTADO = {
+  IDLE: "ocioso", OBSERVING: "observando", THINKING: "pensando", ACTING: "navegando",
+  WAITING_APPROVAL: "aguardando sua aprovação", PAUSED: "pausado",
+  USER_CONTROL: "você está no controle", CANCELLING: "cancelando",
+  CANCELLED: "cancelado", COMPLETED: "concluído", ERROR: "erro", DISCONNECTED: "desconectado",
+};
+
+function desconhecido() {
+  $("aEstado").textContent = "estado desconhecido";
+  $("aEstado").dataset.estado = "DISCONNECTED";
+  S.modo = null;
+  $("mAsk").setAttribute("aria-pressed", "false");
+  $("mAuto").setAttribute("aria-pressed", "false");
+  $("mAviso").textContent = "sem estado comprovado — tratando como PERGUNTAR";
+}
+
+async function estadoVivo() {
+  if (S.sessionId === null) { desconhecido(); return; }
+  let e;
+  try {
+    e = await gestao("/api/v1/sessions/" + encodeURIComponent(S.sessionId) + "/live");
+  } catch { desconhecido(); return; }
+
+  $("aEstado").textContent = NOME_DO_ESTADO[e.runtime_state] || e.runtime_state;
+  $("aEstado").dataset.estado = e.runtime_state;
+  $("aAcao").textContent = e.current_action
+    ? e.current_action + (e.action_level ? " · risco " + e.action_level : "")
+    : "";
+
+  S.modo = e.autonomy_mode || null;
+  $("mAsk").setAttribute("aria-pressed", String(S.modo === "ASK"));
+  $("mAuto").setAttribute("aria-pressed", String(S.modo === "AUTO"));
+  $("mAviso").textContent =
+    S.modo === "AUTO" && Array.isArray(e.sempre_aprovam) && e.sempre_aprovam.length > 0
+      ? "mesmo em AUTO, ainda pergunto: " + e.sempre_aprovam.join(", ")
+      : S.modo === null ? "modo desconhecido — tratando como PERGUNTAR" : "";
+
+  aplicarControle(e.control);
+  pintarAprovacao(e.approvals_pending || []);
+}
+
+function aplicarControle(modo) {
+  S.controle = modo;
+  document.body.dataset.controle = modo;
+  $("btControle").textContent = modo === "human" ? "Devolver controle" : "Assumir controle";
+}
+
+// ── aprovação (amarrada à ação; o painel só transporta a decisão) ─────
+function pintarAprovacao(pendentes) {
+  const caixa = $("aprovacao");
+  if (pendentes.length === 0) { caixa.hidden = true; S.pendente = null; return; }
+  const a = pendentes[0];
+  if (S.pendente !== null && S.pendente.approval_id === a.approval_id && !caixa.hidden) return;
+  S.pendente = a;
+  $("aprFila").textContent = pendentes.length > 1
+    ? pendentes.length + " pedidos na fila; decidindo o mais antigo" : "";
+  $("aprAcao").textContent = a.rota || "—";
+  $("aprOnde").textContent = a.recurso || "—";
+  $("aprNivel").textContent = a.nivel || "—";
+  $("aprMotivo").textContent = a.motivo || "—";
+  $("aprConsequencia").textContent = a.consequencia || "—";
+  $("aprArgs").textContent = JSON.stringify(a.args_visiveis || {}, null, 1);
+  caixa.hidden = false;
+}
+
+async function decidir(qual) {
+  if (S.pendente === null || S.decidindo) return;
+  S.decidindo = true;
+  const id = S.pendente.approval_id;
+  try {
+    await gestao("/api/v1/approvals/" + encodeURIComponent(id) + "/" + qual, "POST", { by: "painel" });
+    feed("action." + (qual === "approve" ? "approved" : "denied"), S.pendente.rota);
+  } catch (e) {
+    feed("aprovacao.falhou", String(e.message || e), true);
+  } finally {
+    S.decidindo = false;
+    await estadoVivo();
+  }
+}
+
+// ── abas (posse do agente; as SUAS abas não aparecem aqui) ────────────
+async function abas() {
+  if (S.sessionId === null) return;
+  if (S.controle === "human") return; // observação congelada durante takeover
+  let lista;
+  try { lista = await acao("browser.tabs", {}); } catch { return; }
+  const p = $("abas");
+  p.innerHTML = "";
+  for (const t of Array.isArray(lista) ? lista : []) {
+    const d = document.createElement("div");
+    d.className = "aba";
+    d.dataset.ativa = t.active ? "1" : "0";
+    const ponto = document.createElement("span"); ponto.className = "ponto";
+    const tt = document.createElement("span"); tt.className = "t";
+    tt.textContent = (t.title || t.url || t.page_id);
+    tt.title = t.url || "";
+    const posse = document.createElement("span"); posse.className = "posse";
+    posse.textContent = "agente";
+    d.append(ponto, tt, posse);
+    p.appendChild(d);
+  }
+}
+
+// ── eventos ao vivo ───────────────────────────────────────────────────
+function conectarEventos() {
+  if (S.ws !== null) { try { S.ws.close(); } catch { /* já fechado */ } }
+  let ws;
+  const qs = S.token !== null ? "?token=" + encodeURIComponent(S.token) : "";
+  try { ws = new WebSocket(S.base.replace(/^http/, "ws") + "/events" + qs); } catch { return; }
+  S.ws = ws;
+  ws.onopen = () => { S.backoff = 1000; };
+  ws.onmessage = (m) => {
+    let ev;
+    try { ev = JSON.parse(m.data); } catch { return; }
+    const p = ev.payload || {};
+    switch (ev.event) {
+      case "page.loaded": feed(ev.event, p.url || ""); abas(); break;
+      case "session.created":
+      case "session.closed": sessoes(); break;
+      case "control.taken": aplicarControle("human"); break;
+      case "control.returned": aplicarControle("agent"); break;
+      case "task.started": gi("Comecei. Acompanhe em AGORA."); break;
+      case "task.progress":
+        if (p.step || p.descricao || p.message) gi(String(p.step || p.descricao || p.message));
+        break;
+      case "task.completed": gi("Concluído. " + (p.summary || p.resultado || "")); break;
+      case "task.failed": gi("Não consegui terminar: " + (p.error || p.reason || "falha"), true); break;
+      case "action.proposed":
+      case "action.approved":
+      case "action.denied":
+      case "cancel.too_late":
+      case "agent.paused":
+      case "agent.resumed":
+      case "emergency_stop":
+      case "autonomy.changed":
+      case "owner.changed":
+        feed(ev.event, p.tool || "", ev.event === "action.denied" || ev.event === "emergency_stop");
+        estadoVivo();
+        break;
+      default:
+        if (ev.event.endsWith(".failed")) feed(ev.event, p.tool || p.url || "", true);
+    }
+  };
+  ws.onclose = () => {
+    S.backoff = Math.min(S.backoff * 2, 30000);
+    setTimeout(() => { if (S.base !== null) conectarEventos(); }, S.backoff);
+  };
+  ws.onerror = () => { try { ws.close(); } catch { /* fechado */ } };
+}
+
+// ── intenção → control plane ──────────────────────────────────────────
+async function enviar() {
+  const t = $("texto").value.trim();
+  if (t === "" || S.sessionId === null) return;
+  $("texto").value = "";
+  bolha("user", null, t);
+  let goal = t;
+  if (S.contextoPagina !== null) {
+    goal = "Contexto da página ativa: " + S.contextoPagina + "\n\nPedido: " + t;
+    S.contextoPagina = null;
+  }
+  try {
+    const r = await acao("browser.task", { goal });
+    gi("Entendido — vou trabalhar nisso. (task " + String(r.task_id || "").slice(-6) + ")");
+  } catch (e) {
+    if (e.code === "AGENT_UNAVAILABLE" || /provider|agent/i.test(String(e.message))) {
+      gi("O runtime está sem provedor de IA configurado (ai_provider). Sem ele eu não planejo tasks — mas os controles, aprovações e a auditoria continuam valendo.", true);
+    } else {
+      gi("O runtime recusou: " + String(e.message || e.code), true);
+    }
+  }
+}
+
+// ── contexto da página (via runtime, caminho A0 governado) ────────────
+async function contextoDaPagina() {
+  if (S.sessionId === null) return;
+  try {
+    const tabs = await acao("browser.tabs", {});
+    const ativa = (tabs || []).find((t) => t.active);
+    if (!ativa) { sistema("Nenhuma aba do agente ativa."); return; }
+    let excerto = "";
+    try {
+      const ex = await acao("browser.extract", { format: "text" });
+      excerto = String(ex.content || "").slice(0, 600);
+    } catch { /* extract pode exigir capability; o contexto segue só com URL */ }
+    S.contextoPagina = '"' + (ativa.title || "") + '" (' + ativa.url + ")" +
+      (excerto !== "" ? " — trecho: " + excerto : "");
+    sistema("Contexto anexado: " + (ativa.title || ativa.url) + ". A próxima mensagem vai com ele.");
+    $("texto").focus();
+  } catch (e) {
+    sistema("Não consegui ler a página: " + String(e.message || e));
+  }
+}
+
+// ── histórico: Audit e Replay (somente leitura) ───────────────────────
+async function historico(filtro) {
+  const sec = $("historico");
+  if (!sec.hidden && sec.dataset.filtro === filtro) { sec.hidden = true; return; }
+  sec.dataset.filtro = filtro;
+  sec.hidden = false;
+  const meta = $("histMeta"), linha = $("histLinha");
+  if (S.sessionId === null) { meta.textContent = "sem sessão"; return; }
+  let r;
+  try {
+    r = await gestao("/api/v1/sessions/" + encodeURIComponent(S.sessionId) + "/replay");
+  } catch (e) {
+    meta.textContent = "não foi possível ler o histórico";
+    linha.textContent = String(e.message || e);
+    $("histSelo").hidden = true; $("histSelado").hidden = true;
+    return;
+  }
+  $("histSelo").hidden = r.read_only !== true;
+  $("histSelado").hidden = r.selado !== true;
+  const c = r.contagens || {};
+  meta.textContent = (filtro === "audit" ? "Audit — só ações · " : "Replay — linha do tempo completa · ") +
+    (c.acoes || 0) + " ações · " + (c.eventos || 0) + " eventos";
+  linha.innerHTML = "";
+  const itens = (Array.isArray(r.timeline) ? r.timeline : [])
+    .filter((i) => (filtro === "audit" ? i.source === "action" : true));
+  if (itens.length === 0) { linha.textContent = "Sem histórico gravado."; return; }
+  for (const item of itens.slice(-120)) {
+    const d = document.createElement("div");
+    d.className = "hi";
+    const h = document.createElement("span"); h.className = "h";
+    h.textContent = (item.timestamp || "").slice(11, 23) || "—";
+    const l = document.createElement("span"); l.className = "l";
+    const dd = item.data || {};
+    l.textContent = item.label + (item.source === "action" && dd.capability
+      ? " (" + [dd.capability, dd.policy_decision, dd.result].filter(Boolean).join(" · ") + ")" : "");
+    d.append(h, l);
+    linha.appendChild(d);
+  }
+}
+
+// ── controles ─────────────────────────────────────────────────────────
+async function alternarModo(mode) {
+  if (S.sessionId === null) return;
+  try {
+    await gestao("/api/v1/sessions/" + encodeURIComponent(S.sessionId) + "/autonomy", "POST",
+      { mode, by: "painel" });
+  } catch (e) {
+    feed("autonomy.falhou", String(e.message || e), true);
+    if (e.status === 403) sistema("O runtime recusou a troca de modo: o token do painel não tem esse escopo. AUTO não é atalho — é delegação, e delegar exige credencial de dono.");
+  }
+  await estadoVivo();
+}
+
+$("mAsk").addEventListener("click", () => alternarModo("ASK"));
+$("mAuto").addEventListener("click", () => alternarModo("AUTO"));
+$("aprPermitir").addEventListener("click", () => decidir("approve"));
+$("aprNegar").addEventListener("click", () => decidir("deny"));
+$("enviar").addEventListener("click", enviar);
+$("texto").addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); enviar(); }
+});
+$("btPagina").addEventListener("click", contextoDaPagina);
+$("btAudit").addEventListener("click", () => historico("audit"));
+$("btReplay").addEventListener("click", () => historico("replay"));
+
+$("btPausar").addEventListener("click", async () => {
+  if (S.sessionId === null) return;
+  const pausar = !S.pausado;
+  try {
+    await gestao("/api/v1/sessions/" + encodeURIComponent(S.sessionId) + "/" + (pausar ? "pause" : "resume"),
+      "POST", { by: "painel" });
+    S.pausado = pausar;
+    $("btPausar").textContent = pausar ? "Retomar" : "Pausar";
+  } catch (e) {
+    feed("pausa.falhou", String(e.message || e), true);
+    if (e.status === 403 && !pausar) sistema("Retomar exige escopo ADMIN — a assimetria é deliberada: pausar é freio, retomar é delegação.");
+  }
+  await estadoVivo();
+});
+
+$("btControle").addEventListener("click", async () => {
+  if (S.sessionId === null) return;
+  const alvo = S.controle === "human" ? "release" : "takeover";
+  try {
+    await gestao("/api/v1/sessions/" + encodeURIComponent(S.sessionId) + "/" + alvo, "POST", {});
+    aplicarControle(alvo === "takeover" ? "human" : "agent");
+    sistema(alvo === "takeover"
+      ? "Você assumiu. O agente está congelado — inclusive para observar."
+      : "Controle devolvido. O runtime vai reobservar a página antes de agir.");
+  } catch (e) {
+    feed("controle.falhou", String(e.message || e), true);
+  }
+});
+
+$("btParar").addEventListener("click", async () => {
+  if (S.sessionId === null) return;
+  try {
+    const r = await gestao("/api/v1/sessions/" + encodeURIComponent(S.sessionId) + "/emergency-stop",
+      "POST", { by: "painel" });
+    feed("emergency_stop", "aprovações negadas: " + ((r.aprovacoes_negadas || []).length), true);
+    gi("Parei tudo. A parada roda inteira no runtime — mesmo se este painel cair, ela termina.");
+  } catch (e) {
+    feed("emergency_stop.falhou", String(e.message || e), true);
+  }
+  await estadoVivo();
+});
+
+// ── arranque ──────────────────────────────────────────────────────────
+$("cConectar").addEventListener("click", async () => {
+  const url = $("cUrl").value.trim() || "http://127.0.0.1:7777";
+  const tok = $("cToken").value.trim();
+  $("cErro").textContent = "";
+  try {
+    await conectar(url, tok === "" ? null : tok);
+    await chrome.storage.session.set({ nomos: { url, token: tok } });
+  } catch (e) {
+    S.base = null;
+    $("cErro").textContent = e.status === 401 || e.status === 403
+      ? "credencial recusada pelo runtime — confira o token"
+      : "runtime inalcançável em " + url;
+  }
+});
+
+(async function iniciar() {
+  try {
+    const { nomos } = await chrome.storage.session.get("nomos");
+    if (nomos && nomos.url) {
+      $("cUrl").value = nomos.url;
+      $("cToken").value = nomos.token || "";
+      await conectar(nomos.url, nomos.token || null);
+      return;
+    }
+  } catch { /* sem estado salvo ou runtime fora: mostra a tela de conexão */ }
+  $("conexao").hidden = false;
+})();

@@ -553,6 +553,7 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
     headless: config.headless,
     viewport: config.viewport,
     device_scale_factor: config.device_scale_factor,
+    extension_dir: config.extension_dir,
     ...(config.profiles_root !== null ? { profiles_root: config.profiles_root } : {}),
     onEvent: (e: RuntimeEvent) => {
       bus.emit(e);

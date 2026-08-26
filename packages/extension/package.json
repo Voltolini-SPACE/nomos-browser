@@ -1,0 +1,27 @@
+{
+  "name": "@nomos/browser-extension",
+  "version": "0.3.2",
+  "license": "SEE LICENSE IN LICENSE",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+file:../..",
+    "directory": "packages/extension"
+  },
+  "description": "Extensao NOMOS (MV3, side panel). `build.ts` injeta os tokens do brandbook; `dist/` e artefato e nao e versionado. A extensao e cliente da API v1 com token — nenhuma autoridade propria.",
+  "main": "./build.ts",
+  "exports": {
+    ".": "./build.ts",
+    "./build": "./build.ts",
+    "./launch": "./launch.ts"
+  },
+  "files": [
+    "src",
+    "build.ts",
+    "launch.ts"
+  ]
+}

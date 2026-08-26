@@ -69,6 +69,18 @@ export interface DaemonConfig {
   headless: boolean;
   viewport: { width: number; height: number };
   profiles_root: string | null;
+  /**
+   * Missão EMBEDDED_AGENT_UX — diretório de extensão (descompactada) carregada
+   * no Chromium do runtime via `--load-extension`. null = nenhuma. Só funciona
+   * headful ou no headless novo do canal chromium; Chrome de marca não aceita.
+   */
+  extension_dir: string | null;
+  /** FASE 10 — destacar o alvo NA página antes de clique/digitação. */
+  spotlight: boolean;
+  /** Quanto tempo o destaque fica visível (e quanto o gesto espera por ele). */
+  spotlight_dwell_ms: number;
+  /** Cor CSS do destaque. null ⇒ `Highlight` do sistema; o cofre injeta a da marca. */
+  spotlight_color: string | null;
   /** Teto de sessões vivas (worker pool do SessionManager). */
   max_workers: number;
   /** FASE 43 — ações simultâneas POR SESSÃO. */
@@ -352,6 +364,10 @@ function baseDefaults(): DaemonConfig {
     default_policy: DEFAULT_POLICY_NAME,
     allow_internal_urls: false,
     allow_unleased: false,
+    extension_dir: null,
+    spotlight: false,
+    spotlight_dwell_ms: 220,
+    spotlight_color: null,
     watchdog_enabled: true,
     watchdog_interval_ms: 5_000,
     watchdog_max_restarts: 3,
@@ -551,6 +567,10 @@ export const ENV_KEYS: Readonly<Record<string, string>> = Object.freeze({
   "viewport.width": "NOMOS_BROWSER_VIEWPORT_WIDTH",
   "viewport.height": "NOMOS_BROWSER_VIEWPORT_HEIGHT",
   profiles_root: "NOMOS_BROWSER_PROFILES_ROOT",
+  extension_dir: "NOMOS_BROWSER_EXTENSION_DIR",
+  spotlight: "NOMOS_BROWSER_SPOTLIGHT",
+  spotlight_dwell_ms: "NOMOS_BROWSER_SPOTLIGHT_DWELL_MS",
+  spotlight_color: "NOMOS_BROWSER_SPOTLIGHT_COLOR",
   max_workers: "NOMOS_BROWSER_MAX_WORKERS",
   max_concurrency: "NOMOS_BROWSER_MAX_CONCURRENCY",
   max_queue: "NOMOS_BROWSER_MAX_QUEUE",
@@ -699,6 +719,19 @@ function applyKey(cfg: DaemonConfig, key: string, raw: unknown, origin: string):
       break;
     case "profiles_root":
       cfg.profiles_root = asPath(raw, key, origin);
+      break;
+    case "extension_dir":
+      cfg.extension_dir = asPath(raw, key, origin);
+      break;
+    case "spotlight":
+      cfg.spotlight = asBool(raw, key, origin);
+      break;
+    case "spotlight_dwell_ms":
+      // Teto 5000: destaque mais longo que isso vira atraso de ação, não UX.
+      cfg.spotlight_dwell_ms = asInt(raw, key, origin, 0, 5000);
+      break;
+    case "spotlight_color":
+      cfg.spotlight_color = asString(raw, key, origin);
       break;
     case "upload_root":
       cfg.upload_root = asPath(raw, key, origin);
@@ -1006,6 +1039,10 @@ export const CONFIG_SCHEMA: Readonly<Record<string, ConfigKeySpec>> = Object.fre
   "viewport.width": { tipo: "inteiro", min: 1, max: 20000, exemplo: "1440", sensivel: false, resumo: "Largura CSS do viewport." },
   "viewport.height": { tipo: "inteiro", min: 1, max: 20000, exemplo: "900", sensivel: false, resumo: "Altura CSS do viewport." },
   profiles_root: { tipo: "caminho", exemplo: "/tmp/nomos-perfis", sensivel: true, anulavel: true, resumo: "Raiz dos perfis persistentes do Chromium (cookies e sessão do dono)." },
+  extension_dir: { tipo: "caminho", exemplo: "/tmp/nomos-extensao/dist", sensivel: true, anulavel: true, resumo: "Extensão descompactada carregada no Chromium do runtime (side panel NOMOS). null = nenhuma." },
+  spotlight: { tipo: "boolean", exemplo: "true", sensivel: false, resumo: "Destaca o alvo NA página antes de clique/digitação. Default false: não altera latência medida sem pedido do dono." },
+  spotlight_dwell_ms: { tipo: "inteiro", min: 0, max: 5000, exemplo: "220", sensivel: false, resumo: "Duração do destaque; o gesto espera esse tempo para o humano ver." },
+  spotlight_color: { tipo: "string", exemplo: "var-da-marca", sensivel: false, anulavel: true, resumo: "Cor CSS do destaque. null ⇒ Highlight do sistema; o lançador injeta a cor do cofre." },
   max_workers: { tipo: "inteiro", min: 1, max: 1024, exemplo: "8", sensivel: false, resumo: "Teto de sessões vivas no pool." },
   max_concurrency: { tipo: "inteiro", min: 1, max: 1024, exemplo: "4", sensivel: false, resumo: "Ações simultâneas POR SESSÃO." },
   max_queue: { tipo: "inteiro", min: 0, max: 100000, exemplo: "64", sensivel: false, resumo: "Ações aguardando POR SESSÃO. Estourou ⇒ BACKPRESSURE_REJECTED." },

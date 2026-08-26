@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>NOMOS</title>
+<!--
+  Sem cor literal e sem fonte literal: tokens entram no build, lidos do cofre
+  (packages/extension/build.ts), como na NOMOS Web. Contrato de marca §6.3.
+  Sem script inline: MV3 proíbe por CSP — a lógica vive em sidepanel.js.
+-->
+<style>
+  :root {
+/*__NOMOS_CORES__*/
+    --nomos-mono: __NOMOS_FONT_MONO__;
+    --linha: color-mix(in srgb, var(--nomos-marca) 18%, transparent);
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--nomos-fundo); color: var(--nomos-texto);
+    font-family: var(--nomos-mono); font-size: 12px;
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  button { font: inherit; color: inherit; cursor: pointer; background: transparent;
+           border: 1px solid var(--linha); border-radius: 4px; padding: 4px 9px; }
+  button:hover:not(:disabled) { border-color: var(--nomos-marca); color: var(--nomos-marca); }
+  button:disabled { opacity: .4; cursor: not-allowed; }
+  button.perigo:hover { border-color: var(--nomos-erro); color: var(--nomos-erro); }
+  input, textarea {
+    background: var(--nomos-fundo); color: var(--nomos-texto);
+    border: 1px solid var(--linha); border-radius: 4px; font: inherit; padding: 6px 8px;
+  }
+  input:focus, textarea:focus { outline: none; border-color: var(--nomos-marca); }
+  section { border-bottom: 1px solid var(--linha); }
+  .rotulo { opacity: .55; text-transform: uppercase; letter-spacing: .06em; font-size: 10px; }
+
+  /* ── cabeçalho ─────────────────────────────────────────────── */
+  header { display: flex; align-items: center; gap: 8px; padding: 8px 10px;
+           border-bottom: 1px solid var(--linha); background: var(--nomos-caixas); }
+  header .marca { font-weight: 700; letter-spacing: .08em; }
+  header .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--nomos-aviso); }
+  header .dot[data-live="1"] { background: var(--nomos-marca); }
+  header .dot[data-live="0"] { background: var(--nomos-erro); }
+  header .sessao { flex: 1; text-align: right; opacity: .75; font-size: 11px;
+                   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* ── conexão ───────────────────────────────────────────────── */
+  #conexao { padding: 12px 10px; display: flex; flex-direction: column; gap: 8px; }
+  #conexao[hidden] { display: none; }
+  #conexao .erro { color: var(--nomos-erro); font-size: 11px; min-height: 14px; }
+
+  /* ── chat ──────────────────────────────────────────────────── */
+  #chat { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  #chat[hidden] { display: none; }
+  #mensagens { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+  .msg { max-width: 92%; padding: 6px 9px; border-radius: 8px; border: 1px solid var(--linha);
+         white-space: pre-wrap; overflow-wrap: anywhere; }
+  .msg.user { align-self: flex-end; border-color: color-mix(in srgb, var(--nomos-marca) 45%, transparent); }
+  .msg.gi   { align-self: flex-start; background: var(--nomos-caixas); }
+  .msg.gi b { color: var(--nomos-marca); }
+  .msg.sistema { align-self: center; opacity: .6; font-size: 11px; border: none; }
+  .msg.erro { border-color: var(--nomos-erro); }
+  #compositor { display: flex; gap: 6px; padding: 8px 10px; border-top: 1px solid var(--linha); }
+  #texto { flex: 1; resize: none; height: 54px; }
+
+  /* ── AGORA ─────────────────────────────────────────────────── */
+  #agora { padding: 8px 10px; background: var(--nomos-caixas); }
+  #agora .acao { color: var(--nomos-marca); min-height: 15px; }
+  #agora .estado[data-estado="WAITING_APPROVAL"] { color: var(--nomos-aviso); }
+  #agora .estado[data-estado="USER_CONTROL"] { color: var(--nomos-ciano); }
+  #agora .estado[data-estado="ERROR"], #agora .estado[data-estado="DISCONNECTED"] { color: var(--nomos-erro); }
+  #feed { max-height: 110px; overflow-y: auto; margin-top: 6px; }
+  .ev { font-size: 10px; padding: 2px 6px; border-left: 2px solid var(--linha); margin-bottom: 2px; }
+  .ev b { color: var(--nomos-ciano); }
+  .ev.erro { border-left-color: var(--nomos-erro); }
+  .ev.erro b { color: var(--nomos-erro); }
+
+  /* ── autonomia ─────────────────────────────────────────────── */
+  #autonomia { display: flex; gap: 6px; align-items: center; padding: 8px 10px; }
+  #autonomia button[aria-pressed="true"] { border-color: var(--nomos-marca); color: var(--nomos-marca); }
+  #autonomia .aviso { flex: 1; opacity: .65; font-size: 10px; }
+
+  /* ── aprovação ─────────────────────────────────────────────── */
+  #aprovacao { padding: 10px; border: 1px solid var(--nomos-aviso); border-radius: 6px;
+               margin: 8px 10px; background: var(--nomos-caixas); }
+  #aprovacao[hidden] { display: none; }
+  #aprovacao h2 { margin: 0 0 8px; font-size: 12px; color: var(--nomos-aviso);
+                  text-transform: uppercase; letter-spacing: .06em; }
+  #aprovacao dl { display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; margin: 0 0 10px; font-size: 11px; }
+  #aprovacao dt { opacity: .55; }
+  #aprovacao dd { margin: 0; overflow-wrap: anywhere; }
+  #aprovacao .args { font-size: 10px; opacity: .8; max-height: 80px; overflow: auto; }
+  #aprovacao .botoes { display: flex; gap: 8px; justify-content: flex-end; }
+
+  /* ── abas ──────────────────────────────────────────────────── */
+  #abas { padding: 8px 10px; max-height: 120px; overflow-y: auto; }
+  .aba { display: flex; gap: 6px; align-items: center; padding: 3px 4px; font-size: 11px; }
+  .aba .ponto { width: 6px; height: 6px; border-radius: 50%; background: var(--linha); flex: none; }
+  .aba[data-ativa="1"] .ponto { background: var(--nomos-marca); }
+  .aba .t { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .aba .posse { font-size: 9px; opacity: .6; text-transform: uppercase; }
+
+  /* ── histórico (somente leitura) ───────────────────────────── */
+  #historico { padding: 8px 10px; max-height: 180px; overflow-y: auto; }
+  #historico[hidden] { display: none; }
+  .selo-ro { border: 1px solid var(--nomos-aviso); color: var(--nomos-aviso);
+             border-radius: 3px; padding: 0 5px; font-size: 9px; letter-spacing: .08em; }
+  .hi { font-size: 10px; padding: 2px 0; border-bottom: 1px solid var(--linha); display: flex; gap: 5px; }
+  .hi .h { opacity: .5; white-space: nowrap; }
+  .hi .l { flex: 1; overflow-wrap: anywhere; }
+
+  /* ── rodapé ────────────────────────────────────────────────── */
+  footer { display: flex; gap: 6px; flex-wrap: wrap; padding: 8px 10px;
+           background: var(--nomos-caixas); border-top: 1px solid var(--linha); }
+  #humano { display: none; padding: 6px 10px; border: 1px solid var(--nomos-aviso);
+            color: var(--nomos-aviso); margin: 8px 10px; border-radius: 6px; text-align: center; }
+  body[data-controle="human"] #humano { display: block; }
+  .assinatura { opacity: .4; font-size: 9px; padding: 4px 10px; text-align: center; }
+</style>
+</head>
+<body data-controle="agent">
+
+<header>
+  <span class="dot" id="vivo" data-live="?"></span>
+  <span class="marca" title="__NOMOS_TAGLINE__">NOMOS</span>
+  <span class="sessao" id="hSessao">desconectado</span>
+</header>
+
+<section id="conexao">
+  <span class="rotulo">Conectar ao runtime</span>
+  <input id="cUrl" placeholder="http://127.0.0.1:7777" spellcheck="false">
+  <input id="cToken" type="password" placeholder="token (impresso pelo daemon)" spellcheck="false">
+  <button id="cConectar">Conectar</button>
+  <div class="erro" id="cErro"></div>
+</section>
+
+<div id="chat" hidden>
+  <div id="mensagens"></div>
+
+  <div id="aprovacao" hidden>
+    <h2>NOMOS quer executar</h2>
+    <div id="aprFila" style="font-size:10px;opacity:.6;margin-bottom:6px;"></div>
+    <dl>
+      <dt>Ação</dt><dd id="aprAcao">—</dd>
+      <dt>Onde</dt><dd id="aprOnde">—</dd>
+      <dt>Risco</dt><dd id="aprNivel">—</dd>
+      <dt>Política</dt><dd id="aprMotivo">—</dd>
+      <dt>Consequência</dt><dd id="aprConsequencia">—</dd>
+      <dt>Parâmetros</dt><dd><div class="args" id="aprArgs">—</div></dd>
+    </dl>
+    <div class="botoes">
+      <button id="aprNegar" class="perigo">NEGAR</button>
+      <button id="aprPermitir">PERMITIR</button>
+    </div>
+  </div>
+
+  <div id="humano"><b>CONTROLE HUMANO</b> — ações do agente congeladas.</div>
+
+  <section id="agora">
+    <span class="rotulo">Agora</span>
+    <div><span class="estado" id="aEstado" data-estado="DISCONNECTED">—</span></div>
+    <div class="acao" id="aAcao"></div>
+    <div id="feed"></div>
+  </section>
+
+  <section id="autonomia">
+    <span class="rotulo">Autonomia</span>
+    <button id="mAsk" aria-pressed="false">ASK</button>
+    <button id="mAuto" aria-pressed="false">AUTO</button>
+    <span class="aviso" id="mAviso"></span>
+  </section>
+
+  <section>
+    <div style="display:flex;align-items:center;gap:8px;padding:6px 10px 0;">
+      <span class="rotulo" style="flex:1">Abas</span>
+      <button id="btPagina" title="Enviar contexto da página ativa para a conversa" style="font-size:10px;">Perguntar sobre esta página</button>
+    </div>
+    <div id="abas"></div>
+  </section>
+
+  <section id="historico" hidden>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:4px;">
+      <span class="rotulo" style="flex:1">Histórico</span>
+      <span class="selo-ro" id="histSelo" hidden>SOMENTE LEITURA</span>
+      <span class="selo-ro" id="histSelado" hidden>SELADO</span>
+    </div>
+    <div id="histMeta" style="font-size:10px;opacity:.7;margin-bottom:4px;"></div>
+    <div id="histLinha"></div>
+  </section>
+
+  <div id="compositor">
+    <textarea id="texto" placeholder="O que deseja fazer?&#10;Ex.: Abra o portal e procure as transações de ontem."></textarea>
+    <button id="enviar">➤</button>
+  </div>
+
+  <footer>
+    <button id="btAudit">Audit</button>
+    <button id="btReplay">Replay</button>
+    <button id="btPausar">Pausar</button>
+    <button id="btControle">Assumir controle</button>
+    <button id="btParar" class="perigo">Parar</button>
+  </footer>
+</div>
+
+<div class="assinatura">__NOMOS_SELO__ · __NOMOS_ASSINATURA__</div>
+
+<script src="sidepanel.js"></script>
+</body>
+</html>

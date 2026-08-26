@@ -1,0 +1,12 @@
+{
+  "manifest_version": 3,
+  "name": "NOMOS Browser",
+  "version": "0.3.2",
+  "description": "Painel lateral do NOMOS: converse com a Gi, veja o agente navegar, aprove o que exige consentimento, interrompa e audite.",
+  "permissions": ["sidePanel", "storage"],
+  "host_permissions": ["http://127.0.0.1/*", "http://localhost/*"],
+  "side_panel": { "default_path": "sidepanel.html" },
+  "action": { "default_title": "Abrir o painel NOMOS" },
+  "background": { "service_worker": "background.js" },
+  "icons": { "16": "icons/16.png", "48": "icons/48.png", "128": "icons/128.png" }
+}
