@@ -89,6 +89,11 @@ export const ROUTE_SCOPE: Readonly<Record<string, Scope>> = Object.freeze({
   "sessions.handoff": "CONTROL",
   "sessions.takeover": "ADMIN",
   "sessions.release": "ADMIN",
+  // Desligar a governança da sessão é o ato mais privilegiado que existe: ADMIN,
+  // no mesmo nível de takeover. A `ask` só LÊ a página e pergunta ao modelo — é
+  // observação, e um token OBSERVE deve poder conversar.
+  "sessions.full-control": "ADMIN",
+  "sessions.ask": "OBSERVE",
   // FASE 9 — ler o estado de uma task é OBSERVAR; cancelar ou retomar é ATO DE
   // CONTROLE sobre trabalho em curso, no mesmo nível de `sessions.delete`. Sem
   // estas linhas as quatro rotas cairiam no default ADMIN de `scopeForRoute` —

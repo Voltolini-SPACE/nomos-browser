@@ -47,7 +47,12 @@ if curl -s --max-time 2 http://127.0.0.1:11434/api/tags >/tmp/nomos-ollama-tags.
 import json
 tags=json.load(open('/tmp/nomos-ollama-tags.json'))
 nomes=[m['name'] for m in tags.get('models',[])]
-pref=[n for n in nomes if 'qwen2.5-coder' in n] or [n for n in nomes if 'coder' in n] or nomes
+# A Gi CONVERSA e resume — prefere modelo de conversa, não de código. Ordem:
+# qwen3.5, depois qualquer instruct/qwen não-coder, e só então o que houver.
+pref=([n for n in nomes if 'qwen3.5' in n]
+      or [n for n in nomes if 'instruct' in n.lower() or ('qwen' in n and 'coder' not in n)]
+      or [n for n in nomes if 'coder' not in n]
+      or nomes)
 print(pref[0] if pref else '')
 PY
 )"
@@ -58,7 +63,11 @@ import json,sys
 alvo,modelo,cor=sys.argv[1],sys.argv[2],sys.argv[3]
 cfg={"spotlight":True}
 if cor: cfg["spotlight_color"]=cor
-if modelo: cfg["ai_provider"]="ollama:"+modelo
+if modelo:
+    cfg["ai_provider"]="ollama:"+modelo
+    # think=false: os modelos de conversa (qwen3.5) travam o plano com o modo
+    # think ligado; desligar dá resposta direta. Custo zero, local.
+    cfg["ai_think"]=False
 json.dump(cfg,open(alvo,"w"),indent=2)
 PY
 if [ -n "$MODELO" ]; then

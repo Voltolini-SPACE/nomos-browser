@@ -127,6 +127,7 @@ const ROTULO = {
   "task.progress": "Progresso",
   "task.completed": "Task concluída",
   "task.failed": "Task falhou",
+  "lease.readquirido": "Sessão retomada",
 };
 
 function feed(nome, texto, erro) {
@@ -241,6 +242,8 @@ function desconhecido() {
   S.modo = null;
   $("mAsk").setAttribute("aria-pressed", "false");
   $("mAuto").setAttribute("aria-pressed", "false");
+  $("mTotal").setAttribute("aria-pressed", "false");
+  $("bannerTotal").hidden = true;
   $("mAviso").textContent = "sem estado comprovado — tratando como PERGUNTAR";
 }
 
@@ -260,6 +263,9 @@ async function estadoVivo() {
   S.modo = e.autonomy_mode || null;
   $("mAsk").setAttribute("aria-pressed", String(S.modo === "ASK"));
   $("mAuto").setAttribute("aria-pressed", String(S.modo === "AUTO"));
+  const total = e.controle_total === true;
+  $("mTotal").setAttribute("aria-pressed", String(total));
+  $("bannerTotal").hidden = !total;
   $("mAviso").textContent =
     S.modo === "AUTO" && Array.isArray(e.sempre_aprovam) && e.sempre_aprovam.length > 0
       ? "mesmo em AUTO, ainda pergunto: " + e.sempre_aprovam.join(", ")
@@ -351,7 +357,9 @@ function conectarEventos() {
       case "control.returned": aplicarControle("agent"); break;
       case "task.started": gi("Comecei. Acompanhe em AGORA."); break;
       case "task.progress":
-        if (p.step || p.descricao || p.message) gi(String(p.step || p.descricao || p.message));
+        // Só mostra progresso com TEXTO real. O id do passo sozinho ("s1", "s2")
+        // é ruído que parecia conversa e não dizia nada.
+        if (p.descricao || p.message) gi(String(p.descricao || p.message));
         break;
       case "task.completed":
         gi("Concluído. " + (p.summary || p.resultado || ""));
@@ -396,38 +404,69 @@ function conectarEventos() {
 }
 
 // ── intenção → control plane ──────────────────────────────────────────
+// Contexto da aba ativa (título + URL + trecho), pela rota do runtime — nunca
+// por API de página do Chromium. É o que faz "que página é esta?" funcionar.
+async function montarContexto() {
+  if (S.contextoPagina !== null) { const c = S.contextoPagina; S.contextoPagina = null; return c; }
+  if (S.controle === "human") return "";
+  try {
+    const tabs = await acao("browser.tabs", {});
+    const ativa = (Array.isArray(tabs) ? tabs : []).find((x) => x.active);
+    if (!ativa) return "";
+    let excerto = "";
+    try { const ex = await acao("browser.extract", { format: "text" }); excerto = String(ex.content || "").slice(0, 1500); }
+    catch { /* sem extract: só título+URL */ }
+    return '"' + (ativa.title || "") + '" (' + ativa.url + ")" + (excerto !== "" ? " — conteúdo: " + excerto : "");
+  } catch { return ""; }
+}
+
+// Bolha transitória "Gi · pensando…" — o painel nunca fica mudo esperando.
+function giPensando() {
+  const d = gi("pensando…");
+  d.dataset.pensando = "1";
+  return d;
+}
+
+// Abre uma task (ação real na página). Em controle total, o runtime aprova
+// sozinho; em ASK/AUTO, a aprovação aparece no próprio painel.
+async function abrirTask(goal) {
+  try {
+    const r = await acao("browser.task", { goal });
+    gi("Comecei. Acompanhe em AGORA. (task " + String(r.task_id || "").slice(-6) + ")");
+  } catch (e) {
+    if (e.code === "AGENT_UNAVAILABLE" || /provider|agent/i.test(String(e.message))) {
+      gi("O runtime está sem provedor de IA (ai_provider). Sem ele eu não executo tasks — mas controles e auditoria continuam valendo.", true);
+    } else {
+      gi("O runtime recusou: " + String(e.message || e.code), true);
+    }
+  }
+}
+
 async function enviar() {
   const t = $("texto").value.trim();
   if (t === "" || S.sessionId === null) return;
   $("texto").value = "";
   bolha("user", null, t);
-  let goal = t;
-  if (S.contextoPagina !== null) {
-    goal = "Contexto da página ativa: " + S.contextoPagina + "\n\nPedido: " + t;
-    S.contextoPagina = null;
-  } else {
-    // Sem contexto explícito, anexa a aba ATIVA do agente (título+URL) de graça
-    // — pela rota do runtime (browser.tabs da API v1), nunca por API de página
-    // do Chromium. É o que faz "que página é esta?" simplesmente funcionar sem o
-    // dono clicar em nada antes. Falha aqui não bloqueia o envio: pedido segue puro.
-    try {
-      if (S.controle !== "human") {
-        const tabs = await acao("browser.tabs", {});
-        const ativa = (Array.isArray(tabs) ? tabs : []).find((x) => x.active);
-        if (ativa) goal = 'Página ativa: "' + (ativa.title || "") + '" (' + ativa.url + ")\n\nPedido: " + t;
-      }
-    } catch { /* runtime sem abas ou sem capability: envia o pedido puro */ }
-  }
+  // A Gi PRIMEIRO responde (rota /ask, leitura, sem aprovação). Se a mensagem
+  // for um pedido de AÇÃO, o runtime devolve `act` e o painel abre a task. É o
+  // que faz a resposta APARECER aqui — e a ação acontecer quando é o caso.
+  const page_context = await montarContexto();
+  const pensando = giPensando();
+  let r;
   try {
-    const r = await acao("browser.task", { goal });
-    gi("Entendido — vou trabalhar nisso. (task " + String(r.task_id || "").slice(-6) + ")");
+    r = await gestao("/api/v1/sessions/" + encodeURIComponent(S.sessionId) + "/ask", "POST",
+      { question: t, page_context });
   } catch (e) {
-    if (e.code === "AGENT_UNAVAILABLE" || /provider|agent/i.test(String(e.message))) {
-      gi("O runtime está sem provedor de IA configurado (ai_provider). Sem ele eu não planejo tasks — mas os controles, aprovações e a auditoria continuam valendo.", true);
-    } else {
-      gi("O runtime recusou: " + String(e.message || e.code), true);
-    }
+    pensando.remove();
+    gi(e.status === 400
+      ? "Preciso de um provedor de IA local (Ollama) para responder. Confira se o Ollama está rodando."
+      : "O runtime recusou: " + String(e.message || e.status), true);
+    return;
   }
+  pensando.remove();
+  if (r && typeof r.answer === "string" && r.answer !== "") { gi(r.answer); return; }
+  if (r && typeof r.act === "string" && r.act !== "") { gi("Certo — vou fazer isso na página."); await abrirTask(r.act); return; }
+  gi("Não consegui responder agora. Pode reformular?", true);
 }
 
 // ── contexto da página (via runtime, caminho A0 governado) ────────────
@@ -506,6 +545,20 @@ async function alternarModo(mode) {
 
 $("mAsk").addEventListener("click", () => alternarModo("ASK"));
 $("mAuto").addEventListener("click", () => alternarModo("AUTO"));
+$("mTotal").addEventListener("click", async () => {
+  if (S.sessionId === null) return;
+  const ligar = $("mTotal").getAttribute("aria-pressed") !== "true";
+  try {
+    await gestao("/api/v1/sessions/" + encodeURIComponent(S.sessionId) + "/full-control", "POST", { on: ligar });
+    sistema(ligar
+      ? "Controle total LIGADO — a Gi age sem pedir permissão nesta sessão. Desligue quando terminar."
+      : "Controle total desligado — a governança voltou (ASK/AUTO valem de novo).");
+  } catch (e) {
+    feed("controle-total.falhou", String(e.message || e.status), true);
+    if (e.status === 403) sistema("Ligar o controle total exige o token do dono (ADMIN).");
+  }
+  await estadoVivo();
+});
 $("aprPermitir").addEventListener("click", () => decidir("approve"));
 $("aprNegar").addEventListener("click", () => decidir("deny"));
 $("enviar").addEventListener("click", enviar);

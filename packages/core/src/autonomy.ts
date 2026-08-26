@@ -320,6 +320,14 @@ export function rotasQueSempreAprovam(): string[] {
 export class GovernoDeAutonomia {
   private padrao: AutonomySetting | null = null;
   private readonly porSessao = new Map<string, AutonomySetting>();
+  // CONTROLE TOTAL — o dono desliga a governança NESTA sessão (opt-in explícito,
+  // com aviso no painel). Deliberadamente NÃO vive na matriz de autonomia: aquela
+  // matriz só ACRESCENTA fricção, por topologia, e não deve ganhar um ramo que
+  // permita. Aqui é um interruptor à parte, por sessão, que o runtime lê para
+  // AUTO-APROVAR o que a matriz mandaria perguntar. O portão ainda existe e
+  // ainda registra a proposta na trilha; o que muda é quem responde: o runtime,
+  // em nome de "controle-total", em vez de um humano. Morre com a sessão.
+  private readonly controleTotal = new Set<string>();
 
   /**
    * Modo em vigor para uma sessão.
@@ -355,9 +363,22 @@ export class GovernoDeAutonomia {
     return s;
   }
 
+  /** Controle total EM VIGOR nesta sessão? Fail-closed: só true se ligado. */
+  controleTotalDe(session_id: string): boolean {
+    return this.controleTotal.has(session_id);
+  }
+
+  /** Liga/desliga o controle total da sessão. Ato explícito, por sessão. */
+  definirControleTotal(session_id: string, ligado: boolean): void {
+    if (session_id === "") throw new Error("controle total exige session_id");
+    if (ligado) this.controleTotal.add(session_id);
+    else this.controleTotal.delete(session_id);
+  }
+
   /** A escolha de sessão morre com a sessão. É o que `SESSION` promete. */
   esquecer(session_id: string): void {
     this.porSessao.delete(session_id);
+    this.controleTotal.delete(session_id);
   }
 
   padraoAtual(): AutonomySetting | null {

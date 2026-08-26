@@ -79,7 +79,13 @@
   /* ── autonomia ─────────────────────────────────────────────── */
   #autonomia { display: flex; gap: 6px; align-items: center; padding: 8px 10px; }
   #autonomia button[aria-pressed="true"] { border-color: var(--nomos-marca); color: var(--nomos-marca); }
+  #autonomia #mTotal[aria-pressed="true"] { border-color: var(--nomos-erro); color: var(--nomos-erro);
+    background: color-mix(in srgb, var(--nomos-erro) 14%, transparent); }
   #autonomia .aviso { flex: 1; opacity: .65; font-size: 10px; }
+  #bannerTotal { display: none; margin: 8px 10px; padding: 7px 10px; border-radius: 6px; font-size: 11px;
+    color: var(--nomos-erro); border: 1px solid var(--nomos-erro);
+    background: color-mix(in srgb, var(--nomos-erro) 12%, transparent); }
+  #bannerTotal:not([hidden]) { display: block; }
 
   /* ── aprovação ─────────────────────────────────────────────── */
   #aprovacao { padding: 10px; border: 1px solid var(--nomos-aviso); border-radius: 6px;
@@ -176,6 +182,8 @@
 
   <div id="humano"><b>CONTROLE HUMANO</b> — ações do agente congeladas.</div>
 
+  <div id="bannerTotal" hidden><b>⚠ CONTROLE TOTAL</b> — a Gi age sem pedir permissão nesta sessão. Desligue quando terminar.</div>
+
   <section id="agora">
     <span class="rotulo">Agora</span>
     <div><span class="estado" id="aEstado" data-estado="DISCONNECTED">—</span></div>
@@ -187,6 +195,7 @@
     <span class="rotulo">Autonomia</span>
     <button id="mAsk" aria-pressed="false">ASK</button>
     <button id="mAuto" aria-pressed="false">AUTO</button>
+    <button id="mTotal" class="perigo" aria-pressed="false" title="A Gi age sem pedir permissão nesta sessão">Controle total</button>
     <span class="aviso" id="mAviso"></span>
   </section>
 

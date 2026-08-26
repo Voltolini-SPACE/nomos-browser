@@ -56,6 +56,8 @@ export type RouteName =
   | "queues.get"
   | "autonomy.get"
   | "autonomy.set"
+  | "sessions.full-control"
+  | "sessions.ask"
   | "autonomy.default.get"
   | "autonomy.default.set"
   | "approvals.list"
@@ -154,6 +156,8 @@ export const ROUTES: readonly RouteSpec[] = Object.freeze([
   // ── Live Agent Console ────────────────────────────────────────────────────
   spec("GET", `${P}/sessions/:id/autonomy`, "autonomy.get", false),
   spec("POST", `${P}/sessions/:id/autonomy`, "autonomy.set", false),
+  spec("POST", `${P}/sessions/:id/full-control`, "sessions.full-control", false),
+  spec("POST", `${P}/sessions/:id/ask`, "sessions.ask", false),
   spec("GET", `${P}/autonomy/default`, "autonomy.default.get", false),
   spec("POST", `${P}/autonomy/default`, "autonomy.default.set", false),
   spec("GET", `${P}/sessions/:id/approvals`, "approvals.list", false),
