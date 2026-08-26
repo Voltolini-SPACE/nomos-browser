@@ -15,10 +15,10 @@
  *  3. Espera o `/health` responder e CRIA A SESSÃO DO DONO (perfil "pessoal",
  *     headful): é ela que abre o Chromium com o painel embarcado. Sem sessão
  *     não há janela — e um lançador que termina sem janela não lançou nada.
- *  4. Copia o token de controle para a área de transferência (macOS,
- *     `pbcopy`) para o painel ser conectado com um Cmd+V. Colar continua sendo
- *     o ato explícito do dono; o que sai é a caça ao arquivo no terminal.
- *     `NOMOS_BROWSER_NO_CLIPBOARD=1` desliga.
+ *  4. NÃO cola token. O daemon injeta um handshake de mesma origem
+ *     (`local-runtime.json`) dentro da extensão que ele carregou, e o painel
+ *     conecta sozinho ao abrir — clicar no ícone basta. O token fica só no
+ *     arquivo 0600, como fallback do caminho avançado/remoto.
  *
  * O que ele NÃO faz: não liga `ai_provider` sozinho (runtime não fala com LLM
  * sem o dono pedir — exporte NOMOS_BROWSER_AI_PROVIDER=ollama:<modelo> antes),
