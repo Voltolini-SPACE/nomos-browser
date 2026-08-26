@@ -20,6 +20,14 @@ import { buildExtension, pngSolido } from "../packages/extension/build.ts";
 const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SRC = path.join(RAIZ, "packages/extension/src");
 
+// Mesmo padrão do ui-build: sem o cofre de marca (runner limpo), o teste de
+// build pula com o motivo dito. Os guardas ESTÁTICOS (sem hex, permissões
+// mínimas, PNG puro) rodam em qualquer máquina.
+const COFRE_MARCA = path.join(process.env["HOME"] ?? "", ".brand-governance/bin/brand-resolve.sh");
+const SEM_COFRE: string | false = existsSync(COFRE_MARCA)
+  ? false
+  : `cofre de marca ausente em ${COFRE_MARCA} — o build da extensão só roda na máquina com a governança`;
+
 test("o fonte da extensão não contém NENHUM token de marca", () => {
   for (const f of readdirSync(SRC)) {
     const texto = readFileSync(path.join(SRC, f), "utf8");
@@ -44,7 +52,7 @@ test("manifesto pede o MÍNIMO — ampliar exige editar este teste", () => {
   assert.ok(!texto.includes("<all_urls>"), "<all_urls> é proibido nesta extensão");
 });
 
-test("build injeta tokens do cofre e produz extensão completa", () => {
+test("build injeta tokens do cofre e produz extensão completa", { skip: SEM_COFRE }, () => {
   const r = buildExtension();
   assert.match(r.corMarca, /^#[0-9A-F]{6}$/);
   const html = readFileSync(path.join(r.dist, "sidepanel.html"), "utf8");

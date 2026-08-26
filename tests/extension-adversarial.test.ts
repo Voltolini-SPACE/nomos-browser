@@ -9,7 +9,7 @@
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import http from "node:http";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -19,6 +19,13 @@ import { buildExtension } from "../packages/extension/build.ts";
 
 const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const FIXTURE = readFileSync(path.join(RAIZ, "spike/fixture/index.html"));
+
+// Mesmo padrão do ui-build: sem o cofre de marca (runner limpo), pula com o
+// motivo dito — nunca falha fingindo outra causa.
+const COFRE_MARCA = path.join(process.env["HOME"] ?? "", ".brand-governance/bin/brand-resolve.sh");
+const SEM_COFRE: string | false = existsSync(COFRE_MARCA)
+  ? false
+  : `cofre de marca ausente em ${COFRE_MARCA} — o adversarial da extensão só roda na máquina com a governança`;
 
 let daemon: { port: number; close: () => Promise<void> } | null = null;
 let fixtureServer: http.Server;
@@ -63,6 +70,7 @@ async function acao(tool: string, corpo: Record<string, unknown>): Promise<any> 
 }
 
 before(async () => {
+  if (SEM_COFRE !== false) return; // testes pulados; nada a montar
   const extDir = buildExtension().dist;
   fixtureServer = http.createServer((_req, res) => {
     res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
@@ -104,6 +112,7 @@ before(async () => {
 });
 
 after(async () => {
+  if (SEM_COFRE !== false) return; // nada foi montado
   await panelCtx?.close();
   if (daemon !== null) await daemon.close().catch(() => undefined);
   await new Promise<void>((r) => fixtureServer?.close(() => r()));
@@ -112,7 +121,7 @@ after(async () => {
   for (const [k, v] of Object.entries(GATE)) process.stderr.write(`${k}=${v}\n`);
 });
 
-test("recarregar o painel reconecta sozinho (estado em storage.session, verdade no runtime)", async () => {
+test("recarregar o painel reconecta sozinho (estado em storage.session, verdade no runtime)", { skip: SEM_COFRE }, async () => {
   await painel.reload();
   await painel.waitForSelector("#chat:not([hidden])", { timeout: 15000 });
   await painel.waitForFunction(
@@ -123,7 +132,7 @@ test("recarregar o painel reconecta sozinho (estado em storage.session, verdade 
   GATE.ADV_RELOAD_RECONECTA = "YES";
 });
 
-test("aprovação decidida por fora some do painel — e não vira decisão dupla", async () => {
+test("aprovação decidida por fora some do painel — e não vira decisão dupla", { skip: SEM_COFRE }, async () => {
   await gestao(`/api/v1/sessions/${sessionId}/autonomy`, "POST", { mode: "ASK", by: "adversarial" });
   const pendente = acao("browser.goto", { url: FIXTURE_URL + "?stale=1" });
   await painel.waitForSelector("#aprovacao:not([hidden])", { timeout: 20000 });
@@ -143,7 +152,7 @@ test("aprovação decidida por fora some do painel — e não vira decisão dupl
   GATE.ADV_APPROVAL_STALE = "YES";
 });
 
-test("segunda sessão não sequestra o painel", async () => {
+test("segunda sessão não sequestra o painel", { skip: SEM_COFRE }, async () => {
   const s2 = await gestao("/api/v1/sessions", "POST", { owner: "outro-agente", profile: "sandbox2" });
   assert.ok(s2.body.session_id);
   await new Promise((r) => setTimeout(r, 4500)); // um ciclo do poll de sessões
@@ -153,7 +162,7 @@ test("segunda sessão não sequestra o painel", async () => {
   GATE.ADV_DUAS_SESSOES = "YES";
 });
 
-test("sessão encerrada: o painel diz, e não finge operar", async () => {
+test("sessão encerrada: o painel diz, e não finge operar", { skip: SEM_COFRE }, async () => {
   await gestao(`/api/v1/sessions/${sessionId}`, "DELETE");
   await painel.waitForFunction(
     () => document.getElementById("hSessao")!.textContent!.includes("sem sessão"),
@@ -163,7 +172,7 @@ test("sessão encerrada: o painel diz, e não finge operar", async () => {
   GATE.ADV_SESSAO_MORTA = "YES";
 });
 
-test("runtime morto: o indicador cai e o painel declara o inalcançável", async () => {
+test("runtime morto: o indicador cai e o painel declara o inalcançável", { skip: SEM_COFRE }, async () => {
   await daemon!.close();
   daemon = null;
   await painel.waitForFunction(

@@ -19,7 +19,7 @@ import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import http from "node:http";
 import { execSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -29,6 +29,14 @@ import { buildExtension } from "../packages/extension/build.ts";
 
 const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const FIXTURE = readFileSync(path.join(RAIZ, "spike/fixture/index.html"));
+
+// Mesmo padrão do ui-build: o cofre de marca é da máquina do dono, não do
+// runner. Sem ele a extensão não constrói — os testes PULAM com o motivo dito,
+// nunca falham fingindo outra causa.
+const COFRE_MARCA = path.join(process.env["HOME"] ?? "", ".brand-governance/bin/brand-resolve.sh");
+const SEM_COFRE: string | false = existsSync(COFRE_MARCA)
+  ? false
+  : `cofre de marca ausente em ${COFRE_MARCA} — o E2E da extensão só roda na máquina com a governança`;
 
 let daemon: { port: number; close: () => Promise<void> };
 let fixtureServer: http.Server;
@@ -86,6 +94,7 @@ async function acao(tool: string, corpo: Record<string, unknown>): Promise<any> 
 }
 
 before(async () => {
+  if (SEM_COFRE !== false) return; // testes pulados; nada a montar
   // 1. extensão nasce do cofre — o mesmo build de produção.
   extDir = buildExtension().dist;
 
@@ -135,6 +144,7 @@ before(async () => {
 });
 
 after(async () => {
+  if (SEM_COFRE !== false) return; // nada foi montado
   await panelCtx?.close();
   await daemon?.close();
   await new Promise<void>((r) => fixtureServer?.close(() => r()));
@@ -145,14 +155,14 @@ after(async () => {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-test("o Chromium do RUNTIME subiu com a extensão embarcada (prova: argv do processo)", () => {
+test("o Chromium do RUNTIME subiu com a extensão embarcada (prova: argv do processo)", { skip: SEM_COFRE }, () => {
   const ps = execSync("ps ax -o command", { encoding: "utf8" });
   const linhas = ps.split("\n").filter((l) => l.includes(`--load-extension=${extDir}`));
   assert.ok(linhas.length > 0, "nenhum Chromium com --load-extension apontando para a extensão construída");
   GATE.RUNTIME_CHROMIUM_CARREGA_EXTENSAO = "YES";
 });
 
-test("credencial errada é recusada — o painel diz, não engole", async () => {
+test("credencial errada é recusada — o painel diz, não engole", { skip: SEM_COFRE }, async () => {
   await painel.waitForSelector("#conexao:not([hidden])", { timeout: 10000 });
   await painel.fill("#cUrl", BASE);
   await painel.fill("#cToken", "token-forjado-000");
@@ -165,7 +175,7 @@ test("credencial errada é recusada — o painel diz, não engole", async () => 
   GATE.EXTENSION_AUTH = "YES";
 });
 
-test("painel conecta com o token real e mostra a sessão viva", async () => {
+test("painel conecta com o token real e mostra a sessão viva", { skip: SEM_COFRE }, async () => {
   await painel.fill("#cToken", TOKEN ?? "");
   await painel.click("#cConectar");
   await painel.waitForSelector("#chat:not([hidden])", { timeout: 15000 });
@@ -180,7 +190,7 @@ test("painel conecta com o token real e mostra a sessão viva", async () => {
   GATE.SECURE_BRIDGE = "YES";
 });
 
-test("abas do agente aparecem, com posse declarada", async () => {
+test("abas do agente aparecem, com posse declarada", { skip: SEM_COFRE }, async () => {
   await painel.waitForFunction(
     () => document.querySelectorAll("#abas .aba").length > 0,
     undefined,
@@ -191,7 +201,7 @@ test("abas do agente aparecem, com posse declarada", async () => {
   GATE.TAB_CONTROL = "YES";
 });
 
-test("ASK e AUTO alternam pelo painel e o estado volta do runtime, não da tela", async () => {
+test("ASK e AUTO alternam pelo painel e o estado volta do runtime, não da tela", { skip: SEM_COFRE }, async () => {
   await painel.click("#mAsk");
   await painel.waitForFunction(
     () => document.getElementById("mAsk")!.getAttribute("aria-pressed") === "true",
@@ -221,7 +231,7 @@ test("ASK e AUTO alternam pelo painel e o estado volta do runtime, não da tela"
   );
 });
 
-test("em ASK, uma navegação pede aprovação no painel; PERMITIR libera exatamente ela", async () => {
+test("em ASK, uma navegação pede aprovação no painel; PERMITIR libera exatamente ela", { skip: SEM_COFRE }, async () => {
   // O teste faz o papel do agente: dispara a ação SEM aguardar.
   const pendente = acao("browser.goto", { url: FIXTURE_URL + "?aprovada=1" });
 
@@ -237,7 +247,7 @@ test("em ASK, uma navegação pede aprovação no painel; PERMITIR libera exatam
   GATE.APPROVAL_UI = "YES";
 });
 
-test("NEGAR nega — e a aprovação anterior não é reutilizável", async () => {
+test("NEGAR nega — e a aprovação anterior não é reutilizável", { skip: SEM_COFRE }, async () => {
   const pendente = acao("browser.goto", { url: FIXTURE_URL + "?negada=1" });
   await painel.waitForSelector("#aprovacao:not([hidden])", { timeout: 20000 });
   await painel.click("#aprNegar");
@@ -252,7 +262,7 @@ test("NEGAR nega — e a aprovação anterior não é reutilizável", async () =
   );
 });
 
-test("clique com spotlight ligado continua entregue e verificado", async () => {
+test("clique com spotlight ligado continua entregue e verificado", { skip: SEM_COFRE }, async () => {
   // Em ASK o clique pede aprovação; o teste aprova PELO PAINEL, como o dono.
   const pendente = acao("browser.click", { target: { selector: "#login-btn" } });
   await painel.waitForSelector("#aprovacao:not([hidden])", { timeout: 20000 });
@@ -263,7 +273,7 @@ test("clique com spotlight ligado continua entregue e verificado", async () => {
   GATE.ACTION_HIGHLIGHT = "YES";
 });
 
-test("feed de atividade registra o que o agente fez", async () => {
+test("feed de atividade registra o que o agente fez", { skip: SEM_COFRE }, async () => {
   await painel.waitForFunction(
     () => document.querySelectorAll("#feed .ev").length > 0,
     undefined,
@@ -272,7 +282,7 @@ test("feed de atividade registra o que o agente fez", async () => {
   GATE.LIVE_ACTIVITY = "YES";
 });
 
-test("chat embutido envia a intenção ao control plane — e repete a recusa do runtime com honestidade", async () => {
+test("chat embutido envia a intenção ao control plane — e repete a recusa do runtime com honestidade", { skip: SEM_COFRE }, async () => {
   // AUTO para o que é rebaixável: a intenção flui sem aprovação manual aqui.
   // (Se browser.task for SEMPRE_APROVAR, o card aparece e o teste decide.)
   await painel.click("#mAuto");
@@ -307,7 +317,7 @@ test("chat embutido envia a intenção ao control plane — e repete a recusa do
   GATE.EMBEDDED_CHAT = "YES";
 });
 
-test("PAUSAR congela no runtime; retomar exige e usa o escopo certo", async () => {
+test("PAUSAR congela no runtime; retomar exige e usa o escopo certo", { skip: SEM_COFRE }, async () => {
   await painel.click("#btPausar");
   await painel.waitForFunction(
     () => document.getElementById("aEstado")!.dataset.estado === "PAUSED",
@@ -323,7 +333,7 @@ test("PAUSAR congela no runtime; retomar exige e usa o escopo certo", async () =
   GATE.PAUSE = "YES";
 });
 
-test("ASSUMIR CONTROLE congela o agente até a devolução — inclusive para observar", async () => {
+test("ASSUMIR CONTROLE congela o agente até a devolução — inclusive para observar", { skip: SEM_COFRE }, async () => {
   await painel.click("#btControle");
   await painel.waitForFunction(
     () => document.body.dataset.controle === "human",
@@ -344,7 +354,7 @@ test("ASSUMIR CONTROLE congela o agente até a devolução — inclusive para ob
   GATE.TAKEOVER = "YES";
 });
 
-test("Audit e Replay abrem somente leitura — a alavanca não existe", async () => {
+test("Audit e Replay abrem somente leitura — a alavanca não existe", { skip: SEM_COFRE }, async () => {
   await painel.click("#btAudit");
   await painel.waitForFunction(
     () => document.querySelectorAll("#histLinha .hi").length > 0,
@@ -367,7 +377,7 @@ test("Audit e Replay abrem somente leitura — a alavanca não existe", async ()
   GATE.REPLAY_UI = "YES";
 });
 
-test("PARAR é parada de emergência no backend", async () => {
+test("PARAR é parada de emergência no backend", { skip: SEM_COFRE }, async () => {
   await painel.click("#btParar");
   await painel.waitForFunction(
     () => [...document.querySelectorAll("#feed .ev")].some((e) =>
