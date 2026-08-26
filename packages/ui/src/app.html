@@ -262,7 +262,7 @@
   <div id="palco">
     <div id="semTela">
       Runtime não alcançado ou nenhuma sessão ativa.<br>
-      <code>nomos-browser</code> em <code>127.0.0.1:7777</code><br>
+      <code>nomos-browser</code> em <code id="semTelaEndereco">127.0.0.1:7777</code><br>
       <small>__NOMOS_ASSINATURA__</small>
     </div>
     <img id="tela" alt="Página sob controle do NOMOS" hidden>
@@ -337,6 +337,19 @@ const BASE = (function () {
   return RUNTIME_PADRAO;
 })();
 const $ = (id) => document.getElementById(id);
+
+// A tela vazia dizia "nomos-browser em 127.0.0.1:7777" como TEXTO FIXO. Quando o
+// daemon escuta noutra porta — o caso normal em teste, em demo e em qualquer
+// maquina com a 7777 ocupada — a mensagem mandava o leitor conferir um endereco
+// que nao era o dela. Mensagem de erro que aponta o lugar errado custa mais caro
+// do que mensagem nenhuma: manda depurar o que nao esta quebrado.
+//
+// `BASE` ja e o endereco de verdade. A tela passa a dizer o que ela realmente
+// tentou falar.
+(function enderecoReal() {
+  const alvo = document.getElementById("semTelaEndereco");
+  if (alvo !== null) { alvo.textContent = BASE.replace(/^https?:\/\//, ""); }
+})();
 
 // O daemon injeta o token na página servida a quem já o apresentou. Fica em
 // memória, não em localStorage: um token de arranque não deve sobreviver ao

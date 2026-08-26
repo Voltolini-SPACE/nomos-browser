@@ -356,10 +356,46 @@ describe("Benchmark.run — medição", () => {
       iteracoes: 5,
     });
 
-    // ~100 ms de parede, mas o processo dorme: dormir não consome CPU sob carga
-    // nenhuma (medido: ~1,0–1,7 ms de CPU, com e sem 24 processos concorrentes).
+    // ~100 ms de parede, mas o processo dorme.
+    //
+    // O limiar de 5x foi calibrado NESTA maquina ("medido: ~1,0-1,7 ms de CPU,
+    // com e sem 24 processos concorrentes") e reprovou no runner do GitHub, que
+    // e outra maquina: menos nucleos, virtualizada, vizinhos barulhentos. Medido
+    // aqui de novo, sob 12 processos disputando, a razao cai de ~40-100x para
+    // 18,5x — degrada e nao chega perto de 5x. Ou seja: a disputa de CPU desta
+    // maquina NAO reproduz a falha de la, e trocar 5 por outro numero sem ver os
+    // valores do runner seria so mudar de aposta.
+    //
+    // Entao as medidas passam a ser IMPRESSAS sempre. A mensagem do assert nao
+    // sobreviveu ao formato do TAP no log da CI — chegou como "false !== true",
+    // sem numero nenhum, e foi por isso que a primeira investigacao ficou sem
+    // dado. Uma linha de diagnostico no stdout sobrevive.
+    const fracao = (r: { cpu: { total_us: number }; wall_ms: number }) =>
+      r.wall_ms <= 0 ? 0 : r.cpu.total_us / (r.wall_ms * 1000);
+    console.log(
+      `[bench/cpu] queima cpu=${queima.cpu.total_us}us parede=${queima.wall_ms.toFixed(1)}ms fracao=${fracao(queima).toFixed(3)} | ` +
+      `ocioso cpu=${ocioso.cpu.total_us}us parede=${ocioso.wall_ms.toFixed(1)}ms fracao=${fracao(ocioso).toFixed(3)} | ` +
+      `razao=${ocioso.cpu.total_us === 0 ? "inf" : (queima.cpu.total_us / ocioso.cpu.total_us).toFixed(1)}x`,
+    );
+
     assert.equal(ocioso.wall_ms >= 90, true, `parede=${ocioso.wall_ms}`);
-    assert.equal(ocioso.cpu.total_us < 20_000, true, `cpu=${ocioso.cpu.total_us} µs num run dormindo`);
+
+    // A afirmacao que realmente importa nao e um multiplicador: e que o contador
+    // mede CPU e nao relogio de parede. Dormir gasta pouca CPU POR UNIDADE DE
+    // PAREDE; queimar gasta muita. Escrita como fracao, ela nao depende de quao
+    // rapida e a maquina — so de a medicao significar o que diz. Um contador
+    // quebrado que devolvesse a parede daria fracao ~1 nos dois e reprovaria
+    // aqui; um que devolvesse zero reprovaria na linha de baixo.
+    assert.equal(
+      fracao(ocioso) < 0.5,
+      true,
+      `dormindo, a CPU deveria ser fracao pequena da parede: cpu=${ocioso.cpu.total_us}us parede=${ocioso.wall_ms}ms fracao=${fracao(ocioso).toFixed(3)}`,
+    );
+    assert.equal(
+      fracao(queima) > 0.5,
+      true,
+      `queimando, a CPU deveria dominar a parede: cpu=${queima.cpu.total_us}us parede=${queima.wall_ms}ms fracao=${fracao(queima).toFixed(3)}`,
+    );
     assert.equal(
       queima.cpu.total_us > ocioso.cpu.total_us * 5,
       true,
