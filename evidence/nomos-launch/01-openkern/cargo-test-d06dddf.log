@@ -1,0 +1,169 @@
+   Compiling kern-types v0.0.0 (/private/tmp/ok-baseline/crates/kern-types)
+   Compiling kern-policy v0.0.0 (/private/tmp/ok-baseline/crates/kern-policy)
+   Compiling kern-repo v0.0.0 (/private/tmp/ok-baseline/crates/kern-repo)
+   Compiling kern-fsm v0.0.0 (/private/tmp/ok-baseline/crates/kern-fsm)
+   Compiling kern-capability v0.0.0 (/private/tmp/ok-baseline/crates/kern-capability)
+   Compiling kern-git v0.0.0 (/private/tmp/ok-baseline/crates/kern-git)
+   Compiling kern-exec v0.0.0 (/private/tmp/ok-baseline/crates/kern-exec)
+   Compiling kern-cli v0.0.0 (/private/tmp/ok-baseline/crates/kern-cli)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 5.33s
+     Running unittests src/lib.rs (target/debug/deps/kern_capability-296b3505f8f53821)
+
+running 22 tests
+test fs::tests::allows_inside ... ok
+test fs::tests::blocks_absolute_outside ... ok
+test fs::tests::sibling_prefix_is_not_contained ... ok
+test fs::tests::blocks_parent_traversal ... ok
+test scope::tests::allows_listed_program_clean_args ... ok
+test scope::tests::network_allowlist_matches_exact_endpoint ... ok
+test scope::tests::network_default_denies ... ok
+test scope::tests::rejects_control_characters ... ok
+test scope::tests::rejects_config_injection ... ok
+test scope::tests::rejects_unlisted_program ... ok
+test tests::absolute_path_and_traversal_denied ... ok
+test tests::argument_injection_denied ... ok
+test tests::authorize_operation_uses_bound_target ... ok
+test tests::expired_capability_denied ... ok
+test tests::happy_path_authorizes_and_consumes_use ... ok
+test tests::network_denied_by_default ... ok
+test tests::one_shot_cannot_be_replayed ... ok
+test tests::operation_not_granted_denied ... ok
+test tests::risk_ceiling_enforced ... ok
+test tests::worktree_binding_denies_other_worktree ... ok
+test tests::wrong_agent_is_denied ... ok
+test tests::wrong_mission_and_repo_denied ... ok
+
+test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/main.rs (target/debug/deps/kern-0a0e78b1d7e6d624)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/kern_exec-bc62ebfb9f3f1474)
+
+running 11 tests
+test sandbox::tests::host_backend_declares_honest_capabilities ... ok
+test sandbox::tests::empty_policy_is_trivially_admitted ... ok
+test sandbox::tests::multiple_missing_capabilities_all_reported ... ok
+test sandbox::tests::filesystem_isolation_requirement_is_refused_fail_closed ... ok
+test sandbox::tests::network_allowlist_requirement_is_refused ... ok
+test sandbox::tests::satisfiable_policy_is_admitted ... ok
+test tests::unauthorized_program_is_denied_before_spawn ... ok
+test tests::environment_is_isolated_to_allowlist ... ok
+test tests::runs_and_captures_output ... ok
+test tests::timeout_kills_long_process ... ok
+test tests::grandchild_is_reaped_no_orphan_with_positive_control ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.53s
+
+     Running unittests src/lib.rs (target/debug/deps/kern_fsm-617adc9758234c4f)
+
+running 5 tests
+test tests::cannot_leave_terminal_state ... ok
+test tests::created_to_completed_is_denied ... ok
+test tests::happy_path_reaches_completed ... ok
+test tests::skipping_authorization_is_illegal ... ok
+test tests::terminal_states_have_no_out_edges ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/kern_git-255fc29f35ea7cf5)
+
+running 8 tests
+test tests::single_git_chokepoint_and_no_shell_escapes ... ok
+test tests::operation_outside_grant_is_denied ... ok
+test tests::transactional_commit_flow ... ok
+test tests::hostile_global_config_is_ignored_with_positive_control ... ok
+test tests::git_clean_filter_is_contained_with_positive_control ... ok
+test tests::head_moved_between_authorization_and_mutation_is_refused ... ok
+test tests::git_hooks_are_contained_with_positive_control ... ok
+test tests::linked_worktrees_are_isolated ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.17s
+
+     Running unittests src/lib.rs (target/debug/deps/kern_policy-8a7155264b53b2b7)
+
+running 4 tests
+test tests::ask_is_representable ... ok
+test tests::empty_engine_denies_by_default ... ok
+test tests::risk_ceiling_and_agent_scoping ... ok
+test tests::first_matching_rule_wins ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/kern_repo-02c66a6f9011a3aa)
+
+running 7 tests
+test tests::not_a_repository_errors ... ok
+test tests::resolves_main_worktree ... ok
+test tests::head_change_is_observed_on_reresolve ... ok
+test tests::symlinked_path_resolves_to_real_repo ... ok
+test tests::linked_worktree_shares_repository_but_distinct_worktree ... ok
+test tests::two_repos_have_distinct_identity_no_cross_effect ... ok
+test tests::submodule_is_a_distinct_repository ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running unittests src/lib.rs (target/debug/deps/kern_types-53ee9ad317f12f73)
+
+running 12 tests
+test budget::tests::output_cannot_overspend ... ok
+test budget::tests::operations_deplete_and_refuse ... ok
+test id::tests::accepts_and_borrows ... ok
+test evidence::tests::records_fields ... ok
+test id::tests::generate_is_unique_and_prefixed ... ok
+test id::tests::ids_are_distinct_types ... ok
+test id::tests::rejects_empty ... ok
+test mission::tests::builds_and_exposes_fields ... ok
+test mission::tests::deadline_is_attachable ... ok
+test risk::tests::ordering_is_meaningful ... ok
+test risk::tests::within_ceiling ... ok
+test time::tests::not_expired_before_and_expired_after ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests kern_capability
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests kern_exec
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests kern_fsm
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests kern_git
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests kern_policy
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests kern_repo
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests kern_types
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+RC=0

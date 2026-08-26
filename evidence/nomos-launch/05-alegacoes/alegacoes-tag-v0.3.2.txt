@@ -1,0 +1,31 @@
+ALEGACOES_PUBLICAS
+fonte_da_medicao_da_suite=/tmp/resumo-final.tsv
+
+medido:
+  arquivos_teste         38
+  ferramentas_mcp        16
+  comandos_cli           8   (chaves de COMMANDS; `replay verify` e forma de invocacao, nao comando)
+  demos                  6
+  suite_pass             797
+  suite_fail             0
+  suite_arquivos         38
+  suite_arquivos_ruins   0
+
+declarado vs medido:
+  ok   ferramentas MCP (tabela)     declarado=16     medido=16
+  ok   ferramentas MCP (secao)      declarado=16     medido=16
+  ok   ferramentas MCP              declarado=16     medido=16
+  ok   comandos CLI                 declarado=8      medido=8
+         chaves de COMMANDS; `replay verify` e forma de invocacao, nao comando
+  ok   arquivos de teste            declarado=38     medido=38
+  ok   passes da suite              declarado=797    medido=797
+  ok   site · passes da suite       declarado=797    medido=797
+  ok   site · arquivos de teste     declarado=38     medido=38
+  ok   site · demos                 declarado=6      medido=6
+  ok   site · ferramentas MCP       declarado=16     medido=16
+  ok   site · comandos CLI          declarado=8      medido=8
+         chaves de COMMANDS; `replay verify` e forma de invocacao, nao comando
+
+ALEGACOES_CONTRADITORIAS=0
+ALEGACOES_NAO_VERIFICAVEIS=0
+UNPROVEN_PUBLIC_CLAIMS=0

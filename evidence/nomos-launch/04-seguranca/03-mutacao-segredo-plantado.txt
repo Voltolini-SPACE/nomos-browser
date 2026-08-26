@@ -1,0 +1,16 @@
+VARREDURA_DE_HISTORICO
+repo=/tmp/nomos-mut
+commits=65
+objetos=1810
+
+-- 1. formatos de credencial em QUALQUER blob do historico
+  ACHADO padrao: AKIA[0-9A-Z]{16}
+      38374f64b1ff1175fc21faa110bfc523249136ee:vazamento.txt:1:AKIA0123456789ABCDEF
+
+-- 2. arquivos que nunca deveriam ter entrado, em qualquer commit
+  nenhum arquivo proibido em nenhum commit
+
+-- 3. autoteste: a varredura enxerga um segredo plantado?
+  ok: o padrao casa com um segredo plantado
+
+HISTORICO_PUBLICO_LIMPO=NAO

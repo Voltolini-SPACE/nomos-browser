@@ -1,0 +1,71 @@
+CLEAN_ROOM_PUBLICO
+remoto=https://github.com/Voltolini-SPACE/nomos-browser.git
+ref=v0.3.1
+data=2026-08-26T03:11:05Z
+node=v26.0.0
+npm=11.12.1
+
+== 1. CLONE ==
+Cloning into '/tmp/nomos-final/repo'...
+warning: refs/tags/v0.3.1 97ce4de28caa796445ef9dcd37f51fcece618ee7 is not a commit!
+Note: switching to 'b19adef7bb031d70da1085f2dfdab3e319f8271c'.
+
+You are in 'detached HEAD' state. You can look around, make experimental
+changes and commit them, and you can discard any commits you make in this
+state without impacting any branches by switching back to a branch.
+
+If you want to create a new branch to retain commits you create, you may
+do so (now or later) by using -c with the switch command. Example:
+
+  git switch -c <new-branch-name>
+
+Or undo this operation with:
+
+  git switch -
+
+Turn off this advice by setting config variable advice.detachedHead to false
+
+CLONE=OK head=b19adef7bb031d70da1085f2dfdab3e319f8271c
+arquivos_versionados=716
+
+== 2. CONTEUDO RECEBIDO ==
+  presente: README.md (14042 b)
+  presente: LICENSE (1072 b)
+  presente: NOTICE.md (2171 b)
+  presente: CHANGELOG.md (38597 b)
+  presente: CONTRIBUTING.md (3487 b)
+  presente: SECURITY.md (2091 b)
+  presente: PRODUCT_MANIFEST.md (9479 b)
+  presente: PRODUCT_TRUTH_MATRIX.md (9725 b)
+  presente: ROADMAP.md (4102 b)
+  presente: package.json (708 b)
+VERSAO_PACKAGE_JSON=0.3.1
+LICENSE_PACKAGE_JSON=MIT
+
+== 3. HIGIENE DO PACOTE ==
+  node_modules: 0 arquivo(s) versionado(s)
+  packages/ui/dist: 0 arquivo(s) versionado(s)
+  .env: 0 arquivo(s) versionado(s)
+  .DS_Store: 0 arquivo(s) versionado(s)
+HIGIENE=OK
+
+== 4. NPM CI ==
+  ambiente herdado: NODE_ENV=production omit=dev
+
+added 17 packages in 453ms
+NPM_CI=OK
+  tsc local: presente
+
+== 5. TYPECHECK ==
+TYPECHECK=OK
+
+== 6. SUITE ==
+SUITE_RC=1  duracao=416s
+  TS_PASS=795
+  TS_FAIL=2
+  ARQUIVOS_OK=37
+  ARQUIVOS_RUINS=1
+
+== VEREDITO ==
+CLEAN_ROOM=FAIL
+head=b19adef7bb031d70da1085f2dfdab3e319f8271c

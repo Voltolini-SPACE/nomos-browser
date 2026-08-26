@@ -1,0 +1,15 @@
+VARREDURA_DE_HISTORICO
+repo=/tmp/nomos-v032/repo
+commits=1
+objetos=907
+
+-- 1. formatos de credencial em QUALQUER blob do historico
+  nenhum formato de credencial em nenhum commit
+
+-- 2. arquivos que nunca deveriam ter entrado, em qualquer commit
+  nenhum arquivo proibido em nenhum commit
+
+-- 3. autoteste: a varredura enxerga um segredo plantado?
+  ok: o padrao casa com um segredo plantado
+
+HISTORICO_PUBLICO_LIMPO=SIM

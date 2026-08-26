@@ -1,0 +1,53 @@
+CLEAN_ROOM_PUBLICO
+remoto=https://github.com/Voltolini-SPACE/nomos-browser.git
+ref=main
+data=2026-08-26T02:21:38Z
+node=v26.0.0
+npm=11.12.1
+
+== 1. CLONE ==
+Cloning into '/tmp/nomos-clean-room/repo'...
+CLONE=OK head=5ca4461439051b7751d97785133f5d925691e64a
+arquivos_versionados=713
+
+== 2. CONTEUDO RECEBIDO ==
+  presente: README.md (13710 b)
+  presente: LICENSE (1072 b)
+  presente: NOTICE.md (2171 b)
+  presente: CHANGELOG.md (31891 b)
+  presente: CONTRIBUTING.md (3487 b)
+  presente: SECURITY.md (2091 b)
+  presente: PRODUCT_MANIFEST.md (9267 b)
+  presente: PRODUCT_TRUTH_MATRIX.md (9725 b)
+  presente: ROADMAP.md (4102 b)
+  presente: package.json (713 b)
+VERSAO_PACKAGE_JSON=0.3.0-rc.2
+LICENSE_PACKAGE_JSON=MIT
+
+== 3. HIGIENE DO PACOTE ==
+  node_modules: 0 arquivo(s) versionado(s)
+  packages/ui/dist: 0 arquivo(s) versionado(s)
+  .env: 0 arquivo(s) versionado(s)
+  .DS_Store: 0 arquivo(s) versionado(s)
+HIGIENE=OK
+
+== 4. NPM CI ==
+  ambiente herdado: NODE_ENV=production omit=dev
+
+added 17 packages in 487ms
+NPM_CI=OK
+  tsc local: presente
+
+== 5. TYPECHECK ==
+TYPECHECK=OK
+
+== 6. SUITE ==
+SUITE_RC=0  duracao=421s
+  TS_PASS=797
+  TS_FAIL=0
+  ARQUIVOS_OK=38
+  ARQUIVOS_RUINS=0
+
+== VEREDITO ==
+CLEAN_ROOM=PASS
+head=5ca4461439051b7751d97785133f5d925691e64a

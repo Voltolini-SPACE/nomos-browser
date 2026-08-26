@@ -1,0 +1,3 @@
+RMSYNC_CRU: ok=false erro=ENOTEMPTY
+HELPER:     removido=true tentativas=8 ultimoErro=nenhum
+CONTROLE=VALIDO (o cru quebra, o helper aguenta)
