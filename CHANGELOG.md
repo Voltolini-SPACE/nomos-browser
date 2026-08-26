@@ -3,7 +3,7 @@
 Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento pretendido: [SemVer](https://semver.org/lang/pt-BR/).
 
-**Versão corrente: `0.4.0`.** A primeira marcação foi `v0.2.0-rc.1`; antes dela
+**Versão corrente: `0.4.1`.** A primeira marcação foi `v0.2.0-rc.1`; antes dela
 o repositório não tinha tag alguma e `package.json` declarava `0.1.0` desde o
 início — e este arquivo dizia isso, porque anunciar uma versão que nunca foi
 marcada seria o tipo de mentira que o resto desta documentação existe para
@@ -27,6 +27,33 @@ Legenda usada nos itens:
 **⚠ INCOMPATÍVEL** = muda comportamento observável de quem já usa a API.
 
 ---
+
+## [0.4.1] — 2026-08-26
+
+A correção de experiência pública sobre a 0.4.0: **o painel da Gi abre já
+conectado, num clique** — sem colar token, sem formulário, sem terminal.
+
+- **Auto-conexão do painel embarcado** (`655817d`). O dono clicava no ícone
+  NOMOS e via um formulário "CONECTAR AO RUNTIME / token impresso pelo daemon"
+  em vez do chat; o token só ia ao clipboard no arranque (já sobrescrito), sem
+  caminho óbvio para conversar. Causa raiz: a auto-conexão nunca foi ligada —
+  `auth.ts` já documentava a intenção (`rootSecret` existe "só para o daemon
+  injetar na própria UI, mesma origem"), mas a injeção não existia.
+  - **Added**: o daemon grava `<extension_dir>/local-runtime.json` `{base,token}`
+    0600 no arranque (antes de qualquer Chromium) e remove no encerramento;
+    **não** é `web_accessible_resource`. O painel lê esse handshake de mesma
+    origem (`fetch("local-runtime.json")`, sem nenhuma `chrome.*` de página) e
+    conecta sozinho. É o princípio de `serveUi()` aplicado à extensão.
+  - **Added**: saudação de estado vazio + input focado + onboarding uma vez;
+    cada mensagem anexa a aba ativa automaticamente ("que página é esta?" só
+    funciona). Identidade **Gi** no cabeçalho.
+  - **Changed**: `launch.ts`/`servico.ts` não copiam mais o token para o
+    clipboard; o token fica só no arquivo 0600 (fallback avançado).
+  - **Security**: permissões do manifesto seguem exatamente
+    `["sidePanel","storage"]`; o painel continua sem falar com o Chromium.
+    Novo teste `extension-autoconnect` prova a positiva, a **contra-prova** de
+    token forjado (o painel NÃO conecta) e o handshake 0600/não-web_accessible.
+  - Regressão: **827/0** (baseline 824 + 3 novos).
 
 ## [0.4.0] — 2026-08-26
 

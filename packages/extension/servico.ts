@@ -13,9 +13,10 @@
  *
  * O que ele mantém idêntico: daemon como processo filho (trava de instância,
  * prints e sinais dele valem), /health autenticado antes de declarar vivo,
- * sessão do dono criada para abrir a janela, token no clipboard (macOS).
+ * sessão do dono criada para abrir a janela. O painel conecta sozinho pelo
+ * handshake de mesma origem que o daemon injeta na extensão — sem clipboard.
  */
-import { spawn, execFileSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import { existsSync, readFileSync, mkdirSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -100,21 +101,17 @@ if (token !== null) {
     console.error(`[nomos] aviso: não consegui garantir a sessão do dono: ${(e as Error).message}`);
   }
 
-  if (process.platform === "darwin" && process.env["NOMOS_BROWSER_NO_CLIPBOARD"] !== "1") {
-    try {
-      execFileSync("pbcopy", { input: token });
-      console.error("[nomos] token de controle copiado para a área de transferência (Cmd+V no painel).");
-    } catch { console.error(`[nomos] token em: ${tokenPath}`); }
-  } else {
-    console.error(`[nomos] token em: ${tokenPath}`);
-  }
+  // O painel conecta sozinho pelo handshake de mesma origem que o daemon injeta
+  // na extensão (ver daemon.ts / sidepanel.js). O token não vai para a área de
+  // transferência; fica só no arquivo 0600, como fallback do caminho avançado.
+  console.error(`[nomos] token de controle (fallback avançado) em: ${tokenPath}`);
 }
 
 mkdirSync(path.join(os.homedir(), ".nomos-browser", "logs"), { recursive: true });
 console.error(
   "\n┌─ NOMOS Browser em serviço ─────────────────────────────\n" +
-  "│ Janela do Chromium aberta. Ícone NOMOS → painel ao lado.\n" +
-  `│ Conectar: runtime ${BASE} + token (Cmd+V).\n` +
-  "│ Parar: nomos-browser stop\n" +
+  "│ Janela do Chromium aberta. Clique no ícone NOMOS: o painel\n" +
+  "│ abre ao lado JÁ conectado — é só conversar com a Gi.\n" +
+  `│ (Avançado) runtime em ${BASE}. Parar: nomos-browser stop\n` +
   "└────────────────────────────────────────────────────────",
 );

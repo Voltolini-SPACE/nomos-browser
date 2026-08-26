@@ -34,7 +34,7 @@ case "${1:-help}" in
     for _ in $(seq 1 40); do vivo && break; sleep 1; done
     if vivo; then
       echo "NOMOS Browser: rodando em http://127.0.0.1:$PORT"
-      echo "Token copiado para a área de transferência — Cmd+V no painel."
+      echo "Clique no ícone NOMOS na janela do Chromium — o painel abre já conectado."
     else
       echo "NOMOS Browser NÃO respondeu ao /health em 40 s."
       echo "Veja: nomos-browser logs"; exit 1

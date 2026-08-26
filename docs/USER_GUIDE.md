@@ -16,14 +16,25 @@ bash packaging/release/install.sh
 
 Pronto: o NOMOS Browser abre sozinho e passa a iniciar no login.
 
-## Abrir e conectar
+## Abrir a Gi
 
-- A janela do Chromium abre com a extensão NOMOS embarcada.
-- Clique no ícone de quebra-cabeça → **NOMOS** (fixe se quiser).
-- No painel: runtime `http://127.0.0.1:7777` e token — **Cmd+V** (o serviço
-  copia o token para a área de transferência a cada início).
-- Se aparecer "credencial expirada — reconecte": o serviço reiniciou e o token
-  mudou; cole o novo (já está no clipboard).
+São dois passos, nenhum deles técnico:
+
+1. A janela do Chromium abre com a extensão NOMOS embarcada.
+2. Clique no ícone de quebra-cabeça → **NOMOS** (e, se quiser, **fixe na barra**
+   para deixá-lo sempre à mão).
+
+Pronto: o painel da Gi abre ao lado da página **já conectado**, com o campo de
+mensagem focado. **Não há token para colar, formulário para preencher, nem
+terminal para abrir** — o runtime injeta a credencial na própria extensão que
+carregou, de mesma origem, e o painel conecta sozinho.
+
+A primeira vez mostra um cartão curto ("A Gi está pronta"); clique em
+**Começar** e vá direto à conversa.
+
+> **Uso avançado (opcional):** se você apontar o painel para um runtime remoto,
+> aparece o formulário de conexão manual (URL + token). O token fica em
+> `~/.nomos-browser/control-token`. O caminho normal não precisa dele.
 
 ## Conversar com a Gi
 

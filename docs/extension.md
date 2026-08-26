@@ -35,13 +35,15 @@ node packages/extension/launch.ts
 ```
 
 Isso constrói a extensão do cofre de marca vigente, liga o spotlight com a cor
-da marca, sobe o daemon como processo filho, espera o `/health` (autenticado),
+da marca, sobe o daemon como processo filho, espera o `/health` (autenticado) e
 **cria a sessão do dono** (perfil "pessoal" — é ela que abre a janela do
-Chromium com o painel embarcado) e copia o token de controle para a área de
-transferência (macOS; `NOMOS_BROWSER_NO_CLIPBOARD=1` desliga). Conectar o
-painel vira: ícone NOMOS → runtime `http://127.0.0.1:7777` → Cmd+V. Ctrl-C
-encerra daemon e navegador juntos. Para a Gi planejar tasks, exporte antes
-`NOMOS_BROWSER_AI_PROVIDER=ollama:<modelo>` — o lançador não liga LLM sozinho.
+Chromium com o painel embarcado). Conectar o painel vira **um clique**: ícone
+NOMOS → o painel abre **já conectado**. O daemon injeta um handshake de mesma
+origem (`local-runtime.json`, 0600, não `web_accessible`) dentro da própria
+extensão que ele carregou, e o painel o lê no arranque — sem colar token, sem
+formulário. Ctrl-C encerra daemon e navegador juntos. Para a Gi planejar tasks,
+exporte antes `NOMOS_BROWSER_AI_PROVIDER=ollama:<modelo>` — o lançador não liga
+LLM sozinho.
 
 Equivalente por configuração, sem o lançador:
 
@@ -67,11 +69,21 @@ publicada** — publicar é ato do dono.
 
 ## Conectar
 
-O painel pede a URL do runtime (default `http://127.0.0.1:7777`) e o token que
-o daemon imprime no arranque (arquivo `control-token`). Colar o token é o ato
-explícito que amarra o painel ao runtime certo — a extensão não o adivinha nem
-o lê do disco. O token fica em `chrome.storage.session`: morre quando o
-navegador fecha, e não é legível por páginas.
+**Caminho normal — automático.** Quando o painel roda no Chromium do próprio
+runtime, o daemon já injetou `local-runtime.json` dentro do pacote da extensão
+(mesma origem `chrome-extension://`, 0600, **não** `web_accessible_resource`). O
+painel lê esse handshake no arranque (`fetch("local-runtime.json")`, recurso
+empacotado da própria origem — nenhuma página web o alcança) e conecta sozinho.
+É o princípio de `serveUi()` da NOMOS Web aplicado à extensão: a mesma
+credencial voltando para a mesma origem. Sem clipboard, sem formulário.
+
+Isso realiza a intenção que `auth.ts` já documentava — o `rootSecret` existe "só
+para o daemon injetar na própria UI (mesma origem)".
+
+**Caminho avançado — manual.** Se não houver handshake (runtime remoto), o
+painel mostra o formulário: URL do runtime (default `http://127.0.0.1:7777`) +
+token do arquivo `control-token`. O token fica em `chrome.storage.session`:
+morre quando o navegador fecha, e não é legível por páginas.
 
 ## Requisitos
 

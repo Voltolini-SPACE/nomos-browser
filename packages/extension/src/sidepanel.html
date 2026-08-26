@@ -117,6 +117,17 @@
             color: var(--nomos-aviso); margin: 8px 10px; border-radius: 6px; text-align: center; }
   body[data-controle="human"] #humano { display: block; }
   .assinatura { opacity: .4; font-size: 9px; padding: 4px 10px; text-align: center; }
+
+  /* ── identidade Gi + onboarding ────────────────────────────────────── */
+  header .gi-tag { font-size: 10px; letter-spacing: .1em; padding: 1px 6px; border-radius: 3px;
+                   border: 1px solid var(--linha); color: var(--nomos-marca); }
+  #conexao .dica { color: var(--nomos-aviso); font-size: 10px; }
+  #onboarding { margin: 10px; padding: 12px; border: 1px solid var(--nomos-marca); border-radius: 8px;
+                background: var(--nomos-caixas); }
+  #onboarding[hidden] { display: none; }
+  #onboarding b { color: var(--nomos-marca); }
+  #onboarding p { margin: 6px 0 10px; opacity: .85; line-height: 1.45; }
+  #onboarding button { border-color: var(--nomos-marca); color: var(--nomos-marca); }
 </style>
 </head>
 <body data-controle="agent">
@@ -124,11 +135,13 @@
 <header>
   <span class="dot" id="vivo" data-live="?"></span>
   <span class="marca" title="__NOMOS_TAGLINE__">NOMOS</span>
+  <span class="gi-tag">Gi</span>
   <span class="sessao" id="hSessao">desconectado</span>
 </header>
 
 <section id="conexao">
   <span class="rotulo">Conectar ao runtime</span>
+  <div class="dica" id="cAviso" hidden>Conexão automática indisponível — informe o runtime manualmente.</div>
   <input id="cUrl" placeholder="http://127.0.0.1:7777" spellcheck="false">
   <input id="cToken" type="password" placeholder="token (impresso pelo daemon)" spellcheck="false">
   <button id="cConectar">Conectar</button>
@@ -136,6 +149,12 @@
 </section>
 
 <div id="chat" hidden>
+  <div id="onboarding" hidden>
+    <b>A Gi está pronta.</b>
+    <p>Converse comigo enquanto navega. Posso observar esta página e, quando você autorizar, agir por você.</p>
+    <button id="onbComecar">Começar</button>
+  </div>
+
   <div id="mensagens"></div>
 
   <div id="aprovacao" hidden>
@@ -190,7 +209,7 @@
   </section>
 
   <div id="compositor">
-    <textarea id="texto" placeholder="O que deseja fazer?&#10;Ex.: Abra o portal e procure as transações de ontem."></textarea>
+    <textarea id="texto" placeholder="Peça algo à Gi…&#10;Ex.: Que página é esta? · Resuma para mim · Encontre o botão Entrar."></textarea>
     <button id="enviar">➤</button>
   </div>
 

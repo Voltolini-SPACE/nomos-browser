@@ -26,7 +26,7 @@
  */
 import http from "node:http";
 import path from "node:path";
-import { existsSync, readFileSync, writeFileSync, mkdirSync, unlinkSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync, mkdirSync, unlinkSync, chmodSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import type { AddressInfo } from "node:net";
 import { WebSocketServer, type WebSocket } from "ws";
@@ -2732,6 +2732,39 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
   boundPort = port;
   const host = config.host;
 
+  // ── Auto-conexão do painel embarcado (o daemon injeta na PRÓPRIA UI) ────────
+  //
+  // `auth.ts` documenta a intenção que faltava ligar: o rootSecret existe "só
+  // para o daemon injetar na própria UI (mesma origem)". Aqui isso finalmente
+  // acontece. Quando há uma extensão embarcada (`extension_dir`), o daemon
+  // grava um handshake `local-runtime.json` DENTRO do pacote dela. O painel
+  // (chrome-extension:// carregado NESTE Chromium) lê esse arquivo do próprio
+  // pacote e conecta sozinho — sem o dono colar token, sem terminal, sem
+  // formulário. É o que faltava para "clicar no ícone → Gi ao lado, já pronta".
+  //
+  // Por que é seguro, e não um vazamento:
+  //  - o arquivo mora dentro da extensão que ESTE daemon lançou e vai 0600;
+  //  - NÃO é web_accessible_resource: só a própria página do painel (mesma
+  //    origem chrome-extension://) o lê; nenhuma página web alcança;
+  //  - é a mesma credencial voltando para a mesma origem — idêntico ao
+  //    princípio de `serveUi()`, que injeta o token na NOMOS Web servida.
+  // Escrito ANTES de qualquer sessão (o Chromium só sobe no primeiro
+  // `sessions.create`), então já existe quando a extensão carrega. Removido no
+  // encerramento para não deixar credencial velha no disco.
+  let handshakePath: string | null = null;
+  if (config.extension_dir !== null && rootToken !== null) {
+    try {
+      const alvo = path.join(config.extension_dir, "local-runtime.json");
+      writeFileSync(alvo, JSON.stringify({ base: `http://${host}:${port}`, token: rootToken.secret }), { mode: 0o600 });
+      chmodSync(alvo, 0o600);
+      handshakePath = alvo;
+    } catch (e) {
+      // Sem auto-conexão o painel cai no formulário manual — degradação, não
+      // falha de arranque. O daemon segue de pé.
+      console.error(`[daemon] não consegui gravar o handshake do painel (${config.extension_dir}): ${(e as Error).message}`);
+    }
+  }
+
   // ── FASE 9 — crash recovery de task ────────────────────────────────────────
   //
   // Roda DEPOIS do listen: as tasks que forem retomáveis precisam da API de pé,
@@ -2918,6 +2951,16 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
       services.disposeAll();
       queues.clear();
       bus.close();
+      // Não deixa o handshake de auto-conexão (com o token do arranque) para
+      // trás: o próximo arranque grava um novo, e um token morto no disco não
+      // serve a ninguém.
+      if (handshakePath !== null) {
+        try {
+          unlinkSync(handshakePath);
+        } catch {
+          /* já removido ou dir sumiu: nada a fazer */
+        }
+      }
       server.closeAllConnections();
       await new Promise<void>((r) => server.close(() => r()));
     })();

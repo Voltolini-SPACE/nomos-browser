@@ -160,6 +160,21 @@ async function conectar(base, token) {
   await estadoVivo();
   await abas();
   sistema("Conectado ao runtime " + S.base);
+  await boasVindas();
+}
+
+// Primeira impressão: o painel nunca abre mudo. Uma saudação da Gi em estado
+// vazio, o input focado e — só na primeira vez — um cartão de boas-vindas
+// curto. Nada de tutorial longo: depois disto, é conversa direta.
+async function boasVindas() {
+  try {
+    const { nomos_onboarded } = await chrome.storage.local.get("nomos_onboarded");
+    if (!nomos_onboarded) $("onboarding").hidden = false;
+  } catch { /* sem storage.local: sem onboarding, sem bloqueio */ }
+  if ($("mensagens").childElementCount === 0) {
+    gi("Olá! Sou a Gi. Estou vendo a página ao lado — pergunte sobre ela ou peça uma ação. Quando algo exigir sua autorização, eu peço aqui mesmo.");
+  }
+  $("texto").focus();
 }
 
 function pararTimers() {
@@ -390,6 +405,18 @@ async function enviar() {
   if (S.contextoPagina !== null) {
     goal = "Contexto da página ativa: " + S.contextoPagina + "\n\nPedido: " + t;
     S.contextoPagina = null;
+  } else {
+    // Sem contexto explícito, anexa a aba ATIVA do agente (título+URL) de graça
+    // — pela rota do runtime (browser.tabs da API v1), nunca por API de página
+    // do Chromium. É o que faz "que página é esta?" simplesmente funcionar sem o
+    // dono clicar em nada antes. Falha aqui não bloqueia o envio: pedido segue puro.
+    try {
+      if (S.controle !== "human") {
+        const tabs = await acao("browser.tabs", {});
+        const ativa = (Array.isArray(tabs) ? tabs : []).find((x) => x.active);
+        if (ativa) goal = 'Página ativa: "' + (ativa.title || "") + '" (' + ativa.url + ")\n\nPedido: " + t;
+      }
+    } catch { /* runtime sem abas ou sem capability: envia o pedido puro */ }
   }
   try {
     const r = await acao("browser.task", { goal });
@@ -489,6 +516,12 @@ $("btPagina").addEventListener("click", contextoDaPagina);
 $("btAudit").addEventListener("click", () => historico("audit"));
 $("btReplay").addEventListener("click", () => historico("replay"));
 
+$("onbComecar").addEventListener("click", async () => {
+  $("onboarding").hidden = true;
+  try { await chrome.storage.local.set({ nomos_onboarded: true }); } catch { /* sem storage: reaparece no próximo arranque, sem dano */ }
+  $("texto").focus();
+});
+
 $("btPausar").addEventListener("click", async () => {
   if (S.sessionId === null) return;
   const pausar = !S.pausado;
@@ -562,6 +595,25 @@ $("cConectar").addEventListener("click", async () => {
 });
 
 (async function iniciar() {
+  // 1. HANDSHAKE do daemon (mesma origem). Quando o painel roda no Chromium do
+  //    próprio runtime, o daemon injetou `local-runtime.json` DENTRO do pacote
+  //    da extensão (ver daemon.ts). Lê-lo é ler um recurso empacotado da
+  //    própria origem chrome-extension:// — nenhuma página web o alcança, e não
+  //    há chrome.* de página aqui. É isso que faz o painel abrir JÁ conectado:
+  //    sem colar token, sem formulário, sem terminal.
+  try {
+    const r = await fetch("local-runtime.json", { cache: "no-store" });
+    if (r.ok) {
+      const hs = await r.json().catch(() => null);
+      if (hs !== null && typeof hs.base === "string" && hs.base !== "") {
+        await conectar(hs.base, hs.token || null);
+        try { await chrome.storage.session.set({ nomos: { url: hs.base, token: hs.token || "" } }); } catch { /* sem storage: recarregar refaz o handshake */ }
+        return;
+      }
+    }
+  } catch { S.base = null; /* sem handshake ou runtime fora: tenta o storage */ }
+
+  // 2. RECONEXÃO por storage.session (o dono recarregou o painel).
   try {
     const { nomos } = await chrome.storage.session.get("nomos");
     if (nomos && nomos.url) {
@@ -570,6 +622,9 @@ $("cConectar").addEventListener("click", async () => {
       await conectar(nomos.url, nomos.token || null);
       return;
     }
-  } catch { /* sem estado salvo ou runtime fora: mostra a tela de conexão */ }
+  } catch { S.base = null; /* sem estado salvo ou runtime fora */ }
+
+  // 3. FALLBACK: formulário manual (runtime remoto ou avançado).
+  $("cAviso").hidden = false;
   $("conexao").hidden = false;
 })();

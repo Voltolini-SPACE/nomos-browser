@@ -121,6 +121,14 @@ before(async () => {
   BASE = `http://127.0.0.1:${daemon.port}`;
   TOKEN = (daemon as unknown as { token: string | null }).token;
 
+  // Este E2E exercita o caminho MANUAL/avançado (runtime informado à mão, token
+  // explícito colado no formulário). O daemon embarcado também grava um
+  // handshake de auto-conexão em `extDir`; removê-lo aqui força o painel ao
+  // formulário. A auto-conexão tem cobertura própria e adversarial em
+  // tests/extension-autoconnect.test.ts — os dois caminhos são reais e ambos
+  // precisam continuar de pé.
+  rmSync(path.join(extDir, "local-runtime.json"), { force: true });
+
   // 4. sessão real + página real.
   const s = await gestao("/api/v1/sessions", "POST", { owner: "NOMOS", profile: "sandbox" });
   sessionId = s.body.session_id ?? s.body.result?.session_id;

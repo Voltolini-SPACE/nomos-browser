@@ -80,4 +80,4 @@ case ":$PATH:" in *":$BIN:"*) ;; *) echo "   AVISO: $BIN não está no PATH — 
 # 6. Subir agora.
 "$BIN/nomos-browser" start
 
-echo "── Pronto. Na janela do Chromium: ícone NOMOS → runtime http://127.0.0.1:7777 → Cmd+V (token)."
+echo "── Pronto. Na janela do Chromium: clique no ícone NOMOS — o painel abre ao lado JÁ conectado. É só conversar com a Gi."
