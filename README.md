@@ -66,6 +66,8 @@ viva, com as mesmas abas, cookies e task.
 
 | | |
 |---|---|
+| **Gi no side panel** | A partir da 0.4.0, o navegador abre com um painel lateral: converse com a Gi, veja o agente trabalhar (AGORA), aprove ao lado da página, alterne ASK/AUTO, pause, assuma o volante e audite — sem sair da janela |
+| **Spotlight** | Antes de clicar ou digitar, o runtime destaca o alvo NA própria página com o selo "● NOMOS controlando" |
 | **Live Agent Console** | Espelho da página, cursor do agente, faixa de estado, feed de atividade, centro de aprovação e histórico somente leitura |
 | **Dois modos de autonomia** | `ASK` pergunta antes de cada ação que muda a página; `AUTO` executa sozinho o que você já autorizou |
 | **`AUTO` não é bypass** | O modo automático nunca remove uma aprovação obrigatória. Isso é topologia do código, não promessa |
@@ -92,9 +94,35 @@ Roteiros reproduzíveis com resultado esperado estão em
 
 ## Instalação
 
+### Como usuário (recomendado) — sem terminal de desenvolvedor
+
+Baixe o release mais recente em
+[Releases](https://github.com/Voltolini-SPACE/nomos-browser/releases) e:
+
+```bash
+tar -xzf nomos-browser-v*.tar.gz && cd nomos-browser-v*/
+bash packaging/release/install.sh
+```
+
+O instalador verifica o Node (≥ 22.18 — único requisito), instala o app em
+`~/.nomos-browser/app` com o Chromium do Playwright, **detecta o Ollama** e
+grava a configuração, instala a CLI `nomos-browser` e um LaunchAgent que inicia
+no login. Ao final o navegador abre sozinho: ícone **NOMOS** → painel →
+runtime `http://127.0.0.1:7777` → token (**Cmd+V** — já está no clipboard).
+
+```bash
+nomos-browser start|stop|restart|status|logs|uninstall
+```
+
+Sem Ollama, tudo funciona menos o planejamento de tasks — e a Gi diz isso na
+tela. Guia completo: [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md).
+
+### Como desenvolvedor (a partir do repositório)
+
 ```bash
 npm ci --include=dev
 npx playwright install chromium
+node packages/extension/launch.ts   # experiência embutida (Developer Mode)
 ```
 
 `--include=dev` não é decoração: com `NODE_ENV=production` ou
