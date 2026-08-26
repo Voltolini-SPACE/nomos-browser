@@ -14,7 +14,7 @@
     "src"
   ],
   "engines": {
-    "node": ">=22.6.0"
+    "node": ">=22.18.0"
   },
   "dependencies": {
     "ws": "8.21.3"

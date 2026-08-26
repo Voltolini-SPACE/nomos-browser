@@ -131,6 +131,25 @@ else
 fi
 
 echo
+echo "════ 5b. o MESMO comando que o runner do GitHub roda ════"
+# Esta etapa nasceu de uma divergencia embaracosa: por semanas a validacao local
+# ficou verde enquanto a CI publica estava VERMELHA, e ninguem viu, porque nada
+# aqui rodava o ponto de entrada que o GitHub roda.
+#
+# A sala limpa rodava `npm test`. A regressao rodava uma lista curada. O
+# workflow roda `./scripts/ci.sh <estagio>`. Tres caminhos parecidos e nao
+# iguais — e o que a CI reprovava (`pacotes:manifestos-completos` e a tabela de
+# configuracao gerada) nao era exercido por nenhum dos outros dois.
+#
+# Validar algo ADJACENTE ao que a CI valida nao e validar a CI. Agora o mesmo
+# comando roda aqui, e o verde local passa a significar o que parecia significar.
+if (cd "$RAIZ" && ./scripts/ci.sh fast) > "$SAIDA/05b-ci-fast.txt" 2>&1; then
+  registrar "ci-fast-igual-ao-runner" "PASS" "./scripts/ci.sh fast"
+else
+  registrar "ci-fast-igual-ao-runner" "FALHOU" "ver 05b-ci-fast.txt — a CI publica reprovaria isto"
+fi
+
+echo
 echo "════ 6. guardas estáticas ════"
 if (cd "$RAIZ" \
       && node scripts/verificar-shell-expansao.ts \

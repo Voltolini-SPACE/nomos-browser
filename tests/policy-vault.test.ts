@@ -285,6 +285,28 @@ describe("FASE 21/22 — guarda de path", () => {
 // 5–7. Vault + injeção real
 // ─────────────────────────────────────────────────────────────────────────────
 
+// O estagio `cleanroom` de `ci.sh` se anuncia como "subconjunto HERMETICO (sem
+// Chromium)", e mesmo assim declarava este arquivo — que sobe um navegador de
+// verdade no teste 6. No Mac do dono isso passava calado, porque o Chromium
+// estava instalado. Na primeira maquina SEM ele (um runner Linux limpo), o
+// arquivo ficava vermelho, e justamente o script que deveria provar instalacao
+// do zero era o que nao rodava do zero.
+//
+// A regra da casa vale aqui: passo que nao PODE rodar diz isso em voz alta, com
+// a razao, e nunca vira verde por impossibilidade. Os outros 13 testes deste
+// arquivo sao herméticos e continuam rodando em qualquer lugar.
+function motivoSemChromium(): string | false {
+  try {
+    const caminho = chromium.executablePath();
+    // `executablePath()` responde mesmo quando o binario nunca foi baixado, entao
+    // a pergunta que importa e se o ARQUIVO existe.
+    return fs.existsSync(caminho) ? false : `Chromium ausente em ${caminho} — rode: npx playwright install chromium`;
+  } catch (e) {
+    return `Playwright nao resolve o Chromium nesta maquina: ${String(e)}`;
+  }
+}
+const SEM_CHROMIUM = motivoSemChromium();
+
 describe("FASE 18 — Vault", () => {
   let server: http.Server;
   let baseUrl = "";
@@ -359,7 +381,7 @@ describe("FASE 18 — Vault", () => {
     assert.equal(await v.resolve("x"), "valor-qualquer", "volta a funcionar com 0600");
   });
 
-  it("6. injeta o segredo na página REAL e o retorno NÃO contém o valor", async () => {
+  it("6. injeta o segredo na página REAL e o retorno NÃO contém o valor", { skip: SEM_CHROMIUM }, async () => {
     browser = await chromium.launch({ headless: true });
     const page = await browser.newPage();
     await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
