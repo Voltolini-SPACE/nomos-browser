@@ -65,7 +65,7 @@ __all__ = [
     "verification",
 ]
 
-SDK_VERSION = "0.5.0"
+SDK_VERSION = "0.6.0"
 
 #: Espelham as constantes homônimas de packages/core/src/contract.ts.
 CONTRACT_VERSION = "1"
