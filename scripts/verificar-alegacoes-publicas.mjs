@@ -86,10 +86,26 @@ const notas = {};
       fail += Number(f) || 0;
       if (status !== "OK") ruins += 1;
     }
-    medidas.suite_pass = pass;
-    medidas.suite_fail = fail;
-    medidas.suite_arquivos = arquivos;
-    medidas.suite_arquivos_ruins = ruins;
+    // Um resumo com MENOS arquivos do que existem em tests/ esta incompleto:
+    // ou a suite ainda esta rodando, ou alguem a esta reescrevendo agora. Ja
+    // aconteceu duas vezes nesta missao — o verificador leu um arquivo do qual
+    // outro processo era dono e devolveu `medido=0` contra `declarado=797`, que
+    // parece contradicao de alegacao e nao e. Numero parcial e pior do que
+    // numero nenhum, porque tem cara de medicao.
+    if (arquivos < medidas.arquivos_teste) {
+      medidas.suite_pass = null;
+      medidas.suite_fail = null;
+      medidas.suite_arquivos = arquivos;
+      medidas.suite_arquivos_ruins = null;
+      notas.suite_pass =
+        `NAO_MEDIDO: resumo com ${arquivos} arquivo(s) para ${medidas.arquivos_teste} em tests/. ` +
+        "Incompleto ou sendo reescrito. Espere a suite terminar e meca de novo.";
+    } else {
+      medidas.suite_pass = pass;
+      medidas.suite_fail = fail;
+      medidas.suite_arquivos = arquivos;
+      medidas.suite_arquivos_ruins = ruins;
+    }
   } else {
     medidas.suite_pass = null;
     notas.suite_pass = "NAO_MEDIDO: .suite/resumo.tsv ausente. Rode `npm test` antes de publicar numero de teste.";
