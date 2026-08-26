@@ -3,7 +3,7 @@
 Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento pretendido: [SemVer](https://semver.org/lang/pt-BR/).
 
-**Versão corrente: `0.3.0-rc.2`.** A primeira marcação foi `v0.2.0-rc.1`; antes dela
+**Versão corrente: `0.3.0`.** A primeira marcação foi `v0.2.0-rc.1`; antes dela
 o repositório não tinha tag alguma e `package.json` declarava `0.1.0` desde o
 início — e este arquivo dizia isso, porque anunciar uma versão que nunca foi
 marcada seria o tipo de mentira que o resto desta documentação existe para
@@ -27,6 +27,77 @@ Legenda usada nos itens:
 **⚠ INCOMPATÍVEL** = muda comportamento observável de quem já usa a API.
 
 ---
+
+## [0.3.0] — 2026-08-26
+
+Promoção de `0.3.0-rc.2` a estável. As tags `v0.3.0-rc.1` e `v0.3.0-rc.2`
+continuam onde estavam e apontando para o que sempre apontaram: uma tag
+publicada não se move.
+
+O que separou o `rc.2` do `0.3.0` foi uma **sala limpa a partir do remoto
+público** — clone anônimo por HTTPS, `npm ci`, typecheck e `npm test`, exatamente
+como um estranho recebe o produto. Ela reprovou na primeira execução, e por um
+motivo que nenhuma validação feita na árvore de trabalho poderia ter encontrado.
+
+### Corrigido
+
+- **`npm test` não rodava no Node 26**, e o `engines` prometia uma faixa falsa
+  dos dois lados. O script passava um diretório nu ao runner
+  (`node --test tests/`), forma que funciona até o Node 22 e quebra a partir do
+  23: o runner tenta carregar o argumento como módulo e morre com
+  `MODULE_NOT_FOUND` antes de rodar um único teste. Quem clonasse o repositório
+  público no Node 26 via a suíte inteira falhar sem que existisse defeito algum.
+  Por baixo o piso também estava errado: o executor chama `node --test <arq>.ts`
+  sem `--experimental-strip-types`, então só roda de 22.18 em diante.
+  `test` passou a delegar ao executor — que é o que a própria documentação manda
+  usar — e `engines.node` passou a `>=22.18.0`. Medido nas duas pontas: v22.23.1
+  e v26.0.0. (`5ca4461`)
+
+- **Números públicos que ninguém tinha medido.** O README dizia "789 passes / 37
+  arquivos"; a página pública dizia "792 testes". O mesmo fato, dois números, e
+  nenhuma forma de escolher entre eles sem medir. A CLI era anunciada com 9
+  comandos: são 8, porque `replay verify` é uma forma de invocação de `replay`,
+  não um comando — contaram a linha da ajuda em vez da entrada do registro.
+  Medido: 797 passes, 0 falhas, 38 arquivos, 8 comandos. (`de6857c`)
+
+- **Um relatório de evidência que se contradizia.** `regressao-completa.sh`
+  estampava `NOMOS_BROWSER_REGRESSION=PASS` no cabeçalho três linhas abaixo do
+  seu próprio `ETAPAS_FALHA=1`, porque o veredito olhava só para a suíte
+  TypeScript. E imprimia "em 37 arquivos" como literal, número que envelheceu
+  calado quando o 38º arquivo entrou. Cabeçalho e código de saída agora dizem a
+  mesma coisa, e o número vem da medição. (`de6857c`)
+
+### Adicionado
+
+- `scripts/verificar-alegacoes-publicas.mjs` — mede cada número que o produto diz
+  em público e compara com o texto declarado. Exige que a origem da medição da
+  suíte seja explícita (`--resumo`), porque a medição que vale é a da sala limpa,
+  não a da árvore de trabalho de quem escreveu o código.
+
+- `scripts/verificar-historico-publico.sh` — um repositório público entrega o
+  **histórico**, não só a ponta. O scanner que existia olhava `git ls-files`, ou
+  seja, o que está versionado agora; um segredo que entrou num commit e saiu no
+  seguinte continua sendo entregue a quem clona. Provado com controle de mutação:
+  um segredo plantado e removido da ponta passa batido pelo scanner antigo
+  (`PUBLIC_REPO_SECRET_LEAK=0`) e é pego por este.
+
+- `scripts/clean-room-publico.sh` — a sala limpa que reprovou o `rc.2`. Clona o
+  remoto público, apaga tudo antes, e roda `npm test` como um estranho rodaria.
+  Também limpa o **ambiente**: esta máquina exporta `NODE_ENV=production` e
+  `npm config omit=dev`, e a primeira execução acusou um `TYPECHECK=FAIL` que era
+  defeito do instrumento, não do produto.
+
+- `tests/entrada-publica.test.ts` — guarda a porta de entrada, com controle de
+  mutação que reencena a forma antiga e exige que ela falhe. Em Node < 23 ele se
+  declara SKIP dizendo por quê, em vez de passar em silêncio num lugar onde o
+  defeito não pode aparecer.
+
+### Notas
+
+Marcar `0.3.0` como estável **não mede nenhuma plataforma nova**. Continua
+validado em macOS com Apple Silicon; as limitações de
+[docs/LIMITATIONS.md](docs/LIMITATIONS.md) valem inteiras. Um número de versão
+não é evidência.
 
 ## [0.3.0-rc.2] — 2026-08-25
 

@@ -1,6 +1,6 @@
 {
   "name": "@nomos/browser-core",
-  "version": "0.3.0-rc.2",
+  "version": "0.3.0",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
   "type": "module",
