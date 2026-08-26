@@ -836,6 +836,15 @@ export function agentFromAIProvider(ai: AIProvider, opts: AgentAdapterOptions = 
         "Responda APENAS com um objeto JSON:",
         '{"goal":string,"constraints":string[],"steps":[{"id":string,"intent":string,"action":string,"target":object,"value":string}],"success_conditions":string[],"failure_conditions":string[]}',
         `O campo "action" só pode ser um destes: ${PLANNABLE_ACTIONS.join(", ")}`,
+        // O teste de produção real pegou o buraco desta linha não existir: o
+        // modelo planejava "abrir a página" com "value" vazio, e o passo morria
+        // em INVALID_REQUEST. O dado da ação mora em "value", e isso precisa
+        // ser DITO — modelo não adivinha contrato.
+        'O campo "value" carrega o dado da ação: a URL completa em browser.open/browser.goto, o texto em browser.type; senão "".',
+        'O campo "target" descreve o alvo do gesto, ex.: {"text":"Entrar"} ou {"selector":"#busca"}; use {} quando não houver alvo.',
+        'Se o mesmo texto puder aparecer mais de uma vez na página, acrescente "nth" (0-based) ao target, ex.: {"text":"Ver o NOMOS","nth":0} — o runtime recusa alvo ambíguo em vez de chutar.',
+        'Para browser.scroll, "value" é a distância vertical em PIXELS, ex.: "1200" (positivo desce, negativo sobe). Palavras como "bottom" são recusadas.',
+        'Exemplo de passo válido: {"id":"s1","intent":"abrir a página","action":"browser.open","target":{},"value":"https://exemplo.com"}',
         `No máximo ${maxSteps} passos.`,
       ].join("\n");
       const res = await ask(prompt, ai.capabilities.includes("json") ? "json" : "text");

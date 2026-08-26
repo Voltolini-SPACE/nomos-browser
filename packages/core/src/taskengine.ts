@@ -977,7 +977,12 @@ export class TaskEngine {
           }
           // Controle humano não é falha: é o dono operando. Pausar preserva o
           // checkpoint e devolve a decisão a quem tem o volante.
-          if (code === "CONTROL_HELD_BY_HUMAN") {
+          // AGENT_PAUSED entrou aqui pelo teste de produção real: o botão
+          // Pausar do painel derrubava a task em FAILED ("classe desconhecido")
+          // — um freio que destrói o trabalho que devia só segurar. Pausa do
+          // operador e volante humano são o MESMO fenômeno para a task: ela
+          // espera em PAUSED, com checkpoint, até o dono retomar.
+          if (code === "CONTROL_HELD_BY_HUMAN" || code === "AGENT_PAUSED") {
             rec.last_error = erro;
             await this.#transitar(rec, "PAUSED");
             await this.#anotar("task.paused", rec, { code, step: passo.id, state: rec.state }, "denied", { code, message }, i);

@@ -35,8 +35,13 @@ node packages/extension/launch.ts
 ```
 
 Isso constrói a extensão do cofre de marca vigente, liga o spotlight com a cor
-da marca e sobe o daemon. Toda sessão criada abre um Chromium com o painel
-disponível (ícone NOMOS na barra → abre o side panel).
+da marca, sobe o daemon como processo filho, espera o `/health` (autenticado),
+**cria a sessão do dono** (perfil "pessoal" — é ela que abre a janela do
+Chromium com o painel embarcado) e copia o token de controle para a área de
+transferência (macOS; `NOMOS_BROWSER_NO_CLIPBOARD=1` desliga). Conectar o
+painel vira: ícone NOMOS → runtime `http://127.0.0.1:7777` → Cmd+V. Ctrl-C
+encerra daemon e navegador juntos. Para a Gi planejar tasks, exporte antes
+`NOMOS_BROWSER_AI_PROVIDER=ollama:<modelo>` — o lançador não liga LLM sozinho.
 
 Equivalente por configuração, sem o lançador:
 

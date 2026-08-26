@@ -607,27 +607,59 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
     // para as demais faria o runtime inventar pedido em nome do modelo.
     const chave = CHAVE_DO_VALOR[ferramenta];
     if (chave !== undefined && ctx.step.value !== undefined) corpo[chave] = ctx.step.value;
+    // browser.scroll fala em dx/dy NUMÉRICOS; o plano fala em `value` string.
+    // A convenção (dita no prompt de planejamento) é value = dy em pixels.
+    // Número vira número; "bottom"/"fim" e afins continuam recusados com a
+    // mensagem do handler — traduzir palavra em distância seria o runtime
+    // inventando pedido em nome do modelo. (Achado do teste de produção real.)
+    if (ferramenta === "browser.scroll" && typeof ctx.step.value === "string" && ctx.step.value.trim() !== "") {
+      const dy = Number(ctx.step.value);
+      if (Number.isFinite(dy)) corpo.dy = dy;
+    }
 
     // `0.0.0.0`/`::` são endereços de ESCUTA, não de destino.
     const destino = config.host === "0.0.0.0" || config.host === "::" ? "127.0.0.1" : config.host;
     const dono = taskHolders.get(ctx.session_id);
+    const cabecalhos = {
+      "content-type": "application/json",
+      // A trilha passa a dizer que quem agiu foi o MODELO, não "agent".
+      "x-nomos-client": agent?.name ?? "agent",
+      // FASE 10 — o passo age COMO o dono da task, não como o daemon. Sem
+      // isto, sob `allow_unleased: false`, todo passo de plano bateria na
+      // arbitragem: o lease é do agente que pediu a task, e o token daqui é
+      // o do runtime. O header só é aceito de token ADMIN (ver auth.ts).
+      ...(dono !== undefined ? { [DELEGATION_HEADER]: dono } : {}),
+      ...(rootToken !== null ? { authorization: `Bearer ${rootToken.secret}` } : {}),
+    };
     try {
-      const r = await fetch(`http://${destino}:${boundPort}${API_PREFIX}/${ferramenta}`, {
+      const chamar = async (): Promise<ActionResponse> => {
+        const r = await fetch(`http://${destino}:${boundPort}${API_PREFIX}/${ferramenta}`, {
+          method: "POST",
+          headers: cabecalhos,
+          body: JSON.stringify(corpo),
+        });
+        return (await r.json()) as ActionResponse;
+      };
+      const primeira = await chamar();
+      // O lease do dono da task EXPIRA na ociosidade (TTL curto, de propósito),
+      // e o teste de produção real pegou a consequência: o primeiro passo de um
+      // plano depois de uma pausa do dono morria fatal em CONTROL_NOT_OWNED. O
+      // executor readquire o volante EM NOME do dono da task — uma vez, e só
+      // quando o volante está no chão (holder null). Lease de OUTRO portador
+      // continua derrubando o passo: retomar não é tomar.
+      const det = (primeira.error?.detail ?? {}) as { lease?: string; reason?: string; current_holder?: unknown };
+      const semVolante = primeira.success === false &&
+        primeira.error?.code === "CAPABILITY_DENIED" &&
+        (det.lease === "CONTROL_NOT_OWNED" || det.reason === "CONTROL_NOT_OWNED") &&
+        (det.current_holder === null || det.current_holder === undefined);
+      if (!semVolante) return primeira;
+      const lr = await fetch(`http://${destino}:${boundPort}${API_PREFIX}/sessions/${ctx.session_id}/lease`, {
         method: "POST",
-        headers: {
-          "content-type": "application/json",
-          // A trilha passa a dizer que quem agiu foi o MODELO, não "agent".
-          "x-nomos-client": agent?.name ?? "agent",
-          // FASE 10 — o passo age COMO o dono da task, não como o daemon. Sem
-          // isto, sob `allow_unleased: false`, todo passo de plano bateria na
-          // arbitragem: o lease é do agente que pediu a task, e o token daqui é
-          // o do runtime. O header só é aceito de token ADMIN (ver auth.ts).
-          ...(dono !== undefined ? { [DELEGATION_HEADER]: dono } : {}),
-          ...(rootToken !== null ? { authorization: `Bearer ${rootToken.secret}` } : {}),
-        },
-        body: JSON.stringify(corpo),
+        headers: cabecalhos,
+        body: JSON.stringify({}),
       });
-      return (await r.json()) as ActionResponse;
+      if (!lr.ok) return primeira;
+      return await chamar();
     } catch (e) {
       return negar("INTERNAL", `passo não chegou à API do runtime: ${(e as Error).message}`);
     }

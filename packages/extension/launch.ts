@@ -1,32 +1,127 @@
 /**
- * NOMOS Browser com agente embutido — lançador.
+ * NOMOS Browser com agente embutido — o lançador do dono.
  *
  *   node packages/extension/launch.ts
  *
- * O que ele faz, na ordem, e por quê:
+ * O que ele faz, na ordem:
  *
  *  1. Constrói a extensão do cofre vigente (`build.ts`) — a UI nasce com a
  *     marca do dia, nunca de um token copiado.
- *  2. Exporta a configuração da experiência embutida por variável de ambiente:
- *     extensão carregada no Chromium do runtime, spotlight ligado, cor do
- *     destaque vinda do MESMO cofre. Não grava arquivo de config: quem quiser
- *     tornar isso permanente escreve `nomos-browser.config.json` por decisão.
- *  3. Entrega o processo ao daemon (`import` direto — mesmo processo, mesmo
- *     ciclo de vida, Ctrl-C funciona igual ao `npm run daemon`).
+ *  2. Sobe o daemon como PROCESSO FILHO, pelo mesmo comando que o dono usaria
+ *     (`node packages/api/src/daemon.ts`) — trava de instância única, prints e
+ *     sinais do daemon continuam valendo. A primeira versão deste arquivo
+ *     importava o daemon e confiava no efeito colateral; o daemon tem guarda de
+ *     `import.meta.main` e NÃO subia. O teste de instalação real pegou.
+ *  3. Espera o `/health` responder e CRIA A SESSÃO DO DONO (perfil "pessoal",
+ *     headful): é ela que abre o Chromium com o painel embarcado. Sem sessão
+ *     não há janela — e um lançador que termina sem janela não lançou nada.
+ *  4. Copia o token de controle para a área de transferência (macOS,
+ *     `pbcopy`) para o painel ser conectado com um Cmd+V. Colar continua sendo
+ *     o ato explícito do dono; o que sai é a caça ao arquivo no terminal.
+ *     `NOMOS_BROWSER_NO_CLIPBOARD=1` desliga.
  *
- * O daemon imprime a URL do console e o caminho do token — o painel pede esse
- * token na primeira conexão. A extensão NÃO recebe o token automaticamente:
- * colar o token é o ato explícito que amarra o painel ao runtime certo.
+ * O que ele NÃO faz: não liga `ai_provider` sozinho (runtime não fala com LLM
+ * sem o dono pedir — exporte NOMOS_BROWSER_AI_PROVIDER=ollama:<modelo> antes),
+ * e não desliga autenticação.
+ *
+ * Encerrar: Ctrl-C aqui derruba o daemon junto.
  */
+import { spawn, execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { buildExtension } from "./build.ts";
 
-const r = buildExtension();
-console.error(`[embutido] extensão pronta em ${r.dist} (${r.selo})`);
+const HERE = path.dirname(fileURLToPath(import.meta.url));
+const DAEMON = path.resolve(HERE, "../api/src/daemon.ts");
+const PORT = Number(process.env["NOMOS_BROWSER_PORT"] ?? "7777");
+const BASE = `http://127.0.0.1:${PORT}`;
 
-process.env["NOMOS_BROWSER_EXTENSION_DIR"] = r.dist;
-process.env["NOMOS_BROWSER_SPOTLIGHT"] = process.env["NOMOS_BROWSER_SPOTLIGHT"] ?? "true";
-process.env["NOMOS_BROWSER_SPOTLIGHT_COLOR"] =
-  process.env["NOMOS_BROWSER_SPOTLIGHT_COLOR"] ?? r.corMarca;
+// 1. extensão do cofre
+const ext = buildExtension();
+console.error(`[nomos] extensão pronta em ${ext.dist} (${ext.selo})`);
 
-// O daemon lê o ambiente no arranque; daqui em diante o processo é dele.
-await import("../api/src/daemon.ts");
+// 2. daemon filho, com a experiência embutida ligada por ambiente
+const env = {
+  ...process.env,
+  NOMOS_BROWSER_EXTENSION_DIR: ext.dist,
+  NOMOS_BROWSER_SPOTLIGHT: process.env["NOMOS_BROWSER_SPOTLIGHT"] ?? "true",
+  NOMOS_BROWSER_SPOTLIGHT_COLOR: process.env["NOMOS_BROWSER_SPOTLIGHT_COLOR"] ?? ext.corMarca,
+};
+const filho = spawn(process.execPath, [DAEMON], { env, stdio: ["ignore", "inherit", "inherit"] });
+let encerrando = false;
+filho.on("exit", (code) => {
+  // Daemon caiu (ou já havia outro rodando — a trava de instância fala no log
+  // acima). O lançador não tem por que sobreviver ao daemon.
+  if (!encerrando) process.exit(code ?? 1);
+});
+for (const sig of ["SIGINT", "SIGTERM"] as const) {
+  process.on(sig, () => {
+    encerrando = true;
+    filho.kill(sig);
+    process.exit(0);
+  });
+}
+
+// 3. espera o /health — que exige credencial (o teste de instalação real pegou
+//    o 401: a primeira versão sondava sem token e concluía, errado, que o
+//    daemon não subiu). O token é gravado pelo próprio daemon no arranque, então
+//    o laço relê o arquivo até ele existir. 30 s e erro claro, sem silêncio.
+const tokenPath = path.join(os.homedir(), ".nomos-browser", "control-token");
+const ate = Date.now() + 30_000;
+let vivo = false;
+let token: string | null = null;
+while (Date.now() < ate) {
+  try {
+    token = readFileSync(tokenPath, "utf8").trim();
+  } catch { /* daemon ainda não gravou */ }
+  if (token !== null) {
+    try {
+      const r = await fetch(`${BASE}/health`, { headers: { authorization: `Bearer ${token}` } });
+      if (r.ok) { vivo = true; break; }
+    } catch { /* ainda subindo */ }
+  }
+  await new Promise((r) => setTimeout(r, 300));
+}
+if (!vivo) {
+  console.error(`[nomos] ERRO: o daemon não respondeu em ${BASE}/health em 30 s — veja as mensagens acima.`);
+  filho.kill("SIGTERM");
+  process.exit(1);
+}
+
+// sessão do dono — é ela que abre a janela do Chromium com o painel.
+if (token !== null) {
+  const r = await fetch(`${BASE}/api/v1/sessions`, {
+    method: "POST",
+    headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
+    body: JSON.stringify({ owner: "dono", profile: "pessoal" }),
+  });
+  const corpo = (await r.json().catch(() => null)) as { session_id?: string; error?: { message?: string } } | null;
+  if (r.ok && corpo?.session_id !== undefined) {
+    console.error(`[nomos] sessão do dono aberta: ${corpo.session_id} (perfil "pessoal")`);
+  } else {
+    console.error(`[nomos] ERRO ao abrir a sessão do dono: HTTP ${r.status} ${corpo?.error?.message ?? ""}`);
+  }
+
+  // 4. token na área de transferência (macOS) — colar continua sendo o ato.
+  if (process.platform === "darwin" && process.env["NOMOS_BROWSER_NO_CLIPBOARD"] !== "1") {
+    try {
+      execFileSync("pbcopy", { input: token });
+      console.error("[nomos] token de controle copiado para a área de transferência (Cmd+V no painel).");
+    } catch {
+      console.error(`[nomos] token em: ${tokenPath}`);
+    }
+  } else {
+    console.error(`[nomos] token em: ${tokenPath}`);
+  }
+}
+
+console.error(
+  "\n┌─ NOMOS Browser pronto ─────────────────────────────────\n" +
+  "│ 1. Na janela do Chromium que abriu, clique no ícone NOMOS\n" +
+  "│    (quebra-cabeça → NOMOS, fixe se quiser) — o painel abre ao lado.\n" +
+  `│ 2. Conecte: runtime ${BASE} + token (Cmd+V).\n` +
+  "│ 3. Converse com a Gi. Ctrl-C aqui encerra tudo.\n" +
+  "└────────────────────────────────────────────────────────",
+);

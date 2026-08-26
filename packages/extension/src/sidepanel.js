@@ -51,7 +51,7 @@ async function gestao(rota, metodo, corpo) {
   return r.json();
 }
 
-async function acao(tool, corpo) {
+async function acaoCrua(tool, corpo) {
   const r = await fetch(S.base + "/api/v1/" + tool, {
     method: "POST",
     headers: auth({ "content-type": "application/json" }),
@@ -63,9 +63,34 @@ async function acao(tool, corpo) {
     const cod = (env.error && env.error.code) || "INTERNAL";
     const e = new Error((env.error && env.error.message) || cod);
     e.code = cod;
+    e.detail = env.error && env.error.detail;
     throw e;
   }
   return env.result;
+}
+
+// O lease do criador da sessão EXPIRA com a ociosidade (TTL curto, de
+// propósito). O teste de produção real pegou o buraco: painel aberto, dono
+// toma um café, primeira ação seguinte morria em CONTROL_NOT_OWNED. Aqui o
+// painel readquire o lease — UMA vez, com registro no feed — e repete a ação.
+// Se o lease estiver com OUTRO portador, a recusa fica de pé: readquirir só é
+// legítimo quando o volante está no chão, nunca para tomá-lo de alguém.
+function semLease(e) {
+  const d = e.detail || {};
+  return e.code === "CAPABILITY_DENIED" &&
+    (d.lease === "CONTROL_NOT_OWNED" || d.reason === "CONTROL_NOT_OWNED") &&
+    (d.current_holder === null || d.current_holder === undefined);
+}
+
+async function acao(tool, corpo) {
+  try {
+    return await acaoCrua(tool, corpo);
+  } catch (e) {
+    if (!semLease(e) || S.sessionId === null) throw e;
+    await gestao("/api/v1/sessions/" + encodeURIComponent(S.sessionId) + "/lease", "POST", {});
+    feed("lease.readquirido", "a sessão estava ociosa; volante retomado");
+    return acaoCrua(tool, corpo);
+  }
 }
 
 // ── chat ──────────────────────────────────────────────────────────────
@@ -146,9 +171,21 @@ async function saude() {
   try {
     const h = await gestao("/health");
     $("vivo").dataset.live = h.runtime === "ok" ? "1" : "0";
-  } catch {
+  } catch (e) {
     $("vivo").dataset.live = "0";
-    $("hSessao").textContent = "runtime inalcançável";
+    // 401/403 NÃO é "inalcançável" — é o daemon vivo recusando a credencial.
+    // O caso real: o runtime reiniciou e o token rotacionou. Dizer
+    // "inalcançável" mandaria o dono investigar o processo errado. A tela
+    // reabre a conexão e diz o que aconteceu; o token novo está no
+    // clipboard (o lançador copia a cada arranque).
+    if (e.status === 401 || e.status === 403) {
+      $("hSessao").textContent = "credencial expirada — reconecte";
+      $("conexao").hidden = false;
+      $("cErro").textContent = "o runtime reiniciou e a credencial mudou — cole o token novo (Cmd+V)";
+      $("cToken").value = "";
+    } else {
+      $("hSessao").textContent = "runtime inalcançável";
+    }
   }
 }
 
@@ -301,7 +338,24 @@ function conectarEventos() {
       case "task.progress":
         if (p.step || p.descricao || p.message) gi(String(p.step || p.descricao || p.message));
         break;
-      case "task.completed": gi("Concluído. " + (p.summary || p.resultado || "")); break;
+      case "task.completed":
+        gi("Concluído. " + (p.summary || p.resultado || ""));
+        // O modelo às vezes deixa a RESPOSTA no próprio plano (ex.: um passo
+        // de extract cujo value explica o que encontrou). Isso ficava preso no
+        // registro da task — o dono perguntava e a resposta não chegava ao
+        // chat (achado do teste de produção real). O painel busca o registro
+        // e repete a nota, dizendo de onde ela veio.
+        if (ev.task_id || p.task_id) {
+          gestao("/api/v1/tasks/" + encodeURIComponent(ev.task_id || p.task_id) +
+            "?session_id=" + encodeURIComponent(S.sessionId))
+            .then((t) => {
+              const passos = (t.plan && t.plan.steps) || [];
+              const nota = passos.map((s) => s.value || "").filter((v) => v.length > 40).pop();
+              if (nota) gi("Do plano: " + nota.slice(0, 500));
+            })
+            .catch(() => { /* registro indisponível: o Concluído acima fica */ });
+        }
+        break;
       case "task.failed": gi("Não consegui terminar: " + (p.error || p.reason || "falha"), true); break;
       case "action.proposed":
       case "action.approved":
@@ -443,6 +497,20 @@ $("btPausar").addEventListener("click", async () => {
       "POST", { by: "painel" });
     S.pausado = pausar;
     $("btPausar").textContent = pausar ? "Retomar" : "Pausar";
+    // Retomar a sessão retoma também as tasks que a pausa segurou. Sem isto o
+    // dono "retomava" e nada voltava a andar — a task ficava PAUSED esperando
+    // um resume que o painel não oferecia (achado do teste de produção real).
+    if (!pausar) {
+      try {
+        const ts = await gestao("/api/v1/tasks?session_id=" + encodeURIComponent(S.sessionId));
+        for (const tk of (Array.isArray(ts) ? ts : (ts.tasks || [])).filter((x) => x.state === "PAUSED")) {
+          await gestao("/api/v1/tasks/" + encodeURIComponent(tk.task_id) + "/resume", "POST", {});
+          feed("task.resumed", "task " + String(tk.task_id).slice(-6) + " retomada do checkpoint");
+        }
+      } catch (e) {
+        feed("task.resume.falhou", String(e.message || e), true);
+      }
+    }
   } catch (e) {
     feed("pausa.falhou", String(e.message || e), true);
     if (e.status === 403 && !pausar) sistema("Retomar exige escopo ADMIN — a assimetria é deliberada: pausar é freio, retomar é delegação.");
