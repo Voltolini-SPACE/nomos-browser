@@ -32,6 +32,7 @@ import net from "node:net";
 import os from "node:os";
 import path from "node:path";
 import { mkdtempSync, rmSync, readFileSync, existsSync } from "node:fs";
+import { limparArvores } from "./fixtures/limpeza.ts";
 import { execFileSync } from "node:child_process";
 import { startDaemon, type DaemonHandle } from "../packages/api/src/daemon.ts";
 import { HealthWatchdog } from "../packages/observability/src/watchdog.ts";
@@ -128,8 +129,7 @@ after(async () => {
   for (const s of socketsDoPoco) s.destroy();
   await new Promise<void>((r) => poco.close(() => r()));
   await new Promise<void>((r) => servidorOk.close(() => r()));
-  rmSync(raizSessoes, { recursive: true, force: true });
-  rmSync(runtimeDir, { recursive: true, force: true });
+  limparArvores(raizSessoes, runtimeDir);
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

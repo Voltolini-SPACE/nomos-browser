@@ -3,7 +3,7 @@
 Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento pretendido: [SemVer](https://semver.org/lang/pt-BR/).
 
-**Versão corrente: `0.3.0`.** A primeira marcação foi `v0.2.0-rc.1`; antes dela
+**Versão corrente: `0.3.1`.** A primeira marcação foi `v0.2.0-rc.1`; antes dela
 o repositório não tinha tag alguma e `package.json` declarava `0.1.0` desde o
 início — e este arquivo dizia isso, porque anunciar uma versão que nunca foi
 marcada seria o tipo de mentira que o resto desta documentação existe para
@@ -27,6 +27,66 @@ Legenda usada nos itens:
 **⚠ INCOMPATÍVEL** = muda comportamento observável de quem já usa a API.
 
 ---
+
+## [0.3.1] — 2026-08-26
+
+Correção de um vermelho intermitente na suíte entregue. `v0.3.0` **não foi
+movida**: uma tag publicada não se move, então a correção sai numa versão nova
+em vez de mudar por baixo o que alguém já pode ter baixado.
+
+### Corrigido
+
+- **Quatro arquivos de teste podiam ficar vermelhos sem que nada tivesse
+  falhado.** Encontrado na regressão rodada a partir do clone da tag `v0.3.0`:
+  `tests/ownership.test.ts` passou nos 11 testes e terminou vermelho no
+  `after()`, com `ENOTEMPTY, Directory not empty` num
+  `rmSync(..., { recursive: true, force: true })`.
+
+  `force: true` engole `ENOENT`, não `ENOTEMPTY`. `ENOTEMPTY` ali significa que
+  apareceu arquivo novo dentro de um diretório que a caminhada recursiva já
+  tinha esvaziado: alguém ainda escrevia depois que o `close()` do daemon
+  resolveu. Quem clonasse o repositório e rodasse a suíte podia ver um arquivo
+  vermelho sem nenhum defeito de produto por trás — e, pior, aprender a ignorar
+  vermelho.
+
+  `tests/fixtures/limpeza.ts` passa a fazer a remoção **contando as
+  tentativas**. A tentação era `maxRetries` e seguir a vida, mas isso apagaria a
+  informação: se o runtime de fato continua escrevendo depois de dizer que
+  fechou, isso é defeito de produto, e a retentativa silenciosa o esconderia
+  para sempre. Então insistir funciona, e quando é preciso insistir sai um aviso
+  no stderr dizendo o que aquilo significa.
+
+  Controle de mutação, num processo separado — obrigatoriamente separado, porque
+  `rmSync` é **síncrono** e bloqueia o event loop de quem remove, de modo que um
+  escritor por `setInterval` no mesmo processo nunca roda durante a remoção (foi
+  assim que a primeira tentativa de controle deu um falso "não reproduz"):
+
+  ```
+  RMSYNC_CRU: ok=false erro=ENOTEMPTY
+  HELPER:     removido=true tentativas=8
+  CONTROLE=VALIDO (o cru quebra, o helper aguenta)
+  ```
+
+  Aplicado em `ownership`, `task-engine`, `watchdog-wired` e `product02-gate`,
+  que faziam a mesma remoção da mesma forma.
+
+### Notas
+
+Isto **não** corrige nenhuma afirmação do produto sobre encerramento. Não foi
+provado que `close()` retorna com escritas pendentes; foi provado que arquivos
+apareceram durante a remoção. O aviso do helper existe justamente para que, se
+for esse o caso, a próxima ocorrência chegue com nome em vez de silêncio.
+
+Medido a partir do clone anônimo da tag `v0.3.0`, antes desta correção:
+
+```
+suíte        797 passes · 1 falha (o teardown acima) · 38 arquivos
+E2E          106 casos · 9/9 baterias PASS
+demos        24 passos OK em 6 demos, Chromium real
+cobertura    38/38 arquivos declarados na CI
+segredos     PUBLIC_REPO_SECRET_LEAK=0 · histórico limpo
+tipos        sem erro
+```
 
 ## [0.3.0] — 2026-08-26
 

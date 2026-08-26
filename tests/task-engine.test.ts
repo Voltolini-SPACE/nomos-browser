@@ -29,6 +29,7 @@ import http from "node:http";
 import os from "node:os";
 import path from "node:path";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync, existsSync } from "node:fs";
+import { limparArvores } from "./fixtures/limpeza.ts";
 import { readFile } from "node:fs/promises";
 import { spawn, type ChildProcess } from "node:child_process";
 import { fileURLToPath } from "node:url";
@@ -218,8 +219,7 @@ after(async () => {
   for (const s of sessoesAbertas.splice(0)) await fecharSessao(s);
   await daemon?.close("fim dos testes");
   await fixture?.close();
-  rmSync(raizSessoes, { recursive: true, force: true });
-  rmSync(runtimeDir, { recursive: true, force: true });
+  limparArvores(raizSessoes, runtimeDir);
 });
 
 interface Resp<T> {

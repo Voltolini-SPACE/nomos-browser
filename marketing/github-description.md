@@ -66,9 +66,9 @@ intermediário ou versionar cor no repositório. Então:
 
 ## Primeiro release
 
-Título: `v0.3.0 — Live Agent Console e modos de autonomia`
+Título: `v0.3.1 — Live Agent Console e modos de autonomia`
 
-Corpo: as notas de release derivam do `CHANGELOG.md`, seção `[0.3.0]`.
+Corpo: as notas de release derivam do `CHANGELOG.md`, seção `[0.3.1]`.
 Publicar como release normal, **não** pre-release. A promoção de `rc.2` a
 estável foi paga com uma sala limpa a partir do remoto público, que reprovou o
 `rc.2` e encontrou um defeito real na porta de entrada. As tags `v0.3.0-rc.1` e
@@ -80,7 +80,7 @@ estável foi paga com uma sala limpa a partir do remoto público, que reprovou o
 > e os tokens de identidade visual, são governados à parte e não são versionados
 > aqui.
 >
-> `0.3.0` é **estável**, e estável não quer dizer completo. As limitações
+> `0.3.1` é **estável**, e estável não quer dizer completo. As limitações
 > estão no README, não escondidas: nenhum p99 é reportado, não há rota HTTP para
 > emitir token com escopo, e só macOS/Apple Silicon foi medido. Promover a
 > versão não mediu nenhuma plataforma nova.

@@ -32,6 +32,7 @@ import http from "node:http";
 import os from "node:os";
 import path from "node:path";
 import { mkdtempSync, readFileSync, rmSync, existsSync } from "node:fs";
+import { limparArvores } from "./fixtures/limpeza.ts";
 import { startDaemon, type DaemonHandle } from "../packages/api/src/daemon.ts";
 import { loadConfig } from "../packages/api/src/config.ts";
 import { agenteScriptado, type RoteiroDeAgente } from "./fixtures/task/agente-scriptado.ts";
@@ -139,8 +140,7 @@ before(async () => {
 after(async () => {
   await daemon?.close("fim dos testes de ownership");
   await fixture?.close();
-  rmSync(raizSessoes, { recursive: true, force: true });
-  rmSync(runtimeDir, { recursive: true, force: true });
+  limparArvores(raizSessoes, runtimeDir);
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

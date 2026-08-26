@@ -1,6 +1,6 @@
 {
   "name": "@nomos/browser-observability",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
   "type": "module",

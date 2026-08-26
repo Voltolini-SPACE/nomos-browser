@@ -17,6 +17,7 @@ import assert from "node:assert/strict";
 import http from "node:http";
 import { spawn, type ChildProcess } from "node:child_process";
 import { readFileSync, existsSync, mkdtempSync, rmSync } from "node:fs";
+import { limparArvores } from "./fixtures/limpeza.ts";
 import path from "node:path";
 import os from "node:os";
 import { fileURLToPath } from "node:url";
@@ -449,7 +450,7 @@ test("FASE 14 — SIGKILL no processo do daemon, reinício e decisão explícita
       proc.kill("SIGKILL");
       await new Promise((r) => setTimeout(r, 500));
     }
-    rmSync(runtimeDir, { recursive: true, force: true });
+    limparArvores(runtimeDir);
     rmSync(sessionsRoot, { recursive: true, force: true });
   }
 });

@@ -69,7 +69,7 @@ aparece sem o que ele mede.
 
 ## Anúncio interno
 
-> **NOMOS Browser 0.3.0 — Live Agent Console e modos de autonomia**
+> **NOMOS Browser 0.3.1 — Live Agent Console e modos de autonomia**
 >
 > O que entra:
 >
