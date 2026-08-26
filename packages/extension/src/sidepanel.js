@@ -30,8 +30,14 @@ const S = {
   contextoPagina: null,
   perguntaPendente: null,
   tarefaEmVoo: false,
+  ultimoProgresso: 0,
+  stallAvisado: false,
   timers: [],
 };
+
+// Limiar do watchdog de UX: sem novo progresso por mais que isto com uma task em
+// voo, o painel avisa "está demorando mais que o normal" — sem declarar falha.
+const STALL_MS = 12000;
 
 function auth(h) {
   const o = Object.assign({}, h || {});
@@ -261,8 +267,17 @@ async function estadoVivo() {
   // o "travou?" que o dono levantou. Enquanto há task em voo, o mínimo é
   // "executando…".
   const idleComTask = S.tarefaEmVoo && (e.runtime_state === "IDLE" || e.runtime_state === "COMPLETED");
-  $("aEstado").textContent = idleComTask ? "executando…" : (NOME_DO_ESTADO[e.runtime_state] || e.runtime_state);
-  $("aEstado").dataset.estado = idleComTask ? "ACTING" : e.runtime_state;
+  // WATCHDOG DE STALL (FASE 4): task em voo sem progresso além do limiar. NÃO é
+  // falha — o painel avisa que está demorando e SEGUE acompanhando. Uma única
+  // mensagem por travamento; volta ao normal quando o progresso retoma.
+  const demorando = S.tarefaEmVoo && S.ultimoProgresso > 0 && (Date.now() - S.ultimoProgresso) > STALL_MS;
+  if (demorando && !S.stallAvisado) {
+    S.stallAvisado = true;
+    gi("Esta etapa está demorando mais que o normal. Continuo acompanhando…");
+  }
+  $("aEstado").textContent = demorando ? "demorando mais que o normal…"
+    : idleComTask ? "executando…" : (NOME_DO_ESTADO[e.runtime_state] || e.runtime_state);
+  $("aEstado").dataset.estado = (demorando || idleComTask) ? "ACTING" : e.runtime_state;
   $("aAcao").textContent = e.current_action
     ? e.current_action + (e.action_level ? " · risco " + e.action_level : "")
     : "";
@@ -362,8 +377,12 @@ function conectarEventos() {
       case "session.closed": sessoes(); break;
       case "control.taken": aplicarControle("human"); break;
       case "control.returned": aplicarControle("agent"); break;
-      case "task.started": S.tarefaEmVoo = true; gi("Comecei. Acompanhe em AGORA."); estadoVivo(); break;
+      case "task.started":
+        S.tarefaEmVoo = true; S.ultimoProgresso = Date.now(); S.stallAvisado = false;
+        gi("Comecei. Acompanhe em AGORA."); estadoVivo(); break;
       case "task.progress":
+        // Cada progresso reinicia o relógio do watchdog de stall.
+        S.ultimoProgresso = Date.now(); S.stallAvisado = false;
         // Frase humana ("Clicando em Entrar (2 de 5)"). O id do passo sozinho
         // ("s1") é ruído técnico e fica na trilha, não na conversa.
         if (p.descricao || p.message) gi(String(p.descricao || p.message));
