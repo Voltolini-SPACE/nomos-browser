@@ -23,6 +23,7 @@ Coluna **sensível**: sai `[REDIGIDO]` em `GET /api/v1/config`. Ver `redigirConf
 | `device_scale_factor` | inteiro | `1` | `1..8` | `NOMOS_BROWSER_DEVICE_SCALE_FACTOR` | não | DPR do contexto do Chromium. 1 = tela comum, 2 = retina. |
 | `download_root` | caminho ou `null` | `null` | — | `NOMOS_BROWSER_DOWNLOAD_ROOT` | **sim** | Raiz permitida para download. Fora dela ⇒ DOWNLOAD_DENIED. |
 | `event_buffer` | inteiro | `1000` | `0..1000000` | `NOMOS_BROWSER_EVENT_BUFFER` | não | Buffer circular do EventBus (reconexão de WebSocket). |
+| `extension_dir` | caminho ou `null` | `null` | — | `NOMOS_BROWSER_EXTENSION_DIR` | **sim** | Extensão descompactada carregada no Chromium do runtime (side panel NOMOS). null = nenhuma. |
 | `headless` | boolean | `false` | `true\|false\|1\|0\|yes\|no\|on\|off` | `NOMOS_BROWSER_HEADLESS` | não | Chromium sem janela. Default false: takeover humano precisa de janela visível. |
 | `host` | string | `127.0.0.1` | — | `NOMOS_BROWSER_HOST` | não | Endereço de bind do daemon. Loopback por default; sair dele é ato explícito. |
 | `max_body_bytes` | inteiro | `1048576` | `1..268435456` | `NOMOS_BROWSER_MAX_BODY_BYTES` | não | Teto do corpo de requisição HTTP. |
@@ -37,6 +38,9 @@ Coluna **sensível**: sai `[REDIGIDO]` em `GET /api/v1/config`. Ver `redigirConf
 | `raw_web_content` | enum | `withhold_on_detection` | `withhold_on_detection\|always\|never` | `NOMOS_BROWSER_RAW_WEB_CONTENT` | não | O que fazer com o texto CRU da web quando há injeção detectada. |
 | `scroll_into_view` | boolean | `true` | `true\|false\|1\|0\|yes\|no\|on\|off` | `NOMOS_BROWSER_SCROLL_INTO_VIEW` | não | Rolar o alvo para dentro do viewport antes do gesto. Default true. |
 | `sessions_root` | caminho ou `null` | `null` | — | `NOMOS_SESSIONS_ROOT` | **sim** | Raiz do audit log JSONL e dos snapshots de sessão. |
+| `spotlight` | boolean | `false` | `true\|false\|1\|0\|yes\|no\|on\|off` | `NOMOS_BROWSER_SPOTLIGHT` | não | Destaca o alvo NA página antes de clique/digitação. Default false: não altera latência medida sem pedido do dono. |
+| `spotlight_color` | string ou `null` | `null` | — | `NOMOS_BROWSER_SPOTLIGHT_COLOR` | não | Cor CSS do destaque. null ⇒ Highlight do sistema; o lançador injeta a cor do cofre. |
+| `spotlight_dwell_ms` | inteiro | `220` | `0..5000` | `NOMOS_BROWSER_SPOTLIGHT_DWELL_MS` | não | Duração do destaque; o gesto espera esse tempo para o humano ver. |
 | `stability_interval_ms` | inteiro | `50` | `0..10000` | `NOMOS_BROWSER_STABILITY_INTERVAL_MS` | não | Intervalo entre amostras de estabilização. |
 | `stability_samples` | inteiro | `3` | `2..100` | `NOMOS_BROWSER_STABILITY_SAMPLES` | não | Amostras CONSECUTIVAS iguais da bounding box para declará-la assentada. Mínimo 2: com 1 não se compara nada. |
 | `task_max_attempts` | inteiro | `3` | `1..100` | `NOMOS_BROWSER_TASK_MAX_ATTEMPTS` | não | Tentativas TOTAIS por passo, contando a primeira. 1 desliga a retentativa. |
@@ -47,7 +51,7 @@ Coluna **sensível**: sai `[REDIGIDO]` em `GET /api/v1/config`. Ver `redigirConf
 | `task_total_timeout_ms` | inteiro | `600000` | `1..86400000` | `NOMOS_BROWSER_TASK_TOTAL_TIMEOUT_MS` | não | Prazo da task inteira. |
 | `tasks_root` | caminho ou `null` | `null` | — | `NOMOS_BROWSER_TASKS_ROOT` | **sim** | Raiz dos arquivos de task. null ⇒ dentro de sessions_root. |
 | `upload_root` | caminho ou `null` | `null` | — | `NOMOS_BROWSER_UPLOAD_ROOT` | **sim** | Raiz permitida para upload. Fora dela ⇒ UPLOAD_DENIED. |
-| `version` | string | `0.3.2` | — | — | não | Versão anunciada em /health. Lida do package.json da raiz; sem variável de ambiente de propósito — versão não se configura, se publica. |
+| `version` | string | `0.4.0` | — | — | não | Versão anunciada em /health. Lida do package.json da raiz; sem variável de ambiente de propósito — versão não se configura, se publica. |
 | `viewport.height` | inteiro | `800` | `1..20000` | `NOMOS_BROWSER_VIEWPORT_HEIGHT` | não | Altura CSS do viewport. |
 | `viewport.width` | inteiro | `1280` | `1..20000` | `NOMOS_BROWSER_VIEWPORT_WIDTH` | não | Largura CSS do viewport. |
 | `vision_aim` | enum | `point_then_box` | `box_center\|point\|point_then_box` | `NOMOS_BROWSER_VISION_AIM` | não | Onde mirar dentro do que a visão devolveu. |
@@ -81,6 +85,7 @@ Toda variável abaixo é suportada, tem default, tem validação e recusa valor 
 | `NOMOS_BROWSER_DEVICE_SCALE_FACTOR` | `device_scale_factor` | `1` | `1..8` | `2` |
 | `NOMOS_BROWSER_DOWNLOAD_ROOT` | `download_root` | `null` | — | `/tmp/nomos-download` |
 | `NOMOS_BROWSER_EVENT_BUFFER` | `event_buffer` | `1000` | `0..1000000` | `1000` |
+| `NOMOS_BROWSER_EXTENSION_DIR` | `extension_dir` | `null` | — | `/tmp/nomos-extensao/dist` |
 | `NOMOS_BROWSER_HEADLESS` | `headless` | `false` | `true\|false\|1\|0\|yes\|no\|on\|off` | `true` |
 | `NOMOS_BROWSER_HOST` | `host` | `127.0.0.1` | — | `127.0.0.1` |
 | `NOMOS_BROWSER_MAX_BODY_BYTES` | `max_body_bytes` | `1048576` | `1..268435456` | `1048576` |
@@ -95,6 +100,9 @@ Toda variável abaixo é suportada, tem default, tem validação e recusa valor 
 | `NOMOS_BROWSER_RAW_WEB_CONTENT` | `raw_web_content` | `withhold_on_detection` | `withhold_on_detection\|always\|never` | `always` |
 | `NOMOS_BROWSER_SCROLL_INTO_VIEW` | `scroll_into_view` | `true` | `true\|false\|1\|0\|yes\|no\|on\|off` | `false` |
 | `NOMOS_SESSIONS_ROOT` | `sessions_root` | `null` | — | `/tmp/nomos-sessoes` |
+| `NOMOS_BROWSER_SPOTLIGHT` | `spotlight` | `false` | `true\|false\|1\|0\|yes\|no\|on\|off` | `true` |
+| `NOMOS_BROWSER_SPOTLIGHT_COLOR` | `spotlight_color` | `null` | — | `var-da-marca` |
+| `NOMOS_BROWSER_SPOTLIGHT_DWELL_MS` | `spotlight_dwell_ms` | `220` | `0..5000` | `220` |
 | `NOMOS_BROWSER_STABILITY_INTERVAL_MS` | `stability_interval_ms` | `50` | `0..10000` | `50` |
 | `NOMOS_BROWSER_STABILITY_SAMPLES` | `stability_samples` | `3` | `2..100` | `3` |
 | `NOMOS_BROWSER_TASK_MAX_ATTEMPTS` | `task_max_attempts` | `3` | `1..100` | `3` |

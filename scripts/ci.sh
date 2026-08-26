@@ -71,13 +71,13 @@ FALHAS=0
 # `adversarial` precisa deles ali. Duplicar execução custa tempo; não duplicar
 # custa cobertura num job isolado — o segundo é mais caro.
 # ─────────────────────────────────────────────────────────────────────────────
-E_FAST="bench lease observability replay-hardening skills traceability ui-build config-schema entrada-publica"
-E_CORE="session perception pointer-keyboard target-verifier"
+E_FAST="bench extension-build lease observability replay-hardening skills traceability ui-build config-schema entrada-publica"
+E_CORE="session spotlight perception pointer-keyboard target-verifier"
 E_SECURITY="auth policy-vault ownership injection-wired security-files-secrets security-net-injection autonomy approvals"
 E_PROVIDERS="aiprovider vision providers-runtime cascata-percepcao"
 E_INTEGRATION="api mcp sdk-ts cli task-engine click-entrega audit-forense backpressure-audit"
-E_ADVERSARIAL="security-net-injection security-files-secrets injection-wired watchdog-wired recovery-watchdog"
-E_E2E="e2e-gate product02-gate"
+E_ADVERSARIAL="security-net-injection extension-adversarial security-files-secrets injection-wired watchdog-wired recovery-watchdog"
+E_E2E="e2e-gate product02-gate extension-e2e"
 # `supervisor` roda com HOME sandboxado: não sobe Chromium e não toca no launchd
 # desta máquina. O ciclo completo contra o launchd real é `prova-supervisor.sh`,
 # ato deliberado que NÃO entra em CI (esta máquina roda produção).
