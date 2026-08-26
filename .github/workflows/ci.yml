@@ -5,10 +5,25 @@
 # diverge do script na primeira mudança, e aí a CI passa a testar outra coisa.
 # Cada job abaixo tem exatamente UMA linha de lógica: `./scripts/ci.sh <estagio>`.
 #
-# ESTADO HONESTO: este workflow nunca foi executado por um runner do GitHub —
-# o repositório não tem remote. O que está PROVADO é `scripts/ci.sh` rodando
-# localmente. Enquanto não houver uma execução verde no runner, considere este
-# arquivo declaração de intenção, não evidência.
+# ESTADO HONESTO: este workflow JÁ RODOU verde num runner do GitHub. A frase
+# anterior aqui ("nunca foi executado — o repositório não tem remote") ficou
+# desatualizada no dia em que o repositório ganhou remote, e continuou no arquivo
+# público por onze execuções — todas VERMELHAS, sem que ninguém olhasse.
+#
+# As três causas, encontradas e corrigidas de uma vez:
+#   test:ui-build                   chamava build(), que falha fechado sem o
+#                                   cofre de marca do dono — inexistente num
+#                                   runner público. Agora se pula com a razão.
+#   config:tabela-gerada-esta-atual a tabela publicada anunciava 0.2.0 com o
+#                                   produto em 0.3.2.
+#   pacotes:manifestos-completos    `engines.node` corrigido só na raiz; os oito
+#                                   workspaces ficaram com a faixa falsa.
+#
+# A lição que sobra é sobre este arquivo, não sobre elas: por cinco salas limpas
+# e uma regressão completa, nada na validação local rodava `./scripts/ci.sh`, que
+# é o que os jobs abaixo rodam. Validar algo ADJACENTE ao que a CI valida não é
+# validar a CI. `scripts/regressao-completa.sh` agora tem a etapa 5b, que roda
+# literalmente o mesmo comando.
 #
 # A matriz espelhada aqui é a de `scripts/ci.sh` (ver o cabeçalho de lá). Ela
 # não é redigitada: `scripts/ci-cobertura.sh`, que roda dentro do job `fast`,

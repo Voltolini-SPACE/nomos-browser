@@ -10,6 +10,20 @@ autoriza e interrompe o que o agente faz.
 
 `0.3.2` · MIT · Node ≥ 22.18 · Chromium via Playwright · sem passo de build
 
+[![CI](https://github.com/Voltolini-SPACE/nomos-browser/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Voltolini-SPACE/nomos-browser/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/Voltolini-SPACE/nomos-browser?label=release)](https://github.com/Voltolini-SPACE/nomos-browser/releases/latest)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
+</div>
+
+<div align="center">
+
+<img src="evidence/nomos-public-presence/01-console/console-og.png" width="820"
+     alt="Live Agent Console do NOMOS Browser: a faixa de estado mostra agente gi, sessão #464B, status AGUARDANDO APROVAÇÃO, autonomia PERGUNTAR e ação atual browser.click nível A2. No centro, o pedido de aprovação com ação, onde, nível, consequência, motivo e parâmetros, e os botões NEGAR e APROVAR. Ao fundo, a página espelhada de um portal de pagamento.">
+
+<sub>O console no instante em que o agente para e pergunta. Captura do produto
+rodando, gerada por <code>scripts/capturar-console.mjs</code> — não é maquete.</sub>
+
 </div>
 
 ---
