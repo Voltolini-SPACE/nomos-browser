@@ -51,7 +51,7 @@ Coluna **sensível**: sai `[REDIGIDO]` em `GET /api/v1/config`. Ver `redigirConf
 | `task_total_timeout_ms` | inteiro | `600000` | `1..86400000` | `NOMOS_BROWSER_TASK_TOTAL_TIMEOUT_MS` | não | Prazo da task inteira. |
 | `tasks_root` | caminho ou `null` | `null` | — | `NOMOS_BROWSER_TASKS_ROOT` | **sim** | Raiz dos arquivos de task. null ⇒ dentro de sessions_root. |
 | `upload_root` | caminho ou `null` | `null` | — | `NOMOS_BROWSER_UPLOAD_ROOT` | **sim** | Raiz permitida para upload. Fora dela ⇒ UPLOAD_DENIED. |
-| `version` | string | `0.6.0` | — | — | não | Versão anunciada em /health. Lida do package.json da raiz; sem variável de ambiente de propósito — versão não se configura, se publica. |
+| `version` | string | `0.6.1` | — | — | não | Versão anunciada em /health. Lida do package.json da raiz; sem variável de ambiente de propósito — versão não se configura, se publica. |
 | `viewport.height` | inteiro | `800` | `1..20000` | `NOMOS_BROWSER_VIEWPORT_HEIGHT` | não | Altura CSS do viewport. |
 | `viewport.width` | inteiro | `1280` | `1..20000` | `NOMOS_BROWSER_VIEWPORT_WIDTH` | não | Largura CSS do viewport. |
 | `vision_aim` | enum | `point_then_box` | `box_center\|point\|point_then_box` | `NOMOS_BROWSER_VISION_AIM` | não | Onde mirar dentro do que a visão devolveu. |
