@@ -13,7 +13,8 @@
  *
  * O que ele mantém idêntico: daemon como processo filho (trava de instância,
  * prints e sinais dele valem), /health autenticado antes de declarar vivo,
- * sessão do dono criada para abrir a janela, token no clipboard (macOS).
+ * sessão do dono criada para abrir a janela. O painel conecta sozinho pelo
+ * handshake de mesma origem que o daemon injeta na extensão — sem clipboard.
  */
 import { spawn } from "node:child_process";
 import { existsSync, readFileSync, mkdirSync } from "node:fs";
