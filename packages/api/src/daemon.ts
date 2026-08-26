@@ -1492,6 +1492,53 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
         services.emit("autonomy.changed", sid, null, { de: anterior, para: modo, scope: "SESSION", by: quem }, "human");
         return { session_id: sid, autonomy_mode: modo, scope: ajuste.scope, by: quem, at: ajuste.at };
       }
+      case "sessions.full-control": {
+        // Liga/desliga o CONTROLE TOTAL da sessão: o dono desliga a governança
+        // (opt-in explícito, com aviso vermelho no painel). Não mexe na matriz
+        // de autonomia; é um interruptor à parte que faz o runtime auto-aprovar.
+        const sid = params.id!;
+        const info0 = sessions.get(sid);
+        const on = body.on === true || body.on === "true";
+        autonomia.definirControleTotal(sid, on);
+        // Ligou com algo já esperando aprovação? Libera na hora — senão o dono
+        // ligava o modo e a ação represada continuava travada.
+        if (on) {
+          for (const p of aprovacoes.pendentesDe(sid)) {
+            aprovacoes.decidir(p.approval_id, "APROVADA", "controle-total");
+            services.emit("action.approved", sid, null, { approval_id: p.approval_id, tool: p.rota, por: "controle-total" }, "human");
+          }
+        }
+        await services.note({
+          session: sid, event: "policy", action: "autonomy.changed", actor: "human",
+          owner: info0.owner, result: "ok", verified: true,
+          policy_decision: on ? "allow" : "deny",
+          detail: { controle_total: on, aviso: "governança desligada pelo dono nesta sessão" },
+        });
+        services.emit("autonomy.changed", sid, null, { controle_total: on }, "human");
+        return { session_id: sid, controle_total: on };
+      }
+      case "sessions.ask": {
+        // A Gi RESPONDE (não age): caminho de leitura, sem plano e sem
+        // aprovação — perguntar não é uma ação. Se a mensagem for um pedido de
+        // AÇÃO, o modelo devolve `ACAO: <objetivo>` e o painel abre uma task.
+        const sid = params.id!;
+        sessions.get(sid);
+        const pergunta = typeof body.question === "string" ? body.question.trim() : "";
+        if (pergunta === "") throw new ApiError("INVALID_REQUEST", "question vazia");
+        if (ai === null) throw new ApiError("INVALID_REQUEST", "runtime sem provedor de IA (ai_provider) — a Gi não responde sem ele");
+        const contexto = typeof body.page_context === "string" ? body.page_context.slice(0, 4000) : "";
+        const system =
+          "Você é a Gi, assistente do NOMOS Browser. Responda em português, curto e direto, " +
+          "à mensagem do usuário sobre a página que ele vê. Se a mensagem for um PEDIDO DE AÇÃO no " +
+          "navegador (abrir, navegar, clicar, digitar, baixar, preencher), NÃO responda com texto: " +
+          "responda EXATAMENTE com uma linha no formato `ACAO: <objetivo em uma frase>`. Caso contrário, apenas responda.";
+        const prompt = (contexto !== "" ? "Página atual:\n" + contexto + "\n\n" : "") + "Mensagem do usuário: " + pergunta;
+        const r = await ai.request({ prompt, system });
+        const texto = (r.text ?? "").trim();
+        const m = /^ACAO:\s*(.+)$/is.exec(texto);
+        if (m !== null) return { session_id: sid, act: m[1]!.trim(), answer: null };
+        return { session_id: sid, act: null, answer: texto !== "" ? texto : "Não consegui formular uma resposta agora." };
+      }
       case "autonomy.default.get": {
         const padrao = autonomia.padraoAtual();
         return { autonomy_mode: padrao?.mode ?? null, scope: "DEFAULT", by: padrao?.by ?? null, at: padrao?.at ?? null };
@@ -1569,6 +1616,7 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
           current_action: pend[0]?.rota ?? null,
           action_level: pend[0]?.nivel ?? null,
           autonomy_mode: autonomia.modoDe(sid),
+          controle_total: autonomia.controleTotalDe(sid),
           approval_required: pend.length > 0,
           approvals_pending: pend,
           runtime_state,
@@ -2193,6 +2241,28 @@ export async function startDaemon(opts: StartDaemonOptions = {}): Promise<Daemon
         autonomy_mode: modo,
         expira_em: pedido.expira_em,
       }, client ?? "agent");
+
+      // CONTROLE TOTAL — o dono desligou a governança nesta sessão. A proposta
+      // acima FOI criada e emitida (a trilha e o painel mostram exatamente o que
+      // passou); aqui o próprio runtime a aprova na hora, em nome de
+      // "controle-total", em vez de esperar um humano. É o ÚNICO caminho que
+      // aprova sozinho, e é explícito, por sessão, e auditado como qualquer
+      // decisão. Fora do controle total, nada muda.
+      if (autonomia.controleTotalDe(session_id)) {
+        aprovacoes.decidir(pedido.approval_id, "APROVADA", "controle-total");
+        await services.record(
+          auditEntryFor(req, "ok", true, undefined, {
+            event: "policy",
+            action: "action.approved",
+            capability,
+            policy_decision: "allow",
+            policy_reason: "controle-total: governança desligada nesta sessão pelo dono",
+          }),
+        );
+        services.emit("action.approved", session_id, action_id, {
+          approval_id: pedido.approval_id, tool, por: "controle-total",
+        }, "human");
+      }
 
       const decidido = await aprovacoes.aguardar(pedido.approval_id);
 

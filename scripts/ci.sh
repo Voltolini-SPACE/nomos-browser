@@ -75,7 +75,7 @@ E_FAST="bench extension-build lease observability replay-hardening skills tracea
 E_CORE="session spotlight perception pointer-keyboard target-verifier"
 E_SECURITY="auth policy-vault ownership injection-wired security-files-secrets security-net-injection autonomy approvals"
 E_PROVIDERS="aiprovider vision providers-runtime cascata-percepcao"
-E_INTEGRATION="api mcp sdk-ts cli task-engine click-entrega audit-forense backpressure-audit"
+E_INTEGRATION="api mcp sdk-ts cli task-engine click-entrega audit-forense backpressure-audit full-control-and-ask"
 E_ADVERSARIAL="security-net-injection extension-adversarial security-files-secrets injection-wired watchdog-wired recovery-watchdog"
 E_E2E="e2e-gate product02-gate extension-e2e extension-autoconnect"
 # `supervisor` roda com HOME sandboxado: não sobe Chromium e não toca no launchd

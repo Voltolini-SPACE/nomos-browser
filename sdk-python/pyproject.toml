@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nomos-browser"
-version = "0.4.1"
+version = "0.5.0"
 description = "SDK Python do NOMOS Browser Runtime — API v1, só stdlib"
 readme = { text = "SDK Python do NOMOS Browser Runtime. Fala a API v1 (docs/API.md) sem nenhuma dependência de runtime.", content-type = "text/plain" }
 requires-python = ">=3.11"
