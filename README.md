@@ -254,14 +254,19 @@ por vez, e um arquivo morto aparece como `MORTO`.
 
 ## Testes
 
-Medido em `HEAD 6964cf0`:
+Medido numa **sala limpa**, a partir de um clone anônimo do repositório público
+por HTTPS, rodando `npm test` como qualquer estranho rodaria. Não a partir da
+árvore de trabalho de quem escreveu o código:
 
 ```
-suíte TypeScript     789 passes · 0 falhas · 37/37 arquivos
-E2E do Live Agent    106 casos  · 9 baterias
-sala limpa           14/14 passos, a partir de clone do HEAD
-regressão completa   15 etapas · 0 falha · 0 não-executada
+suíte TypeScript     797 passes · 0 falhas · 38/38 arquivos
+E2E do Live Agent    106 casos  · 9/9 baterias
+sala limpa           clone anônimo → npm ci → typecheck → suíte, tudo verde
+demos                24 passos OK em 6 demos, contra Chromium real
 ```
+
+Reproduza com `scripts/clean-room-publico.sh`, que apaga o diretório antes de
+clonar e não reaproveita nada da máquina.
 
 O projeto se recusa a chamar de PASS o que não foi observado. Dois exemplos:
 

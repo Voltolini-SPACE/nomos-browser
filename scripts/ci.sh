@@ -71,7 +71,7 @@ FALHAS=0
 # `adversarial` precisa deles ali. Duplicar execução custa tempo; não duplicar
 # custa cobertura num job isolado — o segundo é mais caro.
 # ─────────────────────────────────────────────────────────────────────────────
-E_FAST="bench lease observability replay-hardening skills traceability ui-build config-schema"
+E_FAST="bench lease observability replay-hardening skills traceability ui-build config-schema entrada-publica"
 E_CORE="session perception pointer-keyboard target-verifier"
 E_SECURITY="auth policy-vault ownership injection-wired security-files-secrets security-net-injection autonomy approvals"
 E_PROVIDERS="aiprovider vision providers-runtime cascata-percepcao"
@@ -82,7 +82,7 @@ E_E2E="e2e-gate product02-gate"
 # desta máquina. O ciclo completo contra o launchd real é `prova-supervisor.sh`,
 # ato deliberado que NÃO entra em CI (esta máquina roda produção).
 E_RECOVERY="recovery-watchdog supervisor"
-E_CLEANROOM="config-schema lease skills traceability observability replay-hardening bench sdk-ts policy-vault"
+E_CLEANROOM="config-schema lease skills traceability observability replay-hardening bench sdk-ts policy-vault entrada-publica"
 
 ESTAGIOS="fast core security providers integration adversarial e2e recovery cleanroom"
 ESTAGIOS_ALL="fast core security providers integration adversarial e2e recovery"

@@ -81,10 +81,14 @@ sessão, política, autonomia, aprovações, task engine, percepção, visão), 
 
 ## 6. Superfícies
 
-### CLI — `nomos-web` (9 comandos)
+### CLI — `nomos-web` (8 comandos)
 
 `health` · `open <url>` · `sessions` · `screenshot <id>` · `task --session <id> "<objetivo>"` ·
-`events` · `replay <id>` · `replay verify <id>` · `close <id>`
+`events` · `replay <id>` · `close <id>`
+
+`replay verify <id>` é uma **forma de invocação** de `replay`, não um nono
+comando: a CLI não tem tabela de subcomandos, e o próprio código diz isso.
+Contar a linha da ajuda em vez da entrada do registro era o que produzia "9".
 
 Códigos de saída: `0` sucesso · `1` falha de negócio · `2` erro de uso ·
 `3` runtime inalcançável.

@@ -44,7 +44,11 @@ echo
 echo "════ 1. suíte TypeScript do runtime ════"
 if "${RAIZ}/scripts/run-suite.sh" > "$SAIDA/01-suite-ts.txt" 2>&1; then
   P="$(/usr/bin/grep -E '^TS_PASS=' "$SAIDA/01-suite-ts.txt" | tail -1 | cut -d= -f2)"
-  registrar "suite-typescript" "PASS" "TS_PASS=${P:-?} TS_FAIL=0 em 37 arquivos"
+  # "em 37 arquivos" ficou aqui como literal e envelheceu calado: o 38o arquivo
+  # de teste entrou e o relatorio continuou dizendo 37. Numero em relatorio de
+  # evidencia tem que vir da medicao, senao o relatorio vira decoracao.
+  A="$(/usr/bin/grep -E '^ARQUIVOS_OK=' "$SAIDA/01-suite-ts.txt" | tail -1 | cut -d= -f2)"
+  registrar "suite-typescript" "PASS" "TS_PASS=${P:-?} TS_FAIL=0 em ${A:-?} arquivos"
 else
   P="$(/usr/bin/grep -E '^TS_PASS=' "$SAIDA/01-suite-ts.txt" | tail -1 | cut -d= -f2)"
   F="$(/usr/bin/grep -E '^TS_FAIL=' "$SAIDA/01-suite-ts.txt" | tail -1 | cut -d= -f2)"
@@ -176,7 +180,28 @@ E2E_OK=$(/usr/bin/grep -c '^e2e-.*	PASS' "$SAIDA/etapas.tsv" || true)
 echo "ETAPAS_PASS=${etapas_ok}"
 echo "ETAPAS_FALHA=${etapas_ruins}"
 echo "ETAPAS_NAO_EXECUTADAS=${etapas_ausentes}"
-[ "$TS_OK" = "1" ] && echo "NOMOS_BROWSER_REGRESSION=PASS" || echo "NOMOS_BROWSER_REGRESSION=FALHA"
+# O comentario acima sempre disse a regra certa ("etapa ausente derruba"), mas a
+# linha abaixo olhava SO para a suite TypeScript. O resultado era um relatorio
+# que estampava PASS no cabecalho enquanto ele proprio contava ETAPAS_FALHA=1
+# logo acima. Quem le o cabecalho e para ali leva a contradicao inteira.
+# Agora o veredito impresso concorda com o codigo de saida do script.
+# `gi-pytest` cobre a Gi, que e OUTRO produto e vive em outro repositorio. Numa
+# sala limpa ela nunca esta presente. Derrubar o veredito do NOMOS Browser por
+# causa dela seria culpar este produto por uma ausencia que nao e dele; ignora-la
+# em silencio seria esconder que uma etapa nao rodou. Entao: fora da conta,
+# dentro do relatorio, com nome.
+EXTERNAS_AUSENTES=$(/usr/bin/grep -c '^gi-.*	NAO_EXECUTADA' "$SAIDA/etapas.tsv" || true)
+EXTERNAS_RUINS=$(/usr/bin/grep -c '^gi-.*	FALHOU' "$SAIDA/etapas.tsv" || true)
+PROPRIAS_RUINS=$((etapas_ruins - EXTERNAS_RUINS))
+PROPRIAS_AUSENTES=$((etapas_ausentes - EXTERNAS_AUSENTES))
+
+echo "ETAPAS_DE_OUTROS_PRODUTOS_NAO_EXECUTADAS=${EXTERNAS_AUSENTES}$([ "$EXTERNAS_AUSENTES" -gt 0 ] && echo ' (gi-pytest: a Gi vive em outro repositorio)')"
+
+if [ "$TS_OK" = "1" ] && [ "$PROPRIAS_RUINS" -eq 0 ] && [ "$PROPRIAS_AUSENTES" -eq 0 ]; then
+  echo "NOMOS_BROWSER_REGRESSION=PASS"
+else
+  echo "NOMOS_BROWSER_REGRESSION=FALHA (suite_ok=${TS_OK} falhas=${PROPRIAS_RUINS} nao_executadas=${PROPRIAS_AUSENTES})"
+fi
 if [ "$E2E_TOTAL" -gt 0 ] && [ "$E2E_OK" = "$E2E_TOTAL" ]; then
   echo "LIVE_AGENT_REGRESSION=PASS (${E2E_OK}/${E2E_TOTAL} baterias)"
 else
@@ -184,4 +209,11 @@ else
 fi
 echo "RELATORIO=${SAIDA}/etapas.tsv"
 
-[ "$etapas_ruins" -eq 0 ] && [ "$etapas_ausentes" -eq 0 ]
+# O codigo de saida tem que dizer a MESMA coisa que o cabecalho, senao volta a
+# contradicao por outro caminho: banner verde com exit 1. Ele gateia as etapas
+# DESTE produto; o que e de outro produto ja saiu impresso com nome logo acima.
+if [ "$EXTERNAS_RUINS" -gt 0 ] || [ "$EXTERNAS_AUSENTES" -gt 0 ]; then
+  echo "AVISO: ${EXTERNAS_RUINS} falha(s) e ${EXTERNAS_AUSENTES} ausencia(s) em etapas de OUTROS produtos." >&2
+  echo "       Elas NAO gateiam o release do NOMOS Browser, e nao sumiram do relatorio." >&2
+fi
+[ "$PROPRIAS_RUINS" -eq 0 ] && [ "$PROPRIAS_AUSENTES" -eq 0 ]
