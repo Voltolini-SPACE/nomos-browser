@@ -28,6 +28,8 @@ const S = {
   pendente: null,
   decidindo: false,
   contextoPagina: null,
+  perguntaPendente: null,
+  tarefaEmVoo: false,
   timers: [],
 };
 
@@ -254,8 +256,13 @@ async function estadoVivo() {
     e = await gestao("/api/v1/sessions/" + encodeURIComponent(S.sessionId) + "/live");
   } catch { desconhecido(); return; }
 
-  $("aEstado").textContent = NOME_DO_ESTADO[e.runtime_state] || e.runtime_state;
-  $("aEstado").dataset.estado = e.runtime_state;
+  // NÃO mostrar "ocioso" com uma task em voo: entre um passo e outro o runtime
+  // pode ler IDLE por um instante, e "ocioso" no meio do trabalho é exatamente
+  // o "travou?" que o dono levantou. Enquanto há task em voo, o mínimo é
+  // "executando…".
+  const idleComTask = S.tarefaEmVoo && (e.runtime_state === "IDLE" || e.runtime_state === "COMPLETED");
+  $("aEstado").textContent = idleComTask ? "executando…" : (NOME_DO_ESTADO[e.runtime_state] || e.runtime_state);
+  $("aEstado").dataset.estado = idleComTask ? "ACTING" : e.runtime_state;
   $("aAcao").textContent = e.current_action
     ? e.current_action + (e.action_level ? " · risco " + e.action_level : "")
     : "";
@@ -355,31 +362,27 @@ function conectarEventos() {
       case "session.closed": sessoes(); break;
       case "control.taken": aplicarControle("human"); break;
       case "control.returned": aplicarControle("agent"); break;
-      case "task.started": gi("Comecei. Acompanhe em AGORA."); break;
+      case "task.started": S.tarefaEmVoo = true; gi("Comecei. Acompanhe em AGORA."); estadoVivo(); break;
       case "task.progress":
-        // Só mostra progresso com TEXTO real. O id do passo sozinho ("s1", "s2")
-        // é ruído que parecia conversa e não dizia nada.
+        // Frase humana ("Clicando em Entrar (2 de 5)"). O id do passo sozinho
+        // ("s1") é ruído técnico e fica na trilha, não na conversa.
         if (p.descricao || p.message) gi(String(p.descricao || p.message));
         break;
       case "task.completed":
-        gi("Concluído. " + (p.summary || p.resultado || ""));
-        // O modelo às vezes deixa a RESPOSTA no próprio plano (ex.: um passo
-        // de extract cujo value explica o que encontrou). Isso ficava preso no
-        // registro da task — o dono perguntava e a resposta não chegava ao
-        // chat (achado do teste de produção real). O painel busca o registro
-        // e repete a nota, dizendo de onde ela veio.
-        if (ev.task_id || p.task_id) {
-          gestao("/api/v1/tasks/" + encodeURIComponent(ev.task_id || p.task_id) +
-            "?session_id=" + encodeURIComponent(S.sessionId))
-            .then((t) => {
-              const passos = (t.plan && t.plan.steps) || [];
-              const nota = passos.map((s) => s.value || "").filter((v) => v.length > 40).pop();
-              if (nota) gi("Do plano: " + nota.slice(0, 500));
-            })
-            .catch(() => { /* registro indisponível: o Concluído acima fica */ });
-        }
+        S.tarefaEmVoo = false;
+        gi("Pronto." + (p.summary || p.resultado ? " " + (p.summary || p.resultado) : ""));
+        // AJA E ME DIGA O RESULTADO: se esta task nasceu de uma intenção do
+        // usuário que pedia informação, agora que ela agiu eu leio a página onde
+        // parou e entrego a resposta final. É o que fecha a task com um resultado
+        // ÚTIL, não só um "Concluído".
+        if (S.perguntaPendente !== null) { const q = S.perguntaPendente; S.perguntaPendente = null; responderApos(q); }
+        estadoVivo();
         break;
-      case "task.failed": gi("Não consegui terminar: " + (p.error || p.reason || "falha"), true); break;
+      case "task.failed":
+        S.tarefaEmVoo = false; S.perguntaPendente = null;
+        gi("Não consegui terminar: " + (p.error || p.reason || "falha"), true);
+        estadoVivo();
+        break;
       case "action.proposed":
       case "action.approved":
       case "action.denied":
@@ -431,9 +434,11 @@ function giPensando() {
 // sozinho; em ASK/AUTO, a aprovação aparece no próprio painel.
 async function abrirTask(goal) {
   try {
-    const r = await acao("browser.task", { goal });
-    gi("Comecei. Acompanhe em AGORA. (task " + String(r.task_id || "").slice(-6) + ")");
+    await acao("browser.task", { goal });
+    S.tarefaEmVoo = true;   // "executando…" no AGORA até task.completed/failed
+    estadoVivo();
   } catch (e) {
+    S.tarefaEmVoo = false; S.perguntaPendente = null;
     if (e.code === "AGENT_UNAVAILABLE" || /provider|agent/i.test(String(e.message))) {
       gi("O runtime está sem provedor de IA (ai_provider). Sem ele eu não executo tasks — mas controles e auditoria continuam valendo.", true);
     } else {
@@ -465,8 +470,31 @@ async function enviar() {
   }
   pensando.remove();
   if (r && typeof r.answer === "string" && r.answer !== "") { gi(r.answer); return; }
-  if (r && typeof r.act === "string" && r.act !== "") { gi("Certo — vou fazer isso na página."); await abrirTask(r.act); return; }
+  if (r && typeof r.act === "string" && r.act !== "") {
+    gi("Certo, vou fazer isso na página.");
+    // Depois de AGIR, respondo à intenção ORIGINAL do usuário (ex.: "entre na
+    // página de preços e me diga o plano mais barato"): a task navega, e quando
+    // termina eu leio a página resultante e entrego a resposta final.
+    S.perguntaPendente = t;
+    await abrirTask(r.act);
+    return;
+  }
   gi("Não consegui responder agora. Pode reformular?", true);
+}
+
+// Resposta final depois de uma task: lê a página onde a Gi parou e responde à
+// pergunta original. É o que fecha "aja e me diga o resultado".
+async function responderApos(pergunta) {
+  if (S.sessionId === null || pergunta === null) return;
+  const page_context = await montarContexto();
+  const pensando = giPensando();
+  try {
+    const r = await gestao("/api/v1/sessions/" + encodeURIComponent(S.sessionId) + "/ask", "POST",
+      { question: pergunta, page_context, answer_only: true });
+    pensando.remove();
+    if (r && typeof r.answer === "string" && r.answer !== "") gi(r.answer);
+  } catch { pensando.remove(); /* a task já concluiu; não insisto */ }
+  finally { S.tarefaEmVoo = false; estadoVivo(); }  // interação encerrada: AGORA volta ao real
 }
 
 // ── contexto da página (via runtime, caminho A0 governado) ────────────

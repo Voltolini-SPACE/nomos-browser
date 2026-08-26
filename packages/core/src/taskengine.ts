@@ -281,6 +281,27 @@ export function backoffMs(attempt: number, p: RetryPolicy, rnd: () => number = M
   return Math.round(metade + rnd() * metade);
 }
 
+// Frase humana de um passo, para o painel mostrar "Clicando em Entrar (2 de 5)"
+// em vez de "s2". NUNCA usa `value` (texto digitado pode ser segredo); só o
+// `intent` do planejador e o ALVO. O id técnico segue na trilha, não na tela.
+const VERBO_DO_PASSO: Readonly<Record<string, string>> = Object.freeze({
+  "browser.open": "Abrindo", "browser.goto": "Abrindo", "browser.back": "Voltando",
+  "browser.forward": "Avançando", "browser.reload": "Recarregando",
+  "browser.click": "Clicando em", "browser.type": "Preenchendo", "browser.press": "Pressionando",
+  "browser.scroll": "Rolando a página", "browser.wait": "Aguardando",
+  "browser.extract": "Lendo a página", "browser.observe": "Observando a página",
+  "browser.find": "Procurando", "browser.select": "Escolhendo", "browser.upload": "Anexando arquivo",
+});
+export function descreverPasso(passo: PlanStep, i: number, total: number): string {
+  const ordem = total > 1 ? ` (${i + 1} de ${total})` : "";
+  const intent = typeof passo.intent === "string" ? passo.intent.trim() : "";
+  if (intent !== "") return intent + ordem;
+  const t = passo.target;
+  const alvo = t ? (t.text ?? t.label ?? t.placeholder ?? t.role ?? t.selector ?? "") : "";
+  const verbo = VERBO_DO_PASSO[passo.action] ?? passo.action;
+  return verbo + (alvo !== "" ? ` "${alvo}"` : "") + ordem;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Registro persistido
 // ─────────────────────────────────────────────────────────────────────────────
@@ -961,6 +982,8 @@ export class TaskEngine {
             await this.#anotar("task.progress", rec, {
               step: passo.id, action: passo.action, attempt: tentativa,
               verified: saida.verified, state: rec.state, action_id: saida.action_id,
+              // Frase humana para a tela; o `step`/`action` técnicos seguem na trilha.
+              descricao: descreverPasso(passo, i, passos.length),
             }, "ok", null, i);
             await this.#checkpoint(rec, { fase: "step", step: passo.id, next_step_index: rec.checkpoint.step_index });
             break;

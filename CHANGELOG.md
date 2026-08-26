@@ -3,7 +3,7 @@
 Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento pretendido: [SemVer](https://semver.org/lang/pt-BR/).
 
-**Versão corrente: `0.5.0`.** A primeira marcação foi `v0.2.0-rc.1`; antes dela
+**Versão corrente: `0.6.0`.** A primeira marcação foi `v0.2.0-rc.1`; antes dela
 o repositório não tinha tag alguma e `package.json` declarava `0.1.0` desde o
 início — e este arquivo dizia isso, porque anunciar uma versão que nunca foi
 marcada seria o tipo de mentira que o resto desta documentação existe para
@@ -27,6 +27,29 @@ Legenda usada nos itens:
 **⚠ INCOMPATÍVEL** = muda comportamento observável de quem já usa a API.
 
 ---
+
+## [0.6.0] — 2026-08-26
+
+A Gi deixa de "só responder" e passa a **executar tarefas reais de navegador de
+forma compreensível** — e a não inventar.
+
+- **Aja e me diga o resultado** (`dfe14f3`). Depois de uma task, o painel lê a
+  página onde a Gi parou e entrega a resposta final via `/ask` com `answer_only`.
+  *"Vá aos preços e me diga o plano mais barato"* agora **navega E responde**
+  ("Plano Básico, R$ 29"), em vez de só marcar "Concluído".
+- **Progresso legível**. `task.progress` carrega uma frase humana
+  (`descreverPasso`, a partir do `intent` do planejador) — "navegar para a
+  página de preços" no lugar de `s1/s2`. NUNCA vaza o texto digitado (`value`).
+  Emitido em `handlers.ts`, a fonte real do evento no bus.
+- **Sem falso-ocioso**. Enquanto há task em voo, o AGORA mostra "executando…"
+  nos intervalos entre passos, em vez de "ocioso" — o "travou?" que o dono
+  levantou.
+- **Aterramento (anti-alucinação)**. `/ask` responde SÓ com o que está na
+  página e RECUSA o que não está ("não encontrei na página") — 3/3 em teste, no
+  lugar de inventar preços. O roteamento aceita `ACAO:`/`AÇÃO:` (acento) e tem
+  rede de segurança determinística para verbos de navegação (1/3 → 4/4).
+- Testes novos: `descreverPasso` (unit, não vaza `value`), aterramento
+  (responde/recusa), roteamento com acento. Regressão **832/0**.
 
 ## [0.5.0] — 2026-08-26
 

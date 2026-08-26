@@ -1,6 +1,6 @@
 {
   "name": "@nomos/browser",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "license": "SEE LICENSE IN LICENSE",
   "description": "SDK TypeScript do NOMOS Browser Runtime — cliente HTTP/WebSocket da API v1.",
   "type": "module",

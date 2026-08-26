@@ -88,6 +88,7 @@ import { FileVault, VaultError } from "../../core/src/vault.ts";
 import {
   TASK_ESTADOS,
   TaskEngine,
+  descreverPasso,
   estadoFinal,
   type StepExecutor,
   type TaskAuditEvent,
@@ -1937,12 +1938,16 @@ function tarefaIO(
     // o modelo respondeu, quem recusou foi o runtime. Só uma EXCEÇÃO (modelo
     // fora do ar, timeout de inferência) degrada o provider.
     const response = await viaProvider("act", () => agent.act({ session_id: task.session_id, step }));
+    const total = task.checkpoint?.total_steps ?? task.plan?.steps.length ?? 0;
     svc.emit("task.progress", task.session_id, response.action_id, {
       task_id: task.task_id,
       step: step.id,
       step_index: index,
       attempt,
       success: response.success,
+      // Frase humana para o painel ("Clicando em Entrar (2 de 5)"). O `step`/id
+      // técnico segue no payload para a trilha; a tela mostra a `descricao`.
+      descricao: descreverPasso(step, index, total),
     }, agent.name);
 
     if (!response.success) {
