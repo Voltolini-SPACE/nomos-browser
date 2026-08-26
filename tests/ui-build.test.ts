@@ -8,6 +8,25 @@ import { build, resolveBrand, lerTokens } from "../packages/ui/build.ts";
 const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const FONTE_UI = path.join(RAIZ, "packages/ui/src/app.html");
 
+// O cofre de marca e da MAQUINA DO DONO, nao do repositorio: `~/.brand-governance`
+// nao e versionado e nunca vai existir num runner publico. `packages/ui/build.ts`
+// falha FECHADO sem ele, e isso e o comportamento certo do build.
+//
+// O que estava errado era transformar esse acerto em vermelho. Este arquivo
+// derrubou a CI publica em TODAS as execucoes desde a primeira: `ci.sh` ja
+// marcava o passo `build:ui` como PULADO com a razao impressa, mas o TESTE
+// chamava `build()` assim mesmo e reprovava por uma ausencia que nao e defeito.
+//
+// A regra da casa: nunca verde por impossibilidade, e tampouco vermelho por
+// impossibilidade. O que nao pode rodar aqui se pula dizendo por que. O primeiro
+// teste deste arquivo — o que prova que o fonte nao tem token de marca copiado —
+// e hermetico e continua rodando em qualquer lugar, que e justamente o guarda que
+// mais importa manter vivo num runner publico.
+const COFRE_MARCA = path.join(process.env["HOME"] ?? "", ".brand-governance/bin/brand-resolve.sh");
+const SEM_COFRE: string | false = existsSync(COFRE_MARCA)
+  ? false
+  : `cofre de marca ausente em ${COFRE_MARCA} — este guarda so roda na maquina que tem a governanca de marca`;
+
 test("o fonte da UI não contém NENHUM token de marca (contrato §6.3)", () => {
   const src = readFileSync(FONTE_UI, "utf8");
 
@@ -21,7 +40,7 @@ test("o fonte da UI não contém NENHUM token de marca (contrato §6.3)", () => 
   }
 });
 
-test("resolveBrand usa o resolvedor oficial e reporta rc e oficialidade", () => {
+test("resolveBrand usa o resolvedor oficial e reporta rc e oficialidade", { skip: SEM_COFRE }, () => {
   const r = resolveBrand("NOMOS");
   assert.equal(r.marca, "NOMOS");
   assert.ok(r.versao.startsWith("v"), `versão inesperada: ${r.versao}`);
@@ -32,11 +51,11 @@ test("resolveBrand usa o resolvedor oficial e reporta rc e oficialidade", () => 
   assert.equal(r.oficial, r.rc === 0);
 });
 
-test("marca inexistente falha fechado, não devolve paleta inventada", () => {
+test("marca inexistente falha fechado, não devolve paleta inventada", { skip: SEM_COFRE }, () => {
   assert.throws(() => resolveBrand("MARCA_QUE_NAO_EXISTE_XYZ"), /não resolveu|sem caminho/);
 });
 
-test("tokens vêm do cofre com integridade conferida e sem colisão de chave", () => {
+test("tokens vêm do cofre com integridade conferida e sem colisão de chave", { skip: SEM_COFRE }, () => {
   const { tokens, integridade } = lerTokens(resolveBrand("NOMOS").fonte);
 
   assert.ok(Object.keys(tokens.cores).length >= 8, "esperava ao menos 8 cores no brandbook");
@@ -54,7 +73,7 @@ test("tokens vêm do cofre com integridade conferida e sem colisão de chave", (
   assert.ok(tokens.fontes.mono.length > 0, "fonte mono não extraída");
 });
 
-test("build injeta os tokens, marca PROPOSTA e não deixa placeholder", () => {
+test("build injeta os tokens, marca PROPOSTA e não deixa placeholder", { skip: SEM_COFRE }, () => {
   const r = build();
   const html = readFileSync(r.saida, "utf8");
 
