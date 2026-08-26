@@ -11,9 +11,10 @@ Licença **MIT** e titular **Voltolini-SPACE**, decididos pelo dono em
 
 ## Descrição (About) — 350 caracteres
 
-> Infraestrutura de navegação governada para agentes de IA. Modo ASK e AUTO, com
-> aprovação amarrada à ação, console ao vivo, trilha auditável e replay somente
-> leitura. AUTO nunca remove uma aprovação obrigatória.
+> Navegação governada para agentes de IA, com a Gi num painel lateral que abre
+> já conectado (um clique, sem token). ASK/AUTO com aprovação amarrada à ação,
+> console ao vivo, trilha auditável e replay. AUTO nunca remove uma aprovação
+> obrigatória.
 
 Versão curta, se o limite apertar:
 
