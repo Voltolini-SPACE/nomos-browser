@@ -165,6 +165,36 @@ function trilha(): Record<string, unknown>[] {
 }
 
 /**
+ * Espera a trilha conter o que se procura, em vez de ler uma vez e torcer.
+ *
+ * Nasceu de um vermelho na sala limpa da tag v0.3.1, sob carga: o watchdog TINHA
+ * agido — `detected`, `recovered` e a soltura do lease passaram todos — e mesmo
+ * assim `assert.ok(linhas.length > 0)` reprovou tres linhas abaixo. O audit e
+ * escrito de forma assincrona; a leitura era sincrona e imediata. Sob CPU
+ * disputada, a escrita perde a corrida.
+ *
+ * Isto NAO enfraquece a assercao: se a linha nunca aparecer, ela continua
+ * reprovando ao fim do prazo, e com a mesma mensagem. O que muda e que a suite
+ * deixa de ficar vermelha por causa da maquina estar ocupada — vermelho que nao
+ * distingue defeito de carga ensina a ignorar vermelho.
+ *
+ * O arquivo ja fazia exatamente isso para o `status` da sessao, algumas linhas
+ * acima. Esta e a mesma espera, aplicada ao efeito colateral que faltava.
+ */
+async function trilhaAte(
+  filtro: (l: Record<string, unknown>) => boolean,
+  prazoMs = 4000,
+): Promise<Record<string, unknown>[]> {
+  const limite = Date.now() + prazoMs;
+  let achadas: Record<string, unknown>[] = [];
+  for (;;) {
+    achadas = trilha().filter(filtro);
+    if (achadas.length > 0 || Date.now() >= limite) return achadas;
+    await dormir(50);
+  }
+}
+
+/**
  * PIDs do navegador do Playwright que SÃO DESCENDENTES deste processo de teste.
  *
  * A restrição a descendentes não é zelo excessivo: esta máquina roda serviços de
@@ -288,7 +318,7 @@ test("2. NAVEGADOR MORTO por baixo: SIGKILL real, sessão FAILED e nada pendurad
   assert.equal(daemon.leases.currentHolder(sid), null, "o lease sobreviveu à morte do navegador");
 
   // A trilha registra — recuperação em silêncio é inauditável.
-  const linhas = trilha().filter((l) => String(l.action).startsWith("watchdog."));
+  const linhas = await trilhaAte((l) => String(l.action).startsWith("watchdog."));
   assert.ok(linhas.length > 0, "o watchdog agiu sem deixar linha no audit");
   assert.ok(
     linhas.some((l) => (l.detail as Record<string, unknown>)?.kind === "browser_dead"),
@@ -396,7 +426,7 @@ test("5. TASK ESTAGNADA é pausada de forma declarada, nunca abandonada em RUNNI
     `a task terminou em ${String(estado)} — estagnada não pode virar concluída nem seguir RUNNING`,
   );
 
-  const linhas = trilha().filter((l) => l.action === "watchdog.recovered");
+  const linhas = await trilhaAte((l) => l.action === "watchdog.recovered");
   assert.ok(
     linhas.some((l) => (l.detail as Record<string, unknown>)?.kind === "task_stalled"),
     "a pausa por estagnação não entrou na trilha",

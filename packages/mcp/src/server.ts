@@ -31,7 +31,7 @@ import { ToolInputError, buildRuntimeCall, listToolsPayload, toolByName } from "
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const SERVER_NAME = "nomos-browser-mcp" as const;
-export const SERVER_VERSION = "0.3.1" as const;
+export const SERVER_VERSION = "0.3.2" as const;
 export const DEFAULT_RUNTIME_URL = "http://127.0.0.1:7777" as const;
 export const DEFAULT_OWNER = "mcp:nomos-browser-mcp" as const;
 

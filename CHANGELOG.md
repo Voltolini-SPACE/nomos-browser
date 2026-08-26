@@ -3,7 +3,7 @@
 Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento pretendido: [SemVer](https://semver.org/lang/pt-BR/).
 
-**Versão corrente: `0.3.1`.** A primeira marcação foi `v0.2.0-rc.1`; antes dela
+**Versão corrente: `0.3.2`.** A primeira marcação foi `v0.2.0-rc.1`; antes dela
 o repositório não tinha tag alguma e `package.json` declarava `0.1.0` desde o
 início — e este arquivo dizia isso, porque anunciar uma versão que nunca foi
 marcada seria o tipo de mentira que o resto desta documentação existe para
@@ -27,6 +27,53 @@ Legenda usada nos itens:
 **⚠ INCOMPATÍVEL** = muda comportamento observável de quem já usa a API.
 
 ---
+
+## [0.3.2] — 2026-08-26
+
+Fecha uma corrida em `tests/watchdog-wired.test.ts`. `v0.3.0` e `v0.3.1` **não
+foram movidas**.
+
+### Corrigido
+
+- **Um teste podia reprovar depois de o produto ter feito tudo certo.** Visto
+  uma vez, na sala limpa da tag `v0.3.1`: o caso *"NAVEGADOR MORTO por baixo"*
+  passou em todas as asserções sobre o comportamento — `detected.browser_dead`
+  subiu, `recovered.browser_dead` subiu, o lease foi solto — e reprovou três
+  linhas abaixo, em:
+
+  ```
+  AssertionError: o watchdog agiu sem deixar linha no audit
+  ```
+
+  O watchdog tinha agido. A trilha é escrita de forma **assíncrona**; a leitura
+  era **síncrona e imediata**, sem espera nenhuma. Sob disputa, a escrita perde a
+  corrida e o teste lê um arquivo que ainda não recebeu a linha.
+
+  O mais claro é que o mesmo arquivo, vinte linhas acima, já esperava desse jeito
+  pelo `status` da sessão (`for (...) await dormir(100)`). A espera existia para
+  um efeito e faltava para o outro.
+
+  `trilhaAte()` passa a esperar a linha aparecer, com prazo. Isso **não
+  enfraquece a asserção**: se a linha nunca aparecer, ela reprova ao fim do
+  prazo, com a mesma mensagem. O que deixa de acontecer é vermelho causado por a
+  máquina estar ocupada — e vermelho que não distingue defeito de carga ensina a
+  ignorar vermelho.
+
+### O que está provado e o que não está
+
+Provado: a corrida existe no código — leitura síncrona imediata de um arquivo
+escrito de forma assíncrona, sem espera, ao contrário da asserção vizinha.
+Provado: a falha aconteceu, com essa mensagem, numa execução real da suíte
+completa a partir do clone da tag.
+
+**Não** provado: que a correção elimina aquela ocorrência específica. A falha não
+foi reproduzida sob demanda — 8 execuções isoladas e 6 sob carga de CPU
+(`load average` 28,9) passaram todas. A carga sintética de CPU não recria a
+disputa da suíte completa, que envolve vários Chromium e pressão de sistema de
+arquivos.
+
+A correção se sustenta por inspeção, não por reprodução, e este parágrafo existe
+para que ninguém leia mais garantia do que foi medido.
 
 ## [0.3.1] — 2026-08-26
 
